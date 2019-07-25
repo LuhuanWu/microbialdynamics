@@ -26,7 +26,7 @@ class trainer:
 
         self.Dx = self.FLAGS.Dx
         self.Dy = self.FLAGS.Dy
-        self.time = self.FLAGS.time
+        self.Dv = self.FLAGS.Dv
         self.n_particles = self.FLAGS.n_particles
 
         self.MSE_steps = self.FLAGS.MSE_steps
@@ -41,8 +41,8 @@ class trainer:
     def init_placeholder(self):
         self.obs = self.model.obs
         self.hidden = self.model.hidden
-        # TODO: test input
         self.input = self.model.input
+        self.time = self.model.time
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -150,11 +150,13 @@ class trainer:
                     self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
-            obs_train, hidden_train = shuffle(obs_train, hidden_train)
+            obs_train, hidden_train, input_train = shuffle(obs_train, hidden_train, input_train)
             for j in range(0, len(obs_train), self.batch_size):
                 self.sess.run(train_op,
                               feed_dict={self.obs:    obs_train[j:j + self.batch_size],
                                          self.hidden: hidden_train[j:j + self.batch_size],
+                                         self.input: input_train[j:j + self.batch_size],
+                                         self.time: obs_train[j:j+self.batch_size].shape[1],
                                          lr:          self.lr})
 
             if (i + 1) % print_freq == 0:
@@ -206,6 +208,8 @@ class trainer:
     def close_session(self):
         self.sess.close()
 
+
+    # TODO: fix evaluation
     def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
                                        {self.obs:    self.obs_train,
@@ -213,7 +217,9 @@ class trainer:
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
                                       {self.obs:    self.obs_test,
-                                       self.hidden: self.hidden_test},
+                                       self.hidden: self.hidden_test,
+                                       self.input: self.input_test,
+                                       self.time: {}},
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
