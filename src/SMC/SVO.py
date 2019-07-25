@@ -28,26 +28,28 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, hidden, input):
+    def get_log_ZSMC(self, obs, hidden, input, time):
         """
         Get log_ZSMC from obs y_1:T
-        Input:
+        Inputs are all placeholders:
             obs.shape = (batch_size, time, Dy)
             hidden.shape = (batch_size, time, Dz)
             input.shape = (batch_size, time, Dx)
+            time.shape = ()
         Output:
             log_ZSMC: shape = scalar
             log: stuff to debug
         """
-        batch_size, time, _ = obs.get_shape().as_list()
-        self.Dx, self.batch_size, self.time = self.model.Dx, batch_size, time
+        self.batch_size, _, _ = obs.get_shape().as_list()
+        self.Dx = self.model.Dx
+        self.time = time
 
         with tf.variable_scope(self.name):
 
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs)
+            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, time)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
@@ -58,8 +60,8 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, hidden, obs, q_cov=1.0):
-        Dx, time, n_particles, batch_size = self.Dx, self.time, self.n_particles, self.batch_size
+    def SMC(self, hidden, obs, input, q_cov=1.0):
+        Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
         preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs)
@@ -68,7 +70,7 @@ class SVO:
         q0, q1, f = self.q0, self.q1, self.f
 
         # -------------------------------------- t = 0 -------------------------------------- #
-        q_f_t_feed = preprocessed_X0
+        q_f_t_feed = tf.concat(preprocessed_X0, input[:, 0, :], axis=-1)
 
         # TODO: add input here
 
@@ -127,9 +129,7 @@ class SVO:
             X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
                                          resample_particles=self.resample_particles)
 
-            q_f_t_feed = X_ancestor
-
-            # TODO: add v_t to q_f_t_feed
+            q_f_t_feed = tf.concat((X_ancestor, input[:, t, :]), axis=-1)
 
             # proposal
             if self.q_uses_true_X:
@@ -330,7 +330,7 @@ class SVO:
         """
 
         :param obs: (batch_size, time, Dy)
-        :return: preprocessed_obs, a list of lenght time, each item is of shape (batch_size, smoother_Dhs*2)
+        :return: preprocessed_obs, a list of length time, each item is of shape (batch_size, smoother_Dhs*2)
         """
         # if self.smooth_obs, smooth obs with bidirectional RNN
 

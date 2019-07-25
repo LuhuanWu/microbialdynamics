@@ -18,26 +18,31 @@ class PSVO(SVO):
         self.BSim_q_init = model.Bsim_q_init_dist
         self.BSim_q2 = model.BSim_q2_dist
 
-    def get_log_ZSMC(self, obs, hidden):
+    def get_log_ZSMC(self, obs, hidden, input, time):
         """
         Get log_ZSMC from obs y_1:T
-        Input:
-            obs.shape = (batch_size, time, Dy)
-            hidden.shape = (batch_size, time, Dz)
+        Inputs are all placeholders
+            obs.shape = (batch_size, ?, Dy)
+            hidden.shape = (batch_size, ?, Dx)
+            input.shape = (batch_size, ?, Dv)
+            time.shape = ()
+            where ? = time
         Output:
-            log_ZSMC: shape = scalar
+            log_ZSMC: shape = ()
             log: stuff to debug
         """
-        batch_size, time, _ = obs.get_shape().as_list()
-        self.Dx, self.batch_size, self.time = self.model.Dx, batch_size, time
+        self.batch_size, _, _ = obs.get_shape().as_list()
+        self.Dx = self.model.Dx
+        self.time = time
 
         with tf.variable_scope(self.name):
 
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, _, log_Ws = self.SMC(hidden, obs)
-            bw_Xs, bw_log_Ws, f_log_probs, g_log_probs = self.backward_simulation_w_proposal(X_prevs, log_Ws, obs)
+            X_prevs, _, log_Ws = self.SMC(hidden, obs, input)
+            bw_Xs, bw_log_Ws, f_log_probs, g_log_probs = \
+                self.backward_simulation_w_proposal(X_prevs, log_Ws, obs, input)
 
             log_ZSMC = self.compute_log_ZSMC(bw_log_Ws, f_log_probs, g_log_probs)
             Xs = bw_Xs
@@ -66,7 +71,7 @@ class PSVO(SVO):
 
         return log_ZSMC
 
-    def backward_simulation_w_proposal(self, Xs, log_Ws, obs):
+    def backward_simulation_w_proposal(self, Xs, log_Ws, obs, input):
         Dx, time, n_particles, batch_size = self.Dx, self.time, self.n_particles, self.batch_size
 
         M = self.n_particles_for_BSim_proposal
@@ -108,19 +113,29 @@ class PSVO(SVO):
             return t >= 1
 
         def while_body(t, bw_X_tp1, bw_Xs_ta, bw_log_Ws_ta, f_log_probs_ta, g_log_probs_ta):
-            # proposal q(x_t | x_t+1, y_{1:T})
+            # bw_X_tp1: (n_particles, batch_size, Dx)
+
+            # proposal q(x_t | x_{t+1}, v_t, y_{1:T}) = q(x_t | x_{t+1}, v_t) q(x_t | y_{1:T})
+            input_t = tf.tile(input[:, t][None,], (M, n_particles, 1, 1))  # (n_particles, batch_size, Dv)
+            concat_x_tp1_v_t = tf.concat((bw_X_tp1, input_t), axis=-1)  # (n_particles, batch)size, Dx+dv)
+            bw_X_t, bw_q_log_prob, _ = self.sample_from_2_dist(self.q1_inv, self.BSim_q2,
+                                                               concat_x_tp1_v_t, preprocessed_obs_ta.read(t),
+                                                               sample_size=M)
             # bw_X_t.shape = (M, n_particles, batch_size, Dx)
             # bw_q_log_prob.shape = (M, n_particles, batch_size)
-            bw_X_t, bw_q_log_prob, _ = self.sample_from_2_dist(self.q1_inv, self.BSim_q2,
-                                                               bw_X_tp1, preprocessed_obs_ta.read(t),
-                                                               sample_size=M)
 
-            # f(x_t+1 | x_t) (M, n_particles, batch_size)
-            f_t_log_prob = self.f.log_prob(bw_X_t, bw_X_tp1)
+            # f(x_t+1 | x_t, v_t+1) (M, n_particles, batch_size)
+            input_tp1 = tf.tile(input[:, t+1][None, None,], (M, n_particles, 1, 1))  # (M, n_particles, batch_size, Dv)
+            concat_x_t_input_tp1 = tf.concat((bw_X_t, input_tp1), axis=-1)  # (M, n_particles, batch_size, Dx+Dv)
+            f_t_log_prob = self.f.log_prob(concat_x_t_input_tp1, bw_X_tp1)
 
-            # p(x_t | y_{1:t}) is proprotional to \int p(x_t-1 | y_{1:t-1}) * f(x_t | x_t-1) dx_t-1 * g(y_t | x_t)
+            # p(x_t |v_t, y_{1:t}) is proprotional to \int p(x_t-1 | y_{1:t-1}) * f(x_t | x_t-1, v_t) dx_t-1 * g(y_t | x_t)
             bw_X_t_tiled = tf.tile(tf.expand_dims(bw_X_t, axis=2), (1, 1, n_particles, 1, 1))
-            f_tm1_log_prob = self.f.log_prob(Xs[t - 1], bw_X_t_tiled)   # (M, n_particles, n_particles, batch_size)
+            # (M, n_particles, n_particles, batch_size, Dx)
+
+            concat_x_tm1_v_t = tf.concat((Xs[t-1], tf.tile(input[t][None,], (n_particles, 1))), axis=-1)
+            # (n_particles, Dx + Dv)
+            f_tm1_log_prob = self.f.log_prob(concat_x_tm1_v_t, bw_X_t_tiled) # (M, n_particles, n_particles, batch_size)
             g_t_log_prob = self.g.log_prob(bw_X_t, obs[:, t])           # (M, n_particles, batch_size)
 
             log_W_tm1 = log_Ws[t - 1] - tf.reduce_logsumexp(log_Ws[t - 1], axis=0)
@@ -148,13 +163,17 @@ class PSVO(SVO):
             tf.while_loop(while_cond, while_body, init_state)
 
         # t = 0
+        # proposal q(x_0 | x_1, v_0, y_{1:T}) = q(x_0 | x_1, v_0) q(x_0 | y_{1:T})
+        input_0 = tf.tile(input[:, 0][None,], (M, n_particles, 1, 1))  # (M, n_particles, batch_size, Dv)
+        concat_x_1_v_0 = tf.concat((bw_X_1, input_0), axis=-1)  # (n_particles, batch)size, Dx+dv)
+        bw_X_0, bw_q_log_prob, _ = self.sample_from_2_dist(self.q1_inv, self.BSim_q2,
+                                                           concat_x_1_v_0, preprocessed_obs[0],
+                                                           sample_size=M)
         # bw_X_t.shape = (M, n_particles, batch_size, Dx)
         # bw_q_log_prob.shape = (M, n_particles, batch_size)
-        bw_X_0, bw_q_log_prob, _ = self.sample_from_2_dist(self.q1_inv, self.BSim_q2,
-                                                           bw_X_1, preprocessed_obs[0],
-                                                           sample_size=M)
 
-        f_0_log_prob = self.f.log_prob(bw_X_0, bw_X_1)          # (M, n_particles, batch_size)
+        concat_x_0_v_1 = tf.concat((bw_X_0, input_0), axis=-1)  # (M, n_particles, batch_size, Dx + Dv)
+        f_0_log_prob = self.f.log_prob(concat_x_0_v_1, bw_X_1)          # (M, n_particles, batch_size)
         g_0_log_prob = self.g.log_prob(bw_X_0, obs[:, 0])       # (M, n_particles, batch_size)
 
         # self.preprocessed_X0_f is cached in self.SMC()

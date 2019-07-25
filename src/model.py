@@ -21,7 +21,6 @@ class SSM(object):
         self.Dy = FLAGS.Dy
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
 
-        #self.time = FLAGS.time
         self.batch_size = FLAGS.batch_size
 
         # Feed-Forward Network (FFN) architectures
