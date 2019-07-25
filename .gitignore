@@ -1,0 +1,12 @@
+**/rslts/**
+**/__pycache__/**
+rslts
+rslts/*
+*.sh
+*.o*
+test.py
+**/test.py
+**/.ipynb_checkpoints
+**/.ipynb_checkpoints/**
+.idea
+.idea/**

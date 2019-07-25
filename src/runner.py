@@ -24,6 +24,7 @@ from rslts_saving.lorenz_rslts_saving import *
 
 from utils.data_generator import generate_dataset
 from utils.data_loader import load_data
+from utils.data_interpolation import interpolate_data
 
 
 def main(_):
@@ -42,18 +43,18 @@ def main(_):
     # ============================================= dataset part ============================================= #
     # generate data from simulation
     if FLAGS.generateTrainingData:
-        model = "fhn"
-        hidden_train, hidden_test, obs_train, obs_test  = \
-            generate_dataset(FLAGS.n_train, FLAGS.n_test, FLAGS.time, model=model, Dy=FLAGS.Dy, lb=-2.5, ub=2.5)
-
+        raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
     else:
-        hidden_train, hidden_test, obs_train, obs_test = \
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
             load_data(FLAGS.datadir + FLAGS.datadict, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
-        FLAGS.n_train, FLAGS.n_test, FLAGS.time = obs_train.shape[0], obs_test.shape[0], obs_test.shape[1]
+        FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
+        interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test)
     # clip saving_num to avoid it > n_train or n_test
-    FLAGS.MSE_steps  = min(FLAGS.MSE_steps, FLAGS.time - 1)
+    min_time = min([obs.shape[0] for obs in obs_train + obs_test])
+    FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 1)
     FLAGS.saving_num = saving_num = min(FLAGS.saving_num, FLAGS.n_train, FLAGS.n_test)
 
     # ============================================== input part ============================================== #
@@ -89,7 +90,6 @@ def main(_):
     # =========================================== data saving part =========================================== #
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
-                         # "t":             FLAGS.time,
                          "bs":            FLAGS.batch_size,
                          "lr":            FLAGS.lr,
                          "epoch":         FLAGS.epoch,
