@@ -46,8 +46,9 @@ def main(_):
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
     else:
+        data_fname = os.path.join(FLAGS.datadir, FLAGS.datadict)
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
-            load_data(FLAGS.datadir + FLAGS.datadict, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
+            load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
     hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
@@ -56,16 +57,6 @@ def main(_):
     min_time = min([obs.shape[0] for obs in obs_train + obs_test])
     FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 1)
     FLAGS.saving_num = saving_num = min(FLAGS.saving_num, FLAGS.n_train, FLAGS.n_test)
-
-    # ============================================== input part ============================================== #
-    # TODO:
-    if FLAGS.use_input:
-        assert FLAGS.inputdir != "", "Please provide input data directory."
-        input_train, input_test = load_data(FLAGS.inputdir)  # should be an np.ndarray
-    else:
-        assert FLAGS.Dv == 0
-        # TODO: fix this
-        input_train, input_test = [], []
 
     print("finished preparing dataset")
 
@@ -120,7 +111,7 @@ def main(_):
     print("finish evaluating training results")
 
     plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
-    plot_y_hat(RLT_DIR, y_hat_val, obs_test, saving_num=saving_num)
+    # plot_y_hat(RLT_DIR, y_hat_val, obs_test, saving_num=saving_num)
 
     if Dx == 2:
         plot_fhn_results(RLT_DIR, Xs_val)

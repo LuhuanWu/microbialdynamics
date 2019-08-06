@@ -70,7 +70,8 @@ class SVO:
         q0, q1, f = self.q0, self.q1, self.f
 
         # -------------------------------------- t = 0 -------------------------------------- #
-        q_f_t_feed = tf.concat(preprocessed_X0, input[:, 0, :], axis=-1)
+        # print(preprocessed_X0, input[:, 0, :])
+        q_f_t_feed = tf.concat([preprocessed_X0, input[:, 0, :]], axis=-1)
 
         # TODO: add input here
 
@@ -101,10 +102,10 @@ class SVO:
 
         log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_{}".format(0))
         log_weight_t = tf.add(log_alpha_t, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
-                            name="log_weight_{}".format(0))  # (n_particles, batch_size)
+                              name="log_weight_{}".format(0))  # (n_particles, batch_size)
 
         log_normalized_weight_t = tf.add(log_weight_t, - tf.reduce_logsumexp(log_weight_t, axis=0),
-                                       name="log_noramlized_weight_{}".format(0))
+                                         name="log_noramlized_weight_{}".format(0))
 
         # -------------------------------------- t = 1, ..., T - 1 -------------------------------------- #
         # prepare tensor arrays
@@ -128,8 +129,8 @@ class SVO:
             # resampling
             X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
                                          resample_particles=self.resample_particles)
-
-            q_f_t_feed = tf.concat((X_ancestor, input[:, t, :]), axis=-1)
+            Input = tf.tile(tf.expand_dims(input[:, t, :], axis=0), (n_particles, 1, 1))
+            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)
 
             # proposal
             if self.q_uses_true_X:
@@ -186,7 +187,7 @@ class SVO:
         log[1] = log[1].write(t_final - 1, X_T_resampled)
 
         # convert tensor arrays to tensors
-        log_shapes = [(time, n_particles, batch_size, Dx)] * 2 + [(time, n_particles, batch_size)]
+        log_shapes = [(None, n_particles, batch_size, Dx)] * 2 + [(None, n_particles, batch_size)]
         log = [ta.stack(name=name) for ta, name in zip(log, log_names)]
         for tensor, shape in zip(log, log_shapes):
             tensor.set_shape(shape)
@@ -336,7 +337,7 @@ class SVO:
 
         with tf.variable_scope("smooth_obs"):
             if not self.smooth_obs:
-                preprocessed_obs = tf.unstack(obs, axis=1)
+                preprocessed_obs = tf.transpose(obs, perm=[1, 0, 2])
                 preprocessed_X0 = preprocessed_obs[0]
             else:
                 preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs)
@@ -389,7 +390,7 @@ class SVO:
         # Intermediate step to calculate k-step R^2
         batch_size, time, _, _ = hidden.shape.as_list()
         _, _, Dy = obs.shape.as_list()
-        assert n_steps < time, "n_steps = {} >= time".format(n_steps)
+        # assert n_steps < time, "n_steps = {} >= time".format(n_steps)
 
         with tf.variable_scope(self.name):
 
@@ -408,7 +409,7 @@ class SVO:
                 f_k_input = x_BxTmkxDz
                 x_BxTmkxDz = self.f.mean(f_k_input)                                 # (batch_size, time - k - 1, Dx)
 
-            y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz)                                # (batch_size, time - N, Dy)
+            y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz)                                # (batch_size, T - N, Dy)
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
             # get y_true

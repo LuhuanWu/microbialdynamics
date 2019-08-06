@@ -70,7 +70,7 @@ class SSM(object):
                                           output_cov=self.output_cov,
                                           diag_cov=self.diag_cov,
                                           name="q0_tran")
-        self.q1_tran = MLP_transformation(self.q1_layers, self.Dx+self.Dv,
+        self.q1_tran = MLP_transformation(self.q1_layers, self.Dx,
                                           output_cov=self.output_cov,
                                           diag_cov=self.diag_cov,
                                           name="q1_tran")

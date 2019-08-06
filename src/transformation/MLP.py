@@ -46,6 +46,8 @@ class MLP_transformation(transformation):
                                          name="sigma_layer")
 
     def transform(self, Input):
+        # if self.name == "q1_tran":
+        #     print(Input.get_shape().as_list())
         with tf.variable_scope(self.name):
             hidden = tf.identity(Input)
             for hidden_layer in self.hidden_layers:

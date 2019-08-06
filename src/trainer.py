@@ -36,7 +36,7 @@ class trainer:
 
         self.init_placeholder()
         self.init_training_param()
-        self.init_quiver_plotting()
+        # self.init_quiver_plotting()
 
     def init_placeholder(self):
         self.obs = self.model.obs
@@ -112,7 +112,7 @@ class trainer:
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input)
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input, self.time)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -152,11 +152,12 @@ class trainer:
             # training
             obs_train, hidden_train, input_train = shuffle(obs_train, hidden_train, input_train)
             for j in range(0, len(obs_train), self.batch_size):
+                assert self.batch_size == 1
                 self.sess.run(train_op,
                               feed_dict={self.obs:    obs_train[j:j + self.batch_size],
                                          self.hidden: hidden_train[j:j + self.batch_size],
-                                         self.input: input_train[j:j + self.batch_size],
-                                         self.time: obs_train[j:j+self.batch_size].shape[1],
+                                         self.input:  input_train[j:j + self.batch_size],
+                                         self.time:   obs_train[j].shape[0],
                                          lr:          self.lr})
 
             if (i + 1) % print_freq == 0:
@@ -169,7 +170,9 @@ class trainer:
 
                 if self.save_res:
                     self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
-                                             self.hidden: hidden_test[0:self.saving_num]}
+                                             self.hidden: hidden_test[0:self.saving_num],
+                                             self.input:  input_test[0:self.saving_num],
+                                             self.time:   [obs.shape[0] for obs in obs_test]}
 
                     Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
 
@@ -213,19 +216,21 @@ class trainer:
     def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
                                        {self.obs:    self.obs_train,
-                                        self.hidden: self.hidden_train},
+                                        self.hidden: self.hidden_train,
+                                        self.input:  self.input_train,
+                                        self.time:   [obs.shape[0] for obs in self.obs_train]},
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
                                       {self.obs:    self.obs_test,
                                        self.hidden: self.hidden_test,
-                                       self.input: self.input_test,
-                                       self.time: {}},
+                                       self.input:  self.input_test,
+                                       self.time:   [obs.shape[0] for obs in self.obs_test]},
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                           self.hidden_train, self.obs_train)
+                                                           self.hidden_train, self.obs_train, self.input_train)
         MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                         self.hidden_test, self.obs_test)
+                                                         self.hidden_test, self.obs_test, self.input_test)
 
         print()
         print("iter", iter_num + 1)
@@ -306,7 +311,10 @@ class trainer:
         feed_dict = {}
         for i in range(0, n_batches, self.batch_size):
             for key, value in feed_dict_w_batches.items():
-                feed_dict[key] = value[i:i + self.batch_size]
+                value = value[i:i + self.batch_size]
+                if len(value) == 1 and not hasattr(value[0], "__len__"):
+                    value = value[0]
+                feed_dict[key] = value
             fetches_val = self.sess.run(fetches, feed_dict=feed_dict)
             fetches_list.append(fetches_val)
 
@@ -335,21 +343,24 @@ class trainer:
 
         return res
 
-    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set):
+    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set):
         n_steps = y_means.shape.as_list()[0] - 1
         Dy = y_means.shape.as_list()[1]
         batch_size = self.batch_size
-        n_batches = hidden_set.shape[0]
+        n_batches = len(hidden_set)
 
         combined_MSE_ks = np.zeros((n_steps + 1))             # combined MSE_ks across all batches
         combined_y_means = np.zeros((n_steps + 1, Dy))        # combined y_means across all batches
         combined_y_vars = np.zeros((n_steps + 1, Dy))         # combined y_vars across all batches
 
         for i in range(0, n_batches, batch_size):
-
+            assert batch_size == 1
+            time_batch = obs_set[i].shape[0]
             batch_MSE_ks, batch_y_means, batch_y_vars = self.sess.run([MSE_ks, y_means, y_vars],
                                                                       {self.obs: obs_set[i:i + batch_size],
-                                                                       self.hidden: hidden_set[i:i + batch_size]})
+                                                                       self.hidden: hidden_set[i:i + batch_size],
+                                                                       self.input: input_set[i:i + batch_size],
+                                                                       self.time: time_batch})
             # batch_MSE_ks.shape = (n_steps + 1)
             # batch_y_means.shape = (n_steps + 1, Dy)
             # batch_y_vars.shape = (n_steps + 1, Dy)
@@ -359,7 +370,7 @@ class trainer:
 
             # update combined y_means and combined y_vars according to:
             # https://stats.stackexchange.com/questions/55999/is-it-possible-to-find-the-combined-standard-deviation
-            Tmks = np.arange(self.time - n_steps, self.time + 1, 1)  # [time - n_steps, time - n_steps + 1, ..., time]
+            Tmks = np.arange(time_batch - n_steps, time_batch + 1, 1)  # [time - n_steps, time - n_steps + 1, ..., time]
             Tmks = Tmks[-1:None:-1]                                  # [time, ..., time - n_steps + 1, time - n_steps]
             TmkxDy = np.tile(Tmks, (Dy, 1)).T                        # (n_steps + 1, Dy)
 

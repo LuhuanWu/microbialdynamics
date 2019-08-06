@@ -20,8 +20,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 2                  # dimension of hidden states
-Dy = 1                  # dimension of observations
-Dv = 0                  # dimension of inputs
+Dy = 11                  # dimension of observations
+Dv = 15                  # dimension of inputs
 n_particles = 16        # number of particles
 batch_size = 1          # batch size
 lr = 3e-3               # learning rate
@@ -31,11 +31,11 @@ seed = 2
 # ------------------------------- Data ------------------------------- #
 # True: generate data set from simulation
 # False: read data set from the file
-generateTrainingData = True
+generateTrainingData = False
 
 # if reading data from file
-datadir = "data/fhn/[1,0]_obs_cov_0.01/"
-datadict = "datadict"
+datadir = "data"
+datadict = "microbio.p"
 
 # Was the data pickled in Python2?
 isPython2 = False
@@ -50,7 +50,7 @@ n_test = 2 * batch_size
 
 # --------------------------- Input ---------------------------- #
 # TODO
-use_input = False
+use_input = True
 
 inputdir = ""
 
@@ -146,7 +146,7 @@ save_y_hat = True
 rslt_dir_name = "test_FFBSim"
 
 # number of steps to predict y-hat and calculate R_square
-MSE_steps = 30
+MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
@@ -198,12 +198,6 @@ flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?"
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
 flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
-
-# ----------------------------- Input ------------------------------ #
-flags.DEFINE_boolean("use_input", use_input, "True: use input that modulated the transition and proposal dynamics;"
-                                                "False: not using input")
-
-flags.DEFINE_boolean("inputdir", inputdir, "path of the input data file relative to the repository directory")
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Network (FFN) architectures

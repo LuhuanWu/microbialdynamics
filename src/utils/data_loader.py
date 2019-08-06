@@ -18,7 +18,7 @@ def load_data(path, Dx, isPython2, q_uses_true_X):
         hidden_train = data["Xtrain"]
         hidden_test = data["Xtest"]
     else:
-        hidden_train = [np.zeros(obs.shape[0], Dx) for obs in obs_train]
-        hidden_test = [np.zeros(obs.shape[0], Dx) for obs in obs_test]
+        hidden_train = [np.zeros((obs.shape[0], Dx)) for obs in obs_train]
+        hidden_test = [np.zeros((obs.shape[0], Dx)) for obs in obs_test]
 
     return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test
