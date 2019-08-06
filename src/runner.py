@@ -119,12 +119,15 @@ def main(_):
         json.dump(history, f, indent=4, cls=NumpyEncoder)
 
     Xs, y_hat = log["Xs"], log["y_hat"]
+    """
     Xs_val = mytrainer.evaluate(Xs, mytrainer.saving_feed_dict)
+
     y_hat_val = mytrainer.evaluate(y_hat, mytrainer.saving_feed_dict)
     print("finish evaluating training results")
 
     plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
     # plot_y_hat(RLT_DIR, y_hat_val, obs_test, saving_num=saving_num)
+    
 
     if Dx == 2:
         plot_fhn_results(RLT_DIR, Xs_val)
@@ -134,13 +137,15 @@ def main(_):
     testing_data_dict = {"hidden_test": hidden_test[0:saving_num],
                          "obs_test": obs_test[0:saving_num],
                          "input_test": input_test[0:saving_num]}
+    
     learned_model_dict = {"Xs_val": Xs_val,
                           "y_hat_val": y_hat_val}
     data_dict = {"testing_data_dict": testing_data_dict,
                  "learned_model_dict": learned_model_dict}
-
+    
     with open(RLT_DIR + "data.p", "wb") as f:
         pickle.dump(data_dict, f)
+    """
 
     plot_MSEs(RLT_DIR, history["MSE_trains"], history["MSE_tests"], print_freq)
     plot_R_square(RLT_DIR, history["R_square_trains"], history["R_square_tests"], print_freq)

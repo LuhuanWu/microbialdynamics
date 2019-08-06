@@ -119,7 +119,7 @@ class trainer:
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        #MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input)
+        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input, self.mask)
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -147,9 +147,8 @@ class trainer:
         for i in range(self.epoch):
             start = time.time()
 
-            #if i == 0:
-             #   log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test = \
-              #      self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
+            if i == 0:
+                self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
             obs_train, hidden_train, input_train, mask_train = shuffle(obs_train, hidden_train, input_train, mask_train)
@@ -163,16 +162,15 @@ class trainer:
                                          self.time:   obs_train[j].shape[0],
                                          self.mask:   mask_train[j:j+self.batch_size],
                                          lr:          self.lr})
-            """
+
             if (i + 1) % print_freq == 0:
                 try:
-                    log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test = \
-                        self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
+                    self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
-
-                # TODO: fix mask hehre
+                """
+                # TODO: fix Xs_val here
                 if self.save_res:
                     self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
                                              self.hidden: hidden_test[0:self.saving_num],
@@ -198,7 +196,7 @@ class trainer:
                             self.draw_2D_quiver_plot(Xs_val, self.nextX, self.lattice, i + 1)
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
-
+                """
             end = time.time()
             print("epoch {:<4} took {:.3f} seconds".format(i + 1, end - start))
 
@@ -213,8 +211,6 @@ class trainer:
         log["y_hat"] = y_hat
         
         return metrics, log
-        """
-        return {}, log
 
     def close_session(self):
         self.sess.close()
@@ -237,9 +233,11 @@ class trainer:
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                           self.hidden_train, self.obs_train, self.input_train)
+                                                           self.hidden_train, self.obs_train,
+                                                           self.input_train, self.mask_train)
         MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                         self.hidden_test, self.obs_test, self.input_test)
+                                                         self.hidden_test, self.obs_test,
+                                                         self.input_test, self.mask_test)
 
         print()
         print("iter", iter_num + 1)
@@ -270,8 +268,6 @@ class trainer:
                            "R_square_test":  R_square_test}
             with open(self.epoch_data_DIR + "metric_{}.p".format(iter_num + 1), "wb") as f:
                 pickle.dump(metric_dict, f)
-
-        return log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test
 
     def adjust_lr(self, iter_num, print_freq):
         # determine whether should decrease lr or even stop training
@@ -352,7 +348,7 @@ class trainer:
 
         return res
 
-    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set):
+    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set, mask_set):
         n_steps = y_means.shape.as_list()[0] - 1
         Dy = y_means.shape.as_list()[1]
         batch_size = self.batch_size
@@ -369,7 +365,8 @@ class trainer:
                                                                       {self.obs: obs_set[i:i + batch_size],
                                                                        self.hidden: hidden_set[i:i + batch_size],
                                                                        self.input: input_set[i:i + batch_size],
-                                                                       self.time: time_batch})
+                                                                       self.time: time_batch,
+                                                                       self.mask: mask_set[i:i + batch_size]})
             # batch_MSE_ks.shape = (n_steps + 1)
             # batch_y_means.shape = (n_steps + 1, Dy)
             # batch_y_vars.shape = (n_steps + 1, Dy)
