@@ -40,18 +40,22 @@ def interpolate_datapoint(hidden, obs, input):
     :param obs: (n_obs, Dy + 1), [:, 0] records t of all obs
     :param input: (n_inputs, Dy + 1], [:, 0] records t of all inputs
     :return:
+    hidden: (time, Dx)
+    obs: (time, Dy)
+    interpolated_input: (time, Dv)
+    mask: (time, )
     """
     days = obs[:, 0].astype(int)
     time = days[-1] - days[0] + 1
 
-    mask = np.ones((1, time), dtype=bool)
+    mask = np.ones((time, ), dtype=bool)
 
     i = 0
     for t in np.arange(days[0], days[0]+time):
         if t == days[i]:
             i = i + 1
         else:
-            mask[0][t] = False
+            mask[t] = False
 
     # hidden
     hidden = np.zeros((time, hidden.shape[1]))
@@ -81,13 +85,13 @@ def interpolate_datapoint(hidden, obs, input):
 
     # input
     Dv = input.shape[1] - 1
-    input = np.zeros((time, Dv))
+    interpoated_input = np.zeros((time, Dv))
     for day_input in input:
         day = int(day_input[0])
         if days[0] <= day <= days[-1]:
-            input[day - days[0]] = day_input[1:]
+            interpoated_input[day - days[0]] = day_input[1:]
 
-    return hidden, obs, input, mask
+    return hidden, obs, interpoated_input, mask
 
 
 

@@ -48,6 +48,8 @@ time = 5
 n_train = 2 * batch_size
 n_test = 2 * batch_size
 
+use_mask = True
+
 # --------------------------- Input ---------------------------- #
 # TODO
 use_input = True
@@ -198,6 +200,8 @@ flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?"
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
 flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
+
+flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Network (FFN) architectures

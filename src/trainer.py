@@ -102,7 +102,6 @@ class trainer:
         elif self.Dx == 3:
             self.draw_quiver_during_training = True
 
-    # TODO: add input
     def train(self,
               obs_train, obs_test,
               hidden_train, hidden_test,
@@ -120,7 +119,7 @@ class trainer:
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input)
+        #MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input)
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -148,22 +147,23 @@ class trainer:
         for i in range(self.epoch):
             start = time.time()
 
-            if i == 0:
-                log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test = \
-                    self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
+            #if i == 0:
+             #   log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test = \
+              #      self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
-            obs_train, hidden_train, input_train = shuffle(obs_train, hidden_train, input_train)
+            obs_train, hidden_train, input_train, mask_train = shuffle(obs_train, hidden_train, input_train, mask_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
+
                 self.sess.run(train_op,
                               feed_dict={self.obs:    obs_train[j:j + self.batch_size],
                                          self.hidden: hidden_train[j:j + self.batch_size],
                                          self.input:  input_train[j:j + self.batch_size],
                                          self.time:   obs_train[j].shape[0],
-                                         self.mask:   mask_train[j:j + self.batch_size],
+                                         self.mask:   mask_train[j:j+self.batch_size],
                                          lr:          self.lr})
-
+            """
             if (i + 1) % print_freq == 0:
                 try:
                     log_ZSMC_train, log_ZSMC_test, R_square_train, R_square_test = \
@@ -172,12 +172,13 @@ class trainer:
                 except StopTraining:
                     break
 
+                # TODO: fix mask hehre
                 if self.save_res:
                     self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
                                              self.hidden: hidden_test[0:self.saving_num],
                                              self.input:  input_test[0:self.saving_num],
                                              self.time:   [obs.shape[0] for obs in obs_test],
-                                             self.mask:   mask_test[0:self.batch_size]}
+                                             self.mask:   mask_test[0:self.saving_num]}
 
                     Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
 
@@ -210,12 +211,13 @@ class trainer:
                    "R_square_trains": self.R_square_trains,
                    "R_square_tests":  self.R_square_tests}
         log["y_hat"] = y_hat
-
+        
         return metrics, log
+        """
+        return {}, log
 
     def close_session(self):
         self.sess.close()
-
 
     # TODO: fix evaluation
     def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
@@ -223,13 +225,15 @@ class trainer:
                                        {self.obs:    self.obs_train,
                                         self.hidden: self.hidden_train,
                                         self.input:  self.input_train,
-                                        self.time:   [obs.shape[0] for obs in self.obs_train]},
+                                        self.time:   [obs.shape[0] for obs in self.obs_train],
+                                        self.mask:   self.mask_train},
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
                                       {self.obs:    self.obs_test,
                                        self.hidden: self.hidden_test,
                                        self.input:  self.input_test,
-                                       self.time:   [obs.shape[0] for obs in self.obs_test]},
+                                       self.time:   [obs.shape[0] for obs in self.obs_test],
+                                       self.mask:   self.mask_test},
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,

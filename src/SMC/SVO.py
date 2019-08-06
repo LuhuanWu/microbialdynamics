@@ -161,7 +161,6 @@ class SVO:
             # emission log probability and log weights
             _g_t_log_prob = self.g.log_prob(X, obs[:, t])
             _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
-
             g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")

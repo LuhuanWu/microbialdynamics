@@ -51,9 +51,21 @@ def main(_):
             load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
-    # TODO: implement functions to generate masks in interpolation py
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, mask_train, mask_test = \
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, _mask_train, _mask_test = \
         interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test)
+
+    if FLAGS.use_mask:
+        mask_train, mask_test = _mask_train, _mask_test
+    else:
+        # set all the elements of mask to be True
+        mask_train = []
+        for m in _mask_train:
+            mask_train.append(np.ones_like(m, dtype=bool))
+
+        mask_test = []
+        for m in _mask_test:
+            mask_test.append(np.ones_like(m, dtype=bool))
+
     # clip saving_num to avoid it > n_train or n_test
     min_time = min([obs.shape[0] for obs in obs_train + obs_test])
     FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 1)
