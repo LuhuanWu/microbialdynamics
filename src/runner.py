@@ -51,7 +51,8 @@ def main(_):
             load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
+    # TODO: implement functions to generate masks in interpolation py
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, mask_train, mask_test = \
         interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test)
     # clip saving_num to avoid it > n_train or n_test
     min_time = min([obs.shape[0] for obs in obs_train + obs_test])
@@ -95,10 +96,10 @@ def main(_):
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
     mytrainer.init_data_saving(RLT_DIR)
 
-    # TODO:
     history, log = mytrainer.train(obs_train, obs_test,
                                    hidden_train, hidden_test,
                                    input_train, input_test,
+                                   mask_train, mask_test,
                                    print_freq)
 
     # ======================================== final data saving part ======================================== #

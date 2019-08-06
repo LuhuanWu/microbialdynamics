@@ -10,22 +10,28 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
     interpolated_obs_test = []
     interpolated_input_train = []
     interpolated_input_test = []
+    interpolated_mask_train = []
+    interpolated_mask_test = []
 
     for hidden, obs, input in zip(hidden_train, obs_train, input_train):
-        hidden, obs, input = interpolate_datapoint(hidden, obs, input)
+        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input)
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
         interpolated_input_train.append(input)
+        interpolated_mask_train.append(mask)
 
     for hidden, obs, input in zip(hidden_test, obs_test, input_test):
-        hidden, obs, input = interpolate_datapoint(hidden, obs, input)
+        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input)
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
+        interpolated_mask_test.append(mask)
 
     return interpolated_hidden_train, interpolated_hidden_test, \
            interpolated_obs_train, interpolated_obs_test, \
-           interpolated_input_train, interpolated_input_test
+           interpolated_input_train, interpolated_input_test, \
+           interpolated_mask_train, interpolated_mask_test
+
 
 def interpolate_datapoint(hidden, obs, input):
     """
@@ -37,6 +43,16 @@ def interpolate_datapoint(hidden, obs, input):
     """
     days = obs[:, 0].astype(int)
     time = days[-1] - days[0] + 1
+
+    mask = np.ones((1, time), dtype=bool)
+
+    i = 0
+    for t in np.arange(days[0], days[0]+time):
+        if t == days[i]:
+            i = i + 1
+        else:
+            mask[0][t] = False
+
     # hidden
     hidden = np.zeros((time, hidden.shape[1]))
 
@@ -71,7 +87,7 @@ def interpolate_datapoint(hidden, obs, input):
         if days[0] <= day <= days[-1]:
             input[day - days[0]] = day_input[1:]
 
-    return hidden, obs, input
+    return hidden, obs, input, mask
 
 
 

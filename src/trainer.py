@@ -43,6 +43,7 @@ class trainer:
         self.hidden = self.model.hidden
         self.input = self.model.input
         self.time = self.model.time
+        self.mask = self.model.mask
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -106,13 +107,15 @@ class trainer:
               obs_train, obs_test,
               hidden_train, hidden_test,
               input_train, input_test,
+              mask_train, mask_test,
               print_freq):
 
         self.obs_train,    self.obs_test    = obs_train,    obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
+        self.mask_train, self.mask_test = mask_train, mask_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input, self.time)
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input, self.time, self.mask)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -158,6 +161,7 @@ class trainer:
                                          self.hidden: hidden_train[j:j + self.batch_size],
                                          self.input:  input_train[j:j + self.batch_size],
                                          self.time:   obs_train[j].shape[0],
+                                         self.mask:   mask_train[j:j + self.batch_size],
                                          lr:          self.lr})
 
             if (i + 1) % print_freq == 0:
@@ -172,7 +176,8 @@ class trainer:
                     self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
                                              self.hidden: hidden_test[0:self.saving_num],
                                              self.input:  input_test[0:self.saving_num],
-                                             self.time:   [obs.shape[0] for obs in obs_test]}
+                                             self.time:   [obs.shape[0] for obs in obs_test],
+                                             self.mask:   mask_test[0:self.batch_size]}
 
                     Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
 

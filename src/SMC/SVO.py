@@ -28,7 +28,7 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, hidden, input, time):
+    def get_log_ZSMC(self, obs, hidden, input, time, mask):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
@@ -36,6 +36,7 @@ class SVO:
             hidden.shape = (batch_size, time, Dz)
             input.shape = (batch_size, time, Dx)
             time.shape = ()
+            mask.shape = (batch_size, time) | batch_size=1
         Output:
             log_ZSMC: shape = scalar
             log: stuff to debug
@@ -49,7 +50,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, time)
+            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
@@ -60,7 +61,7 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, hidden, obs, input, q_cov=1.0):
+    def SMC(self, hidden, obs, input, mask, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
@@ -98,7 +99,10 @@ class SVO:
             f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_{}_log_prob".format(0))
 
         # emission log probability and log weights
-        g_t_log_prob = self.g.log_prob(X, obs[:, 0], name="g_{}_log_prob".format(0))
+        _g_t_log_prob = self.g.log_prob(X, obs[:, 0])
+        _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
+
+        g_t_log_prob = tf.where(mask[0][0], _g_t_log_prob, _g_t_log_prob_0, name="g_{}_log_prob".format(0))
 
         log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_{}".format(0))
         log_weight_t = tf.add(log_alpha_t, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
@@ -155,7 +159,10 @@ class SVO:
                 f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
 
             # emission log probability and log weights
-            g_t_log_prob = self.g.log_prob(X, obs[:, t], name="g_t_log_prob")
+            _g_t_log_prob = self.g.log_prob(X, obs[:, t])
+            _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
+
+            g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
 
