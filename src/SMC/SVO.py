@@ -442,18 +442,19 @@ class SVO:
             y_means = []    # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
             y_vars = []     # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
             for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-                # TODO: add mask here
 
                 difference = y_hat_BxTmkxDy - y_BxTmkxDy   # (batch_size, time-k, Dy)
-                masked_difference = tf.boolean_mask(difference - y_BxTmkxDy, mask[:, k:])
+                masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
+                masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
 
                 MSE_k = tf.reduce_sum(masked_difference**2, name="MSE_{}".format(k))
                 MSE_ks.append(MSE_k)
 
-                masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])
-                y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))
+                masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])   # (mask_time, Dy)
+                masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
+                y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
                 y_means.append(y_mean)
-                y_var = tf.reduce_sum((masked_y - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))
+                y_var = tf.reduce_sum((masked_y - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))   # (Dy,)
                 y_vars.append(y_var)
 
             MSE_ks = tf.stack(MSE_ks, name="MSE_ks")     # (n_steps + 1)
