@@ -449,9 +449,11 @@ class SVO:
 
                 MSE_k = tf.reduce_sum(masked_difference**2, name="MSE_{}".format(k))
                 MSE_ks.append(MSE_k)
-                y_mean = tf.reduce_mean(y_BxTmkxDy, axis=[0, 1], name="y_mean_{}".format(k))
+
+                masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])
+                y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))
                 y_means.append(y_mean)
-                y_var = tf.reduce_sum((y_BxTmkxDy - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))
+                y_var = tf.reduce_sum((masked_y - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))
                 y_vars.append(y_var)
 
             MSE_ks = tf.stack(MSE_ks, name="MSE_ks")     # (n_steps + 1)
