@@ -36,6 +36,7 @@ class trainer:
 
         self.init_placeholder()
         self.init_training_param()
+        self.input_embedding = model.input_embedding
         # self.init_quiver_plotting()
 
     def init_placeholder(self):
@@ -114,12 +115,12 @@ class trainer:
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input, self.time, self.mask)
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input, self.mask)
+        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding, self.mask)
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -169,8 +170,7 @@ class trainer:
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
-                """
-                # TODO: fix Xs_val here
+
                 if self.save_res:
                     self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
                                              self.hidden: hidden_test[0:self.saving_num],
@@ -196,7 +196,7 @@ class trainer:
                             self.draw_2D_quiver_plot(Xs_val, self.nextX, self.lattice, i + 1)
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
-                """
+
             end = time.time()
             print("epoch {:<4} took {:.3f} seconds".format(i + 1, end - start))
 
@@ -215,7 +215,6 @@ class trainer:
     def close_session(self):
         self.sess.close()
 
-    # TODO: fix evaluation
     def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
                                        {self.obs:    self.obs_train,
@@ -327,16 +326,24 @@ class trainer:
         if isinstance(fetches, list):
             for i in range(len(fetches)):
                 if isinstance(fetches_list[0][i], np.ndarray):
-                    if keepdims:
-                        tmp = np.stack([x[i] for x in fetches_list])
+                    all_array = [x[i] for x in fetches_list]
+                    if not all(x.shape == all_array[0].shape for x in all_array):
+                        assert all_array[0].shape[0] == 1
+                        tmp = [x[0] for x in all_array]
+                    elif keepdims:
+                        tmp = np.stack(all_array)
                     else:
-                        tmp = np.concatenate([x[i] for x in fetches_list])
+                        tmp = np.concatenate(all_array)
                 else:
                     tmp = np.array([x[i] for x in fetches_list])
                 res.append(tmp)
         else:
             if isinstance(fetches_list[0], np.ndarray):
-                res = np.stack(fetches_list) if keepdims else np.concatenate(fetches_list)
+                if not all(x.shape == fetches_list[0].shape for x in fetches_list):
+                    assert fetches_list[0].shape[0] == 1
+                    res = [x[0] for x in fetches_list]
+                else:
+                    res = np.stack(fetches_list) if keepdims else np.concatenate(fetches_list)
             else:
                 res = np.array(fetches_list)
 

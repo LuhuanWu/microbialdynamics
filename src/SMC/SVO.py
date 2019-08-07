@@ -74,8 +74,6 @@ class SVO:
         # print(preprocessed_X0, input[:, 0, :])
         q_f_t_feed = tf.concat([preprocessed_X0, input[:, 0, :]], axis=-1)
 
-        # TODO: add input here
-
         # proposal
         if self.q_uses_true_X:
             X, q_t_log_prob = self.sample_from_true_X(hidden[:, 0, :],

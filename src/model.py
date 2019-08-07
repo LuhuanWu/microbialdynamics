@@ -5,6 +5,7 @@ from transformation.flow import NF
 from transformation.MLP import MLP_transformation
 from distribution.mvn import tf_mvn
 from distribution.poisson import tf_poisson
+from distribution.dirichlet import tf_dirichlet
 
 
 class SSM(object):
@@ -15,11 +16,12 @@ class SSM(object):
     """
 
     def __init__(self, FLAGS):
-        # leave the bool flags so that one can know which flags affect which classes
+        assert not (FLAGS.poisson_emission and FLAGS.dirichlet_emission)
 
         self.Dx = FLAGS.Dx
         self.Dy = FLAGS.Dy
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
+        self.Dev = FLAGS.Dev
 
         self.batch_size = FLAGS.batch_size
 
@@ -46,18 +48,20 @@ class SSM(object):
         self.use_bootstrap             = FLAGS.use_bootstrap
         self.use_2_q                   = FLAGS.use_2_q
         self.poisson_emission          = FLAGS.poisson_emission
+        self.dirichlet_emission        = FLAGS.dirichlet_emission
 
         self.X0_use_separate_RNN       = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
         self.PSVO                      = FLAGS.PSVO
-        self.SVO                     = FLAGS.SVO
+        self.SVO                       = FLAGS.SVO
         self.BSim_use_single_RNN       = FLAGS.BSim_use_single_RNN
 
         self.init_placeholder()
         self.init_trans()
         self.init_dist()
         self.init_RNNs()
+        self.init_input_embedding()
 
     def init_placeholder(self):
         self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
@@ -155,6 +159,9 @@ class SSM(object):
         if self.poisson_emission:
             self.g_dist = tf_poisson(self.g_tran,
                                      name="g_dist")
+        elif self.dirichlet_emission:
+            self.g_dist = tf_dirichlet(self.g_tran,
+                                       name="g_dist")
         else:
             self.g_dist = tf_mvn(self.g_tran,
                                  sigma_init=self.g_sigma_init,
@@ -192,3 +199,11 @@ class SSM(object):
                                         activation="linear",
                                         kernel_initializer="he_uniform",
                                         name="X0_transformer")
+
+    def init_input_embedding(self):
+        self.input_embedding_layer = Dense(self.Dev,
+                                           activation="linear",
+                                           kernel_initializer="he_uniform",
+                                           name="input_embedding")
+        self.input_embedding = self.input_embedding_layer(self.input)
+

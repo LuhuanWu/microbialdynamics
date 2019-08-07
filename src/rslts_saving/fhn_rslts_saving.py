@@ -10,13 +10,13 @@ import numpy as np
 def plot_fhn_results(RLT_DIR, Xs_val):
     if not os.path.exists(RLT_DIR + "/FHN 2D plots"):
         os.makedirs(RLT_DIR + "/FHN 2D plots")
-    Xs_val = np.mean(Xs_val, axis=2)
-    for i in range(Xs_val.shape[0]):
+    for i, X in enumerate(Xs_val):
+        X = np.mean(X, axis=1)
         plt.figure()
         plt.title("hidden state for all particles")
         plt.xlabel("x_dim 1")
         plt.ylabel("x_dim 2")
-        plt.plot(Xs_val[i, :, 0], Xs_val[i, :, 1])
+        plt.plot(X[:, 0], X[:, 1])
         sns.despine()
         plt.savefig(RLT_DIR + "/FHN 2D plots/All_x_paths_{}".format(i))
         plt.close()

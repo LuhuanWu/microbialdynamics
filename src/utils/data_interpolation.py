@@ -3,7 +3,7 @@ from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 from matplotlib import pyplot as plt
 
-def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test):
+def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS):
     interpolated_hidden_train = []
     interpolated_hidden_test = []
     interpolated_obs_train = []
@@ -14,14 +14,14 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
     interpolated_mask_test = []
 
     for hidden, obs, input in zip(hidden_train, obs_train, input_train):
-        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input)
+        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input, FLAGS)
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
         interpolated_input_train.append(input)
         interpolated_mask_train.append(mask)
 
     for hidden, obs, input in zip(hidden_test, obs_test, input_test):
-        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input)
+        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input, FLAGS)
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
@@ -33,7 +33,7 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
            interpolated_mask_train, interpolated_mask_test
 
 
-def interpolate_datapoint(hidden, obs, input):
+def interpolate_datapoint(hidden, obs, input, FLAGS):
     """
 
     :param hidden: (n_obs, Dx)
@@ -61,27 +61,36 @@ def interpolate_datapoint(hidden, obs, input):
     hidden = np.zeros((time, hidden.shape[1]))
 
     # obs
-    X = np.atleast_2d(days).T
-    y = obs[:, 1:]
+    Dy = obs.shape[1] - 1
+    if FLAGS.dirichlet_emission:
+        interpoated_obs = np.ones((time, Dy)) / Dy
+        for day_obs in obs:
+            day = int(day_obs[0])
+            smoothed_obs = day_obs[1:]
+            smoothed_obs = smoothed_obs * (1 - 1e-6) + 1e-6 / Dy
+            interpoated_obs[day - days[0]] = smoothed_obs
+    else:
+        X = np.atleast_2d(days).T
+        y = obs[:, 1:]
 
-    kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
-    noise = 1e-2
-    gp = GaussianProcessRegressor(kernel=kernel, alpha=noise ** 2, n_restarts_optimizer=10)
-    gp.fit(X, y)
+        kernel = C(1.0, (1e-3, 1e3)) * RBF(10, (1e-2, 1e2))
+        noise = 1e-2
+        gp = GaussianProcessRegressor(kernel=kernel, alpha=noise ** 2, n_restarts_optimizer=10)
+        gp.fit(X, y)
 
-    X_pred = np.atleast_2d(np.arange(days[0], days[-1] + 1)).T
-    obs, sigma = gp.predict(X_pred, return_std=True)
+        X_pred = np.atleast_2d(np.arange(days[0], days[-1] + 1)).T
+        interpoated_obs, sigma = gp.predict(X_pred, return_std=True)
 
-    # plt.figure()
-    # plt.plot(X_pred, obs, 'b-', label='Prediction')
-    # plt.fill(np.concatenate([X_pred, X_pred[::-1]]),
-    #          np.concatenate([obs - 1.9600 * sigma,
-    #                          (obs + 1.9600 * sigma)[::-1]]),
-    #          alpha=.5, fc='b', ec='None', label='95% confidence interval')
-    # plt.xlabel('$x$')
-    # plt.ylabel('$y$')
-    # plt.legend(loc='upper left')
-    # plt.show()
+        # plt.figure()
+        # plt.plot(X_pred, interpoated_obs, 'b-', label='Prediction')
+        # plt.fill(np.concatenate([X_pred, X_pred[::-1]]),
+        #          np.concatenate([interpoated_obs - 1.9600 * sigma,
+        #                          (interpoated_obs + 1.9600 * sigma)[::-1]]),
+        #          alpha=.5, fc='b', ec='None', label='95% confidence interval')
+        # plt.xlabel('$x$')
+        # plt.ylabel('$y$')
+        # plt.legend(loc='upper left')
+        # plt.show()
 
     # input
     Dv = input.shape[1] - 1
@@ -91,7 +100,7 @@ def interpolate_datapoint(hidden, obs, input):
         if days[0] <= day <= days[-1]:
             interpoated_input[day - days[0]] = day_input[1:]
 
-    return hidden, obs, interpoated_input, mask
+    return hidden, interpoated_obs, interpoated_input, mask
 
 
 

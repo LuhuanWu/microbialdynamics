@@ -52,7 +52,7 @@ def main(_):
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
     hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, _mask_train, _mask_test = \
-        interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test)
+        interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
 
     if FLAGS.use_mask:
         mask_train, mask_test = _mask_train, _mask_test
@@ -119,15 +119,13 @@ def main(_):
         json.dump(history, f, indent=4, cls=NumpyEncoder)
 
     Xs, y_hat = log["Xs"], log["y_hat"]
-    """
     Xs_val = mytrainer.evaluate(Xs, mytrainer.saving_feed_dict)
 
     y_hat_val = mytrainer.evaluate(y_hat, mytrainer.saving_feed_dict)
     print("finish evaluating training results")
 
-    plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
-    # plot_y_hat(RLT_DIR, y_hat_val, obs_test, saving_num=saving_num)
-    
+    # plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
+    plot_y_hat(RLT_DIR, y_hat_val, obs_test, saving_num=saving_num)
 
     if Dx == 2:
         plot_fhn_results(RLT_DIR, Xs_val)
@@ -145,7 +143,6 @@ def main(_):
     
     with open(RLT_DIR + "data.p", "wb") as f:
         pickle.dump(data_dict, f)
-    """
 
     plot_MSEs(RLT_DIR, history["MSE_trains"], history["MSE_tests"], print_freq)
     plot_R_square(RLT_DIR, history["R_square_trains"], history["R_square_tests"], print_freq)

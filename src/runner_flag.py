@@ -19,13 +19,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                  # dimension of hidden states
+Dx = 8                  # dimension of hidden states
 Dy = 11                  # dimension of observations
 Dv = 15                  # dimension of inputs
+Dev = 8                 # dimension of inputs
 n_particles = 16        # number of particles
 batch_size = 1          # batch size
-lr = 3e-3               # learning rate
-epoch = 100
+lr = 2e-3               # learning rate
+epoch = 200
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -48,22 +49,14 @@ time = 5
 n_train = 2 * batch_size
 n_test = 2 * batch_size
 
-use_mask = True
-
-# --------------------------- Input ---------------------------- #
-# TODO
-use_input = True
-
-inputdir = ""
-
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32]         # target evolution
-g_layers = [32]         # target emission
+q0_layers = [32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32, 32]         # target evolution
+g_layers = [32, 32]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -92,6 +85,11 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
+use_mask = True
+
+# whether emission uses Dirichlet distribution
+dirichlet_emission = True
+
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
 use_bootstrap = True
@@ -105,7 +103,6 @@ use_2_q = True
 
 # whether emission uses Poisson distribution
 poisson_emission = False
-
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -179,6 +176,7 @@ flags = tf.app.flags
 flags.DEFINE_integer("Dx", Dx, "dimension of hidden states")
 flags.DEFINE_integer("Dy", Dy, "dimension of observations")
 flags.DEFINE_integer("Dv", Dv, "dimension of inputs")
+flags.DEFINE_integer("Dev", Dev, "input embedding size")
 
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")
@@ -200,8 +198,6 @@ flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?"
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
 flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
-
-flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Network (FFN) architectures
@@ -239,8 +235,9 @@ flags.DEFINE_string("X0_smoother_Dhs", X0_smoother_Dhs, "number of units for X0_
 flags.DEFINE_boolean("X0_use_separate_RNN", X0_use_separate_RNN, "whether use a separate RNN for getting X0")
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
-
 # ------------------------ State Space Model ------------------------- #
+flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
+flags.DEFINE_boolean("dirichlet_emission", dirichlet_emission, "whether emission uses Dirichlet_ distribution")
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "
                                                      "f and q1 can still use different networks)")

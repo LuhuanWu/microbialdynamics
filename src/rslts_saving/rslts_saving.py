@@ -187,17 +187,18 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, saving_num=20):
     if not os.path.exists(RLT_DIR + "y_hat plots"):
         os.makedirs(RLT_DIR + "y_hat plots")
 
-    _, time, Dy = obs.shape
-    saving_num = min(len(ys_hat_val), saving_num)
+    Dy = obs[0].shape[1]
+    saving_num = min(len(obs), saving_num)
 
     for i in range(saving_num):
         for j in range(Dy):
             plt.figure()
             plt.title("obs dim {}".format(j))
             plt.xlabel("Time")
-            plt.plot(obs[i, :, j])
+            plt.plot(obs[i][:, j])
+            time = obs[i].shape[0]
             for k, ys_k_hat_val in enumerate(ys_hat_val):
-                plt.plot(range(k, time), ys_k_hat_val[i, :, j], "--")
+                plt.plot(range(k, time), ys_k_hat_val[i][:, j], "--")
             sns.despine()
             plt.savefig(RLT_DIR + "/y_hat plots/obs_dim_{}_idx_{}".format(j, i))
             plt.close()
