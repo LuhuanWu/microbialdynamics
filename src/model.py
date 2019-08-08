@@ -93,7 +93,7 @@ class SSM(object):
                                                        diag_cov=self.diag_cov,
                                                        name="BSim_q_init_tran")
 
-            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx+self.Dv,
+            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx,
                                                   output_cov=self.output_cov,
                                                   diag_cov=self.diag_cov,
                                                   name="q1_inv_tran")

@@ -366,7 +366,7 @@ class SVO:
                                                                             obs,
                                                                             dtype=tf.float32)
         smoothed_obs = tf.concat(outputs, axis=-1)
-        preprocessed_obs = tf.unstack(smoothed_obs, axis=1)
+        preprocessed_obs = tf.transpose(smoothed_obs, perm=[1, 0, 2])
 
         if self.X0_use_separate_RNN:
             if self.use_stack_rnn:
@@ -384,8 +384,7 @@ class SVO:
             outputs_fw = outputs_bw = outputs
         else:
             outputs_fw, outputs_bw = outputs
-        output_fw_list, output_bw_list = tf.unstack(outputs_fw, axis=1), tf.unstack(outputs_bw, axis=1)
-        preprocessed_X0 = tf.concat([output_fw_list[-1], output_bw_list[0]], axis=-1)
+        preprocessed_X0 = tf.concat([outputs_fw[:, -1, :], outputs_bw[:, 0, :]], axis=-1)
 
         return preprocessed_X0, preprocessed_obs
 
@@ -419,9 +418,9 @@ class SVO:
                 y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz)                            # (batch_size, time - k, Dy)
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
-                x_BxTmkxDz = x_BxTmkxDz[:,:-1]  # (batch_size, time - k - 1, Dx)
+                x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, :-k-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
+                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k + 1:]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
                 x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
 
             y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz)                                # (batch_size, T - N, Dy)
