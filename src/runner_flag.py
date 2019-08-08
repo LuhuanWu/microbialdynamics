@@ -19,14 +19,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 3                 # dimension of hidden states
+Dx = 5                 # dimension of hidden states
 Dy = 11                  # dimension of observations
 Dv = 15                  # dimension of inputs
 Dev = 8                 # dimension of inputs
-n_particles = 16        # number of particles
+n_particles = 64        # number of particles
 batch_size = 1          # batch size
-lr = 2e-3               # learning rate
-epoch = 1
+lr = 5e-4               # learning rate
+epoch = 200
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
