@@ -421,7 +421,7 @@ class SVO:
 
                 x_BxTmkxDz = x_BxTmkxDz[:,:-1]  # (batch_size, time - k - 1, Dx)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, :-k-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
+                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k + 1:]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
                 x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
 
             y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz)                                # (batch_size, T - N, Dy)

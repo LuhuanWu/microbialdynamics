@@ -19,14 +19,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 8                  # dimension of hidden states
+Dx = 3                 # dimension of hidden states
 Dy = 11                  # dimension of observations
 Dv = 15                  # dimension of inputs
 Dev = 8                 # dimension of inputs
 n_particles = 16        # number of particles
 batch_size = 1          # batch size
 lr = 2e-3               # learning rate
-epoch = 200
+epoch = 1
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -142,7 +142,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_FFBSim"
+rslt_dir_name = "microb"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

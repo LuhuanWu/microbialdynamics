@@ -183,7 +183,7 @@ def plot_lorenz_results(RLT_DIR, Xs_val):
         plt.close()
 
 
-def plot_y_hat(RLT_DIR, ys_hat_val, obs, saving_num=20):
+def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
     if not os.path.exists(RLT_DIR + "y_hat plots"):
         os.makedirs(RLT_DIR + "y_hat plots")
 
@@ -195,10 +195,26 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, saving_num=20):
             plt.figure()
             plt.title("obs dim {}".format(j))
             plt.xlabel("Time")
-            plt.plot(obs[i][:, j])
+
             time = obs[i].shape[0]
+
+            masked_time = np.arange(time)[mask[i]]
+            masked_obs = obs[i][mask[i]]
+
+            plt.plot(masked_time, masked_obs[:,j], '-o')
+
             for k, ys_k_hat_val in enumerate(ys_hat_val):
-                plt.plot(range(k, time), ys_k_hat_val[i][:, j], "--")
+                masked_time = np.arange(k, time)[mask[i][k:]]
+                masked_yhat = ys_k_hat_val[i][mask[i][k:]]
+                plt.plot(masked_time, masked_yhat[:,j], "--")
             sns.despine()
             plt.savefig(RLT_DIR + "/y_hat plots/obs_dim_{}_idx_{}".format(j, i))
             plt.close()
+
+# yhat, a list of length K+1, each item is a list of k-step prediction for #n_test, each of which is an array
+# (T-k, Dy)
+
+# obs, a list of length #n_test, each item is an ndarray of shape (time, Dy)
+
+# mask: a list of masks, each item is an array of shape (time, )
+
