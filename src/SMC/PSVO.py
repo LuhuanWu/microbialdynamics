@@ -133,7 +133,7 @@ class PSVO(SVO):
             # bw_q_log_prob.shape = (M, n_particles, batch_size)
 
             # f(x_t+1 | x_t, v_t+1) (M, n_particles, batch_size)
-            input_tp1 = tf.tile(input[tf.newaxis, tf.newaxis, :, t+1], (M, n_particles, 1, 1))  # (M, n_particles, batch_size, Dv)
+            input_tp1 = tf.tile(input[tf.newaxis, tf.newaxis, :, t], (M, n_particles, 1, 1))  # (M, n_particles, batch_size, Dv)
             concat_x_t_input_tp1 = tf.concat((bw_X_t, input_tp1), axis=-1)  # (M, n_particles, batch_size, Dx+Dv)
             f_t_log_prob = self.f.log_prob(concat_x_t_input_tp1, bw_X_tp1)
 
@@ -141,7 +141,7 @@ class PSVO(SVO):
             bw_X_t_tiled = tf.tile(tf.expand_dims(bw_X_t, axis=2), (1, 1, n_particles, 1, 1))
             # (M, n_particles, n_particles, batch_size, Dx)
 
-            concat_x_tm1_v_t = tf.concat((Xs[t-1], tf.tile(input[tf.newaxis, :, t - 1], (n_particles, 1, 1))), axis=-1)
+            concat_x_tm1_v_t = tf.concat((Xs[t - 1], tf.tile(input[tf.newaxis, :, t - 1], (n_particles, 1, 1))), axis=-1)
             # (n_particles, Dx + Dv)
             f_tm1_log_prob = self.f.log_prob(concat_x_tm1_v_t, bw_X_t_tiled) # (M, n_particles, n_particles, batch_size)
 

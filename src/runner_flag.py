@@ -19,10 +19,10 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 5                 # dimension of hidden states
+Dx = 8                 # dimension of hidden states
 Dy = 11                  # dimension of observations
 Dv = 15                  # dimension of inputs
-Dev = 8                 # dimension of inputs
+Dev = 4                 # dimension of inputs
 n_particles = 64        # number of particles
 batch_size = 1          # batch size
 lr = 5e-4               # learning rate
@@ -52,11 +52,11 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32, 32]         # target evolution
-g_layers = [32, 32]         # target emission
+q0_layers = [16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [16, 16]         # target evolution
+g_layers = [16, 16]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1

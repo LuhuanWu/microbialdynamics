@@ -51,11 +51,11 @@ def interpolate_datapoint(hidden, obs, input, FLAGS):
     mask = np.ones((time, ), dtype=bool)
 
     i = 0
-    for t in np.arange(days[0], days[0]+time):
+    for t in np.arange(days[0], days[-1] + 1):
         if t == days[i]:
             i = i + 1
         else:
-            mask[t] = False
+            mask[t - days[0]] = False
 
     # hidden
     hidden = np.zeros((time, hidden.shape[1]))
