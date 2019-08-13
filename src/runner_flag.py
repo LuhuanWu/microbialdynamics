@@ -25,7 +25,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 2                # dimension of hidden states
-Dy = 1                  # dimension of observations
+Dy = 3                  # dimension of observations
 Dv = 1                  # dimension of inputs
 Dev = 1                 # dimension of inputs
 n_particles = 4        # number of particles
@@ -50,7 +50,7 @@ isPython2 = False
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 data_dir = os.path.join(repo_dir, data_dir)
-toy_data_dir = os.path.join(repo_dir, "data/fhn_with_inputs")
+toy_data_dir = os.path.join(repo_dir, "data/fhn_with_inputs_dirichlet")
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -96,7 +96,7 @@ use_stack_rnn = True
 use_mask = False
 
 # whether emission uses Dirichlet distribution
-dirichlet_emission = False
+dirichlet_emission = True
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -150,7 +150,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "toy_fhn_with_inputs"
+rslt_dir_name = "toy_fhn_with_inputs_dirichlet"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

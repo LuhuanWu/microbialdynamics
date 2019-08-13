@@ -60,6 +60,16 @@ hidden_train, hidden_test, obs_train, obs_test = generate_dataset(n_train, n_tes
                                                      x_0_in=None, lb=-2.5, ub=2.5, inputs=inputs, Dv=1,
                                                     g_dist="dirichlet")
 
+for i, obs in enumerate(obs_train):
+    out = obs * (1 - 1e-6) + 1e-6 / Dy
+    out = out / out.sum(axis=1, keepdims=True)
+    obs_train[i] = out
+
+for i, obs in enumerate(obs_test):
+    out = obs * (1 - 1e-6) + 1e-6 / Dy
+    out = out / out.sum(axis=1, keepdims=True)
+    obs_test[i] = out
+
 assert hidden_train.shape == (n_train, time, Dx)
 assert hidden_test.shape == (n_test, time, Dx)
 assert obs_train.shape == (n_train, time, Dy)
