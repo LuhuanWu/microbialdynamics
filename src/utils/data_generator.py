@@ -24,7 +24,9 @@ def generate_hidden_obs(time, Dx, Dy, x_0, f, g, inputs=None, Dv=1):
     if isinstance(f.transformation, fhn_transformation):
         assert Dv == 1
         if inputs is None:
-            inputs = np.random.rand(time, 1) * 3
+            # default input is constant value
+            inputs = np.ones((time, Dv))
+            #inputs = np.random.rand(time, Dv) * 3
 
         assert inputs.shape == (time, Dv)
         for t in range(1, time):
