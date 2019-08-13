@@ -62,13 +62,19 @@ def interpolate_datapoint(hidden, obs, input, FLAGS):
 
     # obs
     Dy = obs.shape[1] - 1
+    i = 0
     if FLAGS.dirichlet_emission:
-        interpoated_obs = np.ones((time, Dy)) / Dy
-        for day_obs in obs:
-            day = int(day_obs[0])
-            smoothed_obs = day_obs[1:]
-            smoothed_obs = smoothed_obs * (1 - 1e-6) + 1e-6 / Dy
-            interpoated_obs[day - days[0]] = smoothed_obs
+        interpoated_obs = np.zeros((time, Dy))
+        last_valid_value = np.ones(Dy) / Dy
+        for t in np.arange(days[0], days[-1] + 1):
+            if t == days[i]:
+                smoothed_obs = obs[i, 1:]
+                smoothed_obs = smoothed_obs * (1 - 1e-6) + 1e-6 / Dy
+                interpoated_obs[t - days[0]] = smoothed_obs
+                last_valid_value = smoothed_obs
+                i += 1
+            else:
+                interpoated_obs[t - days[0]] = last_valid_value
     else:
         X = np.atleast_2d(days).T
         y = obs[:, 1:]
