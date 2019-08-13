@@ -42,7 +42,12 @@ def generate_hidden_obs(time, Dx, Dy, x_0, f, g, inputs=None, Dv=1):
 def generate_dataset(n_train, n_test, time,
                      model="lorenz", Dx=1, Dy=1,
                      f=None, g=None,
-                     x_0_in=None, lb=-2.5, ub=2.5):
+                     x_0_in=None, lb=-2.5, ub=2.5, inputs=None, Dv=1):
+
+    if inputs is None:
+        inputs = [None for _ in range(n_train + n_test)]
+    else:
+        assert inputs.shape == (n_train+n_test, time, Dv)
 
     if model == "fhn":
         Dx = 2
@@ -85,9 +90,9 @@ def generate_dataset(n_train, n_test, time,
     for i in range(n_train + n_test):
         if x_0_in is None:
             x_0 = np.random.uniform(low=lb, high=ub, size=Dx)
-            hidden, obs = generate_hidden_obs(time, Dx, Dy, x_0, f, g)
+            hidden, obs = generate_hidden_obs(time, Dx, Dy, x_0, f, g, inputs=inputs[i], Dv=Dv)
         else:
-            hidden, obs = generate_hidden_obs(time, Dx, Dy, x_0_in, f, g)
+            hidden, obs = generate_hidden_obs(time, Dx, Dy, x_0_in, f, g, inputs=inputs[i], Dv=Dv)
         if i < n_train:
             hidden_train[i] = hidden
             obs_train[i] = obs

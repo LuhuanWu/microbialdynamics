@@ -24,33 +24,33 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 20                # dimension of hidden states
-Dy = 11                  # dimension of observations
-Dv = 15                  # dimension of inputs
-Dev = 8                 # dimension of inputs
-n_particles = 32        # number of particles
+Dx = 2                # dimension of hidden states
+Dy = 1                  # dimension of observations
+Dv = 1                  # dimension of inputs
+Dev = 1                 # dimension of inputs
+n_particles = 4        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 200
+epoch = 300
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
 # True: generate data set from simulation
 # False: read data set from the file
-generateTrainingData = False
+generate_training_data = False
 
-useToyData = False
+use_toy_data = True
 
 # if reading data from file
-datadir = "data"
+data_dir = "data"
 datadict = "microbio.p"
 
 # Was the data pickled in Python2?
 isPython2 = False
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-datadir = os.path.join(repo_dir, datadir)
-toyDataDir = os.path.join(repo_dir, "data/toydata")
+data_dir = os.path.join(repo_dir, data_dir)
+toy_data_dir = os.path.join(repo_dir, "data/fhn_with_inputs")
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -150,7 +150,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "toy"
+rslt_dir_name = "toy_fhn_with_inputs"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -196,11 +196,11 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 # ------------------------------- Data ------------------------------- #
 
-flags.DEFINE_boolean("generateTrainingData", generateTrainingData, "True: generate data set from simulation; "
+flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
-flags.DEFINE_boolean("useToyData", useToyData, "whether or not use toy data for training")
-flags.DEFINE_string("toyDataDir", toyDataDir, "the directory of toy data")
-flags.DEFINE_string("datadir", datadir, "path of the data set file relative to the repository directory")
+flags.DEFINE_boolean("use_toy_data", use_toy_data, "whether or not use toy data for training")
+flags.DEFINE_string("toy_data_dir", toy_data_dir, "the directory of toy data")
+flags.DEFINE_string("data_dir", data_dir, "path of the data set file relative to the repository directory")
 flags.DEFINE_string("datadict", datadict, "name of the data set file")
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
