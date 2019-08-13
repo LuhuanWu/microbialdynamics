@@ -18,7 +18,7 @@ class PSVO(SVO):
         self.BSim_q_init = model.Bsim_q_init_dist
         self.BSim_q2 = model.BSim_q2_dist
 
-    def get_log_ZSMC(self, obs, hidden, input, time, mask):
+    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders
@@ -41,9 +41,9 @@ class PSVO(SVO):
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, _, log_Ws = self.SMC(hidden, obs, input, mask)
+            X_prevs, _, log_Ws = self.SMC(hidden, obs, input, mask, time_interval)
             bw_Xs, bw_log_Ws, f_log_probs, g_log_probs = \
-                self.backward_simulation_w_proposal(X_prevs, log_Ws, obs, input, mask)
+                self.backward_simulation_w_proposal(X_prevs, log_Ws, obs, input, mask, time_interval)
 
             log_ZSMC = self.compute_log_ZSMC(bw_log_Ws, f_log_probs, g_log_probs)
             Xs = bw_Xs
@@ -72,7 +72,7 @@ class PSVO(SVO):
 
         return log_ZSMC
 
-    def backward_simulation_w_proposal(self, Xs, log_Ws, obs, input, mask):
+    def backward_simulation_w_proposal(self, Xs, log_Ws, obs, input, mask, time_interval):
         Dx, time, n_particles, batch_size = self.Dx, self.time, self.n_particles, self.batch_size
 
         assert batch_size == 1
@@ -85,7 +85,7 @@ class PSVO(SVO):
         f_log_probs_ta = tf.TensorArray(tf.float32, size=time, name="joint_f_log_probs")
         g_log_probs_ta = tf.TensorArray(tf.float32, size=time, name="joint_g_log_probs")
 
-        preprocessed_X0, preprocessed_obs = self.BS_preprocess_obs(obs)
+        preprocessed_X0, preprocessed_obs = self.BS_preprocess_obs(obs, time_interval)
 
         # t = T - 1
         # proposal q(x_T | y_{1:T})
@@ -193,11 +193,10 @@ class PSVO(SVO):
 
         # self.preprocessed_X0_f is cached in self.SMC()
         mu_0 = self.preprocessed_X0
-        q_f_t_feed = tf.concat([mu_0, input[:, 0, :]], axis=-1)
         if not (self.model.use_bootstrap and self.model.use_2_q):
-            f_init_log_prob = self.f.log_prob(q_f_t_feed, bw_X_0)     # (M, n_particles, batch_size)
+            f_init_log_prob = self.f.log_prob(mu_0, bw_X_0)     # (M, n_particles, batch_size)
         else:
-            f_init_log_prob = self.q0.log_prob(q_f_t_feed, bw_X_0)    # (M, n_particles, batch_size)
+            f_init_log_prob = self.q0.log_prob(mu_0, bw_X_0)    # (M, n_particles, batch_size)
 
         log_W_0 = f_init_log_prob + g_0_log_prob
 
@@ -229,7 +228,7 @@ class PSVO(SVO):
 
         return bw_Xs, bw_log_Ws, f_log_probs, g_log_probs
 
-    def BS_preprocess_obs(self, obs):
+    def BS_preprocess_obs(self, obs, time_interval):
         # if self.smooth_obs, smooth obs with bidirectional RNN
         with tf.variable_scope("smooth_obs"):
             if self.BSim_use_single_RNN:
@@ -238,6 +237,6 @@ class PSVO(SVO):
                     cells = tf.nn.rnn_cell.MultiRNNCell(self.y_smoother_f)
                 preprocessed_obs, preprocessed_X0 = tf.nn.static_rnn(cells, tf.unstack(obs, axis=1), dtype=tf.float32)
             else:
-                preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs)
+                preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
 
         return preprocessed_X0, preprocessed_obs

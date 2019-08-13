@@ -69,6 +69,7 @@ class SSM(object):
         self.input = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dv), name="input")
         self.time = tf.placeholder(tf.int32, shape=(), name="time")
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
+        self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
 
     def init_trans(self):
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,

@@ -45,6 +45,7 @@ class trainer:
         self.input = self.model.input
         self.time = self.model.time
         self.mask = self.model.mask
+        self.time_interval = self.model.time_interval
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -91,16 +92,7 @@ class trainer:
             self.saver = tf.train.Saver(max_to_keep=1)
 
     def init_quiver_plotting(self):
-        if self.Dx == 2:
-            lattice_shape = [25, 25]
-            lattice_shape.append(self.Dx)
-            self.lattice_shape = lattice_shape
-
-            self.draw_quiver_during_training = True
-            self.lattice = tf.placeholder(tf.float32, shape=lattice_shape, name="lattice")
-            self.nextX = self.SMC.get_nextX(self.lattice)
-
-        elif self.Dx == 3:
+        if self.Dx == 2 or self.Dx == 3:
             self.draw_quiver_during_training = True
 
     def train(self,
@@ -108,14 +100,16 @@ class trainer:
               hidden_train, hidden_test,
               input_train, input_test,
               mask_train, mask_test,
+              time_interval_train, time_interval_test,
               print_freq):
 
         self.obs_train,    self.obs_test    = obs_train,    obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
+        self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask)
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask, self.time_interval)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -152,17 +146,19 @@ class trainer:
                 self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
-            obs_train, hidden_train, input_train, mask_train = shuffle(obs_train, hidden_train, input_train, mask_train)
+            obs_train, hidden_train, input_train, mask_train, time_interval_train = \
+                shuffle(obs_train, hidden_train, input_train, mask_train, time_interval_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
                 self.sess.run(train_op,
-                              feed_dict={self.obs:    obs_train[j:j + self.batch_size],
-                                         self.hidden: hidden_train[j:j + self.batch_size],
-                                         self.input:  input_train[j:j + self.batch_size],
-                                         self.time:   obs_train[j].shape[0],
-                                         self.mask:   mask_train[j:j+self.batch_size],
-                                         lr:          self.lr})
+                              feed_dict={self.obs:           obs_train[j:j + self.batch_size],
+                                         self.hidden:        hidden_train[j:j + self.batch_size],
+                                         self.input:         input_train[j:j + self.batch_size],
+                                         self.time:          obs_train[j].shape[0],
+                                         self.mask:          mask_train[j:j+self.batch_size],
+                                         self.time_interval: time_interval_train[j:j+self.batch_size],
+                                         lr:                 self.lr})
 
             if (i + 1) % print_freq == 0:
                 try:
@@ -172,11 +168,12 @@ class trainer:
                     break
 
                 if self.save_res:
-                    self.saving_feed_dict = {self.obs:    obs_test[0:self.saving_num],
-                                             self.hidden: hidden_test[0:self.saving_num],
-                                             self.input:  input_test[0:self.saving_num],
-                                             self.time:   [obs.shape[0] for obs in obs_test],
-                                             self.mask:   mask_test[0:self.saving_num]}
+                    self.saving_feed_dict = {self.obs:           obs_test[0:self.saving_num],
+                                             self.hidden:        hidden_test[0:self.saving_num],
+                                             self.input:         input_test[0:self.saving_num],
+                                             self.time:          [obs.shape[0] for obs in obs_test],
+                                             self.mask:          mask_test[0:self.saving_num],
+                                             self.time_interval: time_interval_test[0:self.saving_num]}
 
                     Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
 
@@ -217,26 +214,28 @@ class trainer:
 
     def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
-                                       {self.obs:    self.obs_train,
-                                        self.hidden: self.hidden_train,
-                                        self.input:  self.input_train,
-                                        self.time:   [obs.shape[0] for obs in self.obs_train],
-                                        self.mask:   self.mask_train},
+                                       {self.obs:           self.obs_train,
+                                        self.hidden:        self.hidden_train,
+                                        self.input:         self.input_train,
+                                        self.time:          [obs.shape[0] for obs in self.obs_train],
+                                        self.mask:          self.mask_train,
+                                        self.time_interval: self.time_interval_train},
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
-                                      {self.obs:    self.obs_test,
-                                       self.hidden: self.hidden_test,
-                                       self.input:  self.input_test,
-                                       self.time:   [obs.shape[0] for obs in self.obs_test],
-                                       self.mask:   self.mask_test},
+                                      {self.obs:            self.obs_test,
+                                       self.hidden:         self.hidden_test,
+                                       self.input:          self.input_test,
+                                       self.time:           [obs.shape[0] for obs in self.obs_test],
+                                       self.mask:           self.mask_test,
+                                        self.time_interval: self.time_interval_test},
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                           self.hidden_train, self.obs_train,
-                                                           self.input_train, self.mask_train)
+                                                           self.hidden_train, self.obs_train, self.input_train,
+                                                           self.mask_train, self.time_interval_train)
         MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
-                                                         self.hidden_test, self.obs_test,
-                                                         self.input_test, self.mask_test)
+                                                         self.hidden_test, self.obs_test, self.input_test,
+                                                         self.mask_test, self.time_interval_test)
 
         print()
         print("iter", iter_num + 1)
@@ -355,7 +354,7 @@ class trainer:
 
         return res
 
-    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set, mask_set):
+    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set, mask_set, time_interval_set):
         n_steps = y_means.shape.as_list()[0] - 1
         Dy = y_means.shape.as_list()[1]
         batch_size = self.batch_size
@@ -373,7 +372,8 @@ class trainer:
                                                                        self.hidden: hidden_set[i:i + batch_size],
                                                                        self.input: input_set[i:i + batch_size],
                                                                        self.time: time_batch,
-                                                                       self.mask: mask_set[i:i + batch_size]})
+                                                                       self.mask: mask_set[i:i + batch_size],
+                                                                       self.time_interval: time_interval_set[i:i + batch_size]})
             # batch_MSE_ks.shape = (n_steps + 1)
             # batch_y_means.shape = (n_steps + 1, Dy)
             # batch_y_vars.shape = (n_steps + 1, Dy)
@@ -416,20 +416,6 @@ class trainer:
         plt.title("quiver")
         plt.xlabel("x_dim 1")
         plt.ylabel("x_dim 2")
-
-        if nextX is not None:
-            axes = plt.gca()
-            x1range, x2range = axes.get_xlim(), axes.get_ylim()
-            X = lattice_val = self.define2Dlattice(x1range, x2range)
-
-            nextX = self.sess.run(nextX, feed_dict={lattice: lattice_val})
-
-            scale = int(5 / 3 * max(abs(x1range[0]) + abs(x1range[1]), abs(x2range[0]) + abs(x2range[1])))
-            plt.quiver(X[:, :, 0], X[:, :, 1], nextX[:, :, 0] - X[:, :, 0], nextX[:, :, 1] - X[:, :, 1], scale=scale)
-
-            quiver_dict = {"X_trajs": X_trajs, "X": X, "nextX": nextX}
-            with open(self.epoch_data_DIR + "lattice_val_{}.p".format(epoch), "wb") as f:
-                pickle.dump(quiver_dict, f)
 
         # sns.despine()
         if not os.path.exists(self.RLT_DIR + "quiver/"):

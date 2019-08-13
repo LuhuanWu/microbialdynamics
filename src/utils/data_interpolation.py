@@ -10,27 +10,31 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
     interpolated_obs_test = []
     interpolated_input_train = []
     interpolated_input_test = []
-    interpolated_mask_train = []
-    interpolated_mask_test = []
+    mask_train = []
+    mask_test = []
+    time_interval_train = []
+    time_interval_test = []
 
     for hidden, obs, input in zip(hidden_train, obs_train, input_train):
-        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input, FLAGS)
+        hidden, obs, input, mask, time_interval = interpolate_datapoint(hidden, obs, input, FLAGS)
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
         interpolated_input_train.append(input)
-        interpolated_mask_train.append(mask)
+        mask_train.append(mask)
+        time_interval_train.append(time_interval)
 
     for hidden, obs, input in zip(hidden_test, obs_test, input_test):
-        hidden, obs, input, mask = interpolate_datapoint(hidden, obs, input, FLAGS)
+        hidden, obs, input, mask, time_interval = interpolate_datapoint(hidden, obs, input, FLAGS)
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
-        interpolated_mask_test.append(mask)
+        mask_test.append(mask)
+        time_interval_test.append(time_interval)
 
     return interpolated_hidden_train, interpolated_hidden_test, \
            interpolated_obs_train, interpolated_obs_test, \
            interpolated_input_train, interpolated_input_test, \
-           interpolated_mask_train, interpolated_mask_test
+           mask_train, mask_test, time_interval_train, time_interval_test
 
 
 def interpolate_datapoint(hidden, obs, input, FLAGS):
@@ -44,18 +48,23 @@ def interpolate_datapoint(hidden, obs, input, FLAGS):
     obs: (time, Dy)
     interpolated_input: (time, Dv)
     mask: (time, )
+    time_interval: (time, )
     """
     days = obs[:, 0].astype(int)
     time = days[-1] - days[0] + 1
 
     mask = np.ones((time, ), dtype=bool)
+    time_interval = np.zeros((time, ))
 
     i = 0
     for t in np.arange(days[0], days[-1] + 1):
+        idx = t - days[0]
         if t == days[i]:
             i = i + 1
+            time_interval[idx] = 0
         else:
             mask[t - days[0]] = False
+            time_interval[idx] = time_interval[idx - 1] + 1
 
     # hidden
     hidden = np.zeros((time, hidden.shape[1]))
@@ -106,7 +115,7 @@ def interpolate_datapoint(hidden, obs, input, FLAGS):
         if days[0] <= day <= days[-1]:
             interpoated_input[day - days[0]] = day_input[1:]
 
-    return hidden, interpoated_obs, interpoated_input, mask
+    return hidden, interpoated_obs, interpoated_input, mask, time_interval
 
 
 

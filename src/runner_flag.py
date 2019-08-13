@@ -1,6 +1,11 @@
+import os
+import inspect
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+os.sys.path.insert(0, parentdir)
+
 import tensorflow as tf
 import tensorflow_probability as tfp
-import os
 import numpy as np
 
 from src.runner import main
@@ -19,13 +24,13 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations
-Dv = 5                  # dimension of inputs
-Dev = 2                 # dimension of inputs
-n_particles = 4        # number of particles
+Dx = 20                # dimension of hidden states
+Dy = 11                  # dimension of observations
+Dv = 15                  # dimension of inputs
+Dev = 8                 # dimension of inputs
+n_particles = 32        # number of particles
 batch_size = 1          # batch size
-lr = 5e-4               # learning rate
+lr = 1e-3               # learning rate
 epoch = 200
 seed = 2
 
@@ -34,7 +39,7 @@ seed = 2
 # False: read data set from the file
 generateTrainingData = False
 
-useToyData = True
+useToyData = False
 
 # if reading data from file
 datadir = "data"
@@ -54,11 +59,11 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [16, 16]         # target evolution
-g_layers = [16, 16]         # target emission
+q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [16]         # target evolution
+g_layers = [16]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -76,8 +81,8 @@ diag_cov = False
 
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [32]
-X0_smoother_Dhs = [32]
+y_smoother_Dhs = [16]
+X0_smoother_Dhs = [16]
 
 # whether use a separate RNN for getting X0
 X0_use_separate_RNN = True
@@ -109,8 +114,8 @@ poisson_emission = False
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
 PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = False      # Smoothing Variational Objective (use proposal based on bRNN)
-AESMC = True    # Auto-Encoding Sequential Monte Carlo
+SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
+AESMC = False    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
 # number of subparticles sampled when augmenting the trajectory backwards

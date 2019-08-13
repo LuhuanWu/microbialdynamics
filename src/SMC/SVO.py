@@ -28,7 +28,7 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, hidden, input, time, mask):
+    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
@@ -50,7 +50,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask)
+            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask, time_interval)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
@@ -61,11 +61,11 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, hidden, obs, input, mask, q_cov=1.0):
+    def SMC(self, hidden, obs, input, mask, time_interval, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
-        preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs)
+        preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs, time_interval)
         self.preprocessed_X0  = preprocessed_X0
         self.preprocessed_obs = preprocessed_obs
         q0, q1, f = self.q0, self.q1, self.f
@@ -147,6 +147,7 @@ class SVO:
                                                                             q_f_t_feed,
                                                                             preprocessed_obs_ta.read(t),
                                                                             sample_size=())
+                    # q_t_log_prob = tf.where(mask[0][t], q_t_log_prob, f_t_log_prob, name="q_t_log_prob")
                 else:
                     X, q_t_log_prob = q1.sample_and_log_prob(q_f_t_feed,
                                                              sample_shape=(),
@@ -331,7 +332,7 @@ class SVO:
 
         return log_ZSMC
 
-    def preprocess_obs(self, obs):
+    def preprocess_obs(self, obs, time_interval):
         """
 
         :param obs: (batch_size, time, Dy)
@@ -344,26 +345,27 @@ class SVO:
                 preprocessed_obs = tf.transpose(obs, perm=[1, 0, 2])
                 preprocessed_X0 = preprocessed_obs[0]
             else:
-                preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs)
+                preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
 
             if not (self.model.use_bootstrap and self.model.use_2_q):
                 preprocessed_X0 = self.model.X0_transformer(preprocessed_X0)
 
         return preprocessed_X0, preprocessed_obs
 
-    def preprocess_obs_w_bRNN(self, obs):
+    def preprocess_obs_w_bRNN(self, obs, time_interval):
         self.y_smoother_f, self.y_smoother_b, self.X0_smoother_f, self.X0_smoother_b = self.model.bRNN
+        rnn_input = tf.concat([obs, time_interval[:, :, tf.newaxis]], axis=-1)
 
         if self.use_stack_rnn:
             outputs, state_fw, state_bw = \
                 tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.y_smoother_f,
                                                                self.y_smoother_b,
-                                                               obs,
+                                                               rnn_input,
                                                                dtype=tf.float32)
         else:
             outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.y_smoother_f,
                                                                             self.y_smoother_b,
-                                                                            obs,
+                                                                            rnn_input,
                                                                             dtype=tf.float32)
         smoothed_obs = tf.concat(outputs, axis=-1)
         preprocessed_obs = tf.transpose(smoothed_obs, perm=[1, 0, 2])
@@ -373,12 +375,12 @@ class SVO:
                 outputs, state_fw, state_bw = \
                     tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.X0_smoother_f,
                                                                    self.X0_smoother_b,
-                                                                   obs,
+                                                                   rnn_input,
                                                                    dtype=tf.float32)
             else:
                 outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.X0_smoother_f,
                                                                                 self.X0_smoother_b,
-                                                                                obs,
+                                                                                rnn_input,
                                                                                 dtype=tf.float32)
         if self.use_stack_rnn:
             outputs_fw = outputs_bw = outputs

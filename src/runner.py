@@ -64,7 +64,8 @@ def main(_):
             load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, _mask_train, _mask_test = \
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+        _mask_train, _mask_test, time_interval_train, time_interval_test = \
             interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
 
         if FLAGS.use_mask:
@@ -125,6 +126,7 @@ def main(_):
                                    hidden_train, hidden_test,
                                    input_train, input_test,
                                    mask_train, mask_test,
+                                   time_interval_train, time_interval_test,
                                    print_freq)
 
     # ======================================== final data saving part ======================================== #
