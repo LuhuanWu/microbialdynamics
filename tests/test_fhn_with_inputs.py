@@ -48,16 +48,17 @@ n_train = 200
 n_test = 40
 time = 200
 Dx = 2
-Dy = 1
+Dy = 3
 
 Dv = 1
 
 inputs = np.random.rand(n_train+n_test, time, Dv) * 3
 
 hidden_train, hidden_test, obs_train, obs_test = generate_dataset(n_train, n_test, time,
-                                                     model="fhn", Dx=Dx, Dy=1,
+                                                     model="fhn", Dx=Dx, Dy=Dy,
                                                      f=None, g=None,
-                                                     x_0_in=None, lb=-2.5, ub=2.5, inputs=inputs, Dv=1)
+                                                     x_0_in=None, lb=-2.5, ub=2.5, inputs=inputs, Dv=1,
+                                                    g_dist="dirichlet")
 
 assert hidden_train.shape == (n_train, time, Dx)
 assert hidden_test.shape == (n_test, time, Dx)
@@ -68,7 +69,7 @@ inputs_train = inputs[:n_train]
 inputs_test = inputs[n_train:]
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_dir = os.path.join(repo_dir, "data/fhn_with_inputs")
+data_dir = os.path.join(repo_dir, "data/fhn_with_inputs_dirichlet")
 print(data_dir)
 joblib.dump((hidden_train, hidden_test, obs_train, obs_test, inputs_train, inputs_test), data_dir)
 

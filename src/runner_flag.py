@@ -141,7 +141,7 @@ min_lr = lr / 10
 
 # --------------------- printing and data saving params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1
+print_freq = 5
 
 # whether to save the followings during training
 #   hidden trajectories
