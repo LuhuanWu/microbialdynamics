@@ -9,7 +9,7 @@ from src.distribution.mvn import mvn
 from src.distribution.poisson import poisson
 
 
-def generate_hidden_obs(time, Dx, Dy, x_0, f, g):
+def generate_hidden_obs(time, Dx, Dy, x_0, f, g, inputs=None, Dv=1):
     """
     Generate hidden states and observation
     f: transition class with x_t = g.sample(x_t-1)
@@ -20,9 +20,20 @@ def generate_hidden_obs(time, Dx, Dy, x_0, f, g):
 
     X[0] = x_0
     Y[0] = g.sample(x_0)
-    for t in range(1, time):
-        X[t] = f.sample(X[t - 1])
-        Y[t] = g.sample(X[t])
+
+    if isinstance(f.transformation, fhn_transformation):
+        assert Dv == 1
+        if inputs is None:
+            inputs = np.random.rand(time, 1) * 3
+
+        assert inputs.shape == (time, Dv)
+        for t in range(1, time):
+            X[t] = f.sample(X[t-1], inputs[t-1])
+            Y[t] = g.sample(X[t])
+    else:
+        for t in range(1, time):
+            X[t] = f.sample(X[t - 1])
+            Y[t] = g.sample(X[t])
     return X, Y
 
 
@@ -35,8 +46,8 @@ def generate_dataset(n_train, n_test, time,
         Dx = 2
 
         if f is None:
-            a, b, c, I, dt = 1.0, 0.95, 0.05, 1.0, 0.15
-            f_params = (a, b, c, I, dt)
+            a, b, c, dt = 1.0, 0.95, 0.05, 0.15
+            f_params = (a, b, c, dt)
             f_tran = fhn_transformation(f_params)
             f = dirac_delta(f_tran)
 

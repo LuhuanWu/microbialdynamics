@@ -40,7 +40,6 @@ seed = 2
 generateTrainingData = False
 
 useToyData = False
-toyDataDir = "toydata"
 
 # if reading data from file
 datadir = "data"
@@ -51,6 +50,7 @@ isPython2 = False
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 datadir = os.path.join(repo_dir, datadir)
+toyDataDir = os.path.join(repo_dir, "data/toydata")
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
