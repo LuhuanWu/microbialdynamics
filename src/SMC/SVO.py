@@ -72,7 +72,7 @@ class SVO:
 
         # -------------------------------------- t = 0 -------------------------------------- #
         # print(preprocessed_X0, input[:, 0, :])
-        q_f_t_feed = tf.concat([preprocessed_X0, input[:, 0, :]], axis=-1)
+        q_f_t_feed = preprocessed_X0
 
         # proposal
         if self.q_uses_true_X:
@@ -131,7 +131,7 @@ class SVO:
             # resampling
             X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
                                          resample_particles=self.resample_particles)
-            Input = tf.tile(tf.expand_dims(input[:, t, :], axis=0), (n_particles, 1, 1))
+            Input = tf.tile(tf.expand_dims(input[:, t-1, :], axis=0), (n_particles, 1, 1))
             q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)
 
             # proposal

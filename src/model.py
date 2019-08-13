@@ -1,11 +1,11 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
-from transformation.flow import NF
-from transformation.MLP import MLP_transformation
-from distribution.mvn import tf_mvn
-from distribution.poisson import tf_poisson
-from distribution.dirichlet import tf_dirichlet
+from src.transformation.flow import NF
+from src.transformation.MLP import MLP_transformation
+from src.distribution.mvn import tf_mvn
+from src.distribution.poisson import tf_poisson
+from src.distribution.dirichlet import tf_dirichlet
 
 
 class SSM(object):
@@ -105,7 +105,7 @@ class SSM(object):
         if self.use_bootstrap:
             self.f_tran = self.q1_tran
         else:
-            self.f_tran = MLP_transformation(self.f_layers, self.Dx+self.Dv,
+            self.f_tran = MLP_transformation(self.f_layers, self.Dx,
                                              output_cov=self.output_cov,
                                              diag_cov=self.diag_cov,
                                              name="f_tran")
@@ -206,4 +206,44 @@ class SSM(object):
                                            kernel_initializer="he_uniform",
                                            name="input_embedding")
         self.input_embedding = self.input_embedding_layer(self.input)
+
+    def sample(self, T, x0=None, x0_mu=None, inputs=None):
+        """
+        #TODO: currently only consider without input
+        Sampling using f and g
+        :param T: the length of sample sequence
+        :param x0_input: a placeholder
+        :param x0: initial hidden state
+        :return: (x_{0:T-1), y_{0:T-1}), a tuple of two tensors
+        """
+
+        if x0 is None:
+            assert x0_mu is not None
+            # TODO: fix this
+            assert x0_mu.shape == (1, self.Dy)
+            x0 = self.q0_dist.sample(x0_mu)
+
+        else:
+            assert x0.shape == (1, self.Dx)
+
+        y0 = self.g_dist.sample(x0)
+
+        x_list = [x0]
+        y_list = [y0]
+        for t in range(1, T):
+            if inputs is None:
+                xt = self.f_dist.sample(x_list[-1])
+            else:
+                xt = self.f_dist.sample(tf.concat((x_list[-1], inputs[t-1]), axis=-1))
+            yt = self.g_dist.sample(xt)
+
+            x_list.append(xt)
+            y_list.append(yt)
+
+        xs = tf.stack(x_list, axis=0)  # (T, n_batches, Dx)
+        ys = tf.stack(y_list, axis=0)  # (T, n_batches, Dy)
+        xs = tf.transpose(xs, (1, 0, 2))
+        ys = tf.transpose(ys, (1, 0, 2))
+        return xs, ys
+
 
