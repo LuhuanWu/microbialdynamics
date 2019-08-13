@@ -8,6 +8,7 @@ import pickle
 import json
 import os
 import pdb
+import joblib
 
 # import from files
 from model import SSM
@@ -45,26 +46,38 @@ def main(_):
     if FLAGS.generateTrainingData:
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
+    elif FLAGS.useToyData:
+        print("Use toy data")
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load("toydata")
+        print("Finish loading the toy data.")
+
+        train_num = len(obs_train)
+        T_train = obs_train[0].shape[0]
+        test_num = len(obs_test)
+        T_test = obs_test[0].shape[0]
+        mask_train = np.ones((train_num, T_train))
+        mask_test = np.ones((test_num, T_test))
+
     else:
         data_fname = os.path.join(FLAGS.datadir, FLAGS.datadict)
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
             load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, _mask_train, _mask_test = \
-        interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, _mask_train, _mask_test = \
+            interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
 
-    if FLAGS.use_mask:
-        mask_train, mask_test = _mask_train, _mask_test
-    else:
-        # set all the elements of mask to be True
-        mask_train = []
-        for m in _mask_train:
-            mask_train.append(np.ones_like(m, dtype=bool))
+        if FLAGS.use_mask:
+            mask_train, mask_test = _mask_train, _mask_test
+        else:
+            # set all the elements of mask to be True
+            mask_train = []
+            for m in _mask_train:
+                mask_train.append(np.ones_like(m, dtype=bool))
 
-        mask_test = []
-        for m in _mask_test:
-            mask_test.append(np.ones_like(m, dtype=bool))
+            mask_test = []
+            for m in _mask_test:
+                mask_test.append(np.ones_like(m, dtype=bool))
 
     # clip saving_num to avoid it > n_train or n_test
     min_time = min([obs.shape[0] for obs in obs_train + obs_test])

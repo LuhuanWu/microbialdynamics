@@ -209,11 +209,11 @@ class SSM(object):
 
     def sample(self, T, x0=None, x0_mu=None, inputs=None):
         """
-        #TODO: currently only consider without input
         Sampling using f and g
         :param T: the length of sample sequence
-        :param x0_input: a placeholder
-        :param x0: initial hidden state
+        :param x0_mu: transformation input for initial distribution, (1, Dy)
+        :param x0: initial hidden state, (1, Dx)
+        :param inputs: (T, Dv)
         :return: (x_{0:T-1), y_{0:T-1}), a tuple of two tensors
         """
 
@@ -226,6 +226,16 @@ class SSM(object):
         else:
             assert x0.shape == (1, self.Dx)
 
+        if inputs is not None:
+            batch_size, T_inputs, Dv = inputs.shape
+            assert Dv == self.Dv
+            assert batch_size == 1
+            assert T_inputs == T
+
+            inputs_embedding = self.input_embedding_layer(inputs)
+
+            assert inputs_embedding.shape == (1, T, self.Dev)
+
         y0 = self.g_dist.sample(x0)
 
         x_list = [x0]
@@ -234,7 +244,7 @@ class SSM(object):
             if inputs is None:
                 xt = self.f_dist.sample(x_list[-1])
             else:
-                xt = self.f_dist.sample(tf.concat((x_list[-1], inputs[t-1]), axis=-1))
+                xt = self.f_dist.sample(tf.concat((x_list[-1], inputs_embedding[:,t-1]), axis=-1))
             yt = self.g_dist.sample(xt)
 
             x_list.append(xt)
@@ -242,8 +252,12 @@ class SSM(object):
 
         xs = tf.stack(x_list, axis=0)  # (T, n_batches, Dx)
         ys = tf.stack(y_list, axis=0)  # (T, n_batches, Dy)
-        xs = tf.transpose(xs, (1, 0, 2))
-        ys = tf.transpose(ys, (1, 0, 2))
+
+        assert xs.shape == (T, 1, self.Dx)
+        assert ys.shape == (T, 1, self.Dy)
+
+        xs = tf.transpose(xs, (1, 0, 2))  # (n_batches, T, Dx)
+        ys = tf.transpose(ys, (1, 0, 2))  # (n_batches, T, Dy)s
         return xs, ys
 
 

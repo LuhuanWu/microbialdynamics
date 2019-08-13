@@ -2,7 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense
 from tensorflow.keras.initializers import Constant
 
-from transformation.base import transformation
+from src.transformation.base import transformation
 
 
 class MLP_transformation(transformation):

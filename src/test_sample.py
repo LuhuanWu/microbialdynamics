@@ -1,59 +1,16 @@
 import tensorflow as tf
-import tensorflow_probability as tfp
-import os
 import numpy as np
+import joblib
 
-from src.runner import main
+from src.model import SSM
 
-np.warnings.filterwarnings('ignore')          # to avoid np deprecation warning
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"      # to avoid lots of log about the device
-os.environ['KMP_DUPLICATE_LIB_OK'] = 'True'   # hack to avoid OS bug...
+flags = tf.app.flags
 
-print("the code is written in:")
-print("\t tensorflow version: 1.12.0")
-print("\t tensorflow_probability version: 0.5.0")
+Dx = 2
+Dy = 3
+Dv = 5
+Dev = 2
 
-print("the system uses:")
-print("\t tensorflow version:", tf.__version__)
-print("\t tensorflow_probability version:", tfp.__version__)
-
-
-# --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations
-Dv = 5                  # dimension of inputs
-Dev = 2                 # dimension of inputs
-n_particles = 4        # number of particles
-batch_size = 1          # batch size
-lr = 5e-4               # learning rate
-epoch = 200
-seed = 2
-
-# ------------------------------- Data ------------------------------- #
-# True: generate data set from simulation
-# False: read data set from the file
-generateTrainingData = False
-
-useToyData = True
-
-# if reading data from file
-datadir = "data"
-datadict = "microbio.p"
-
-# Was the data pickled in Python2?
-isPython2 = False
-
-repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-datadir = os.path.join(repo_dir, datadir)
-
-# time, n_train and n_test will be overwritten if loading data from the file
-time = 5
-n_train = 2 * batch_size
-n_test = 2 * batch_size
-
-# ------------------------ Networks parameters ----------------------- #
-# Feed-Forward Networks (FFN), number of units in each hidden layer
-# For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
 q0_layers = [16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
 q1_layers = [16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
 q2_layers = [16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
@@ -86,9 +43,6 @@ X0_use_separate_RNN = True
 # check https://stackoverflow.com/a/50552539 for differences between them
 use_stack_rnn = True
 
-# ------------------------ State Space Model ------------------------- #
-use_mask = False
-
 # whether emission uses Dirichlet distribution
 dirichlet_emission = True
 
@@ -113,51 +67,7 @@ SVO = False      # Smoothing Variational Objective (use proposal based on bRNN)
 AESMC = True    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
-# number of subparticles sampled when augmenting the trajectory backwards
-n_particles_for_BSim_proposal = 16
-
-# whether Backward Simulation proposal use unidirectional RNN or bidirectional RNN
 BSim_use_single_RNN = False
-
-# ----------------------------- Training ----------------------------- #
-
-# stop training early if validation set does not improve
-early_stop_patience = 200
-
-# reduce learning rate when testing loss doesn't improve for some time
-lr_reduce_patience = 30
-
-# the factor to reduce lr, new_lr = old_lr * lr_reduce_factor
-lr_reduce_factor = 1 / np.sqrt(2)
-
-# minimum lr
-min_lr = lr / 10
-
-# --------------------- printing and data saving params --------------------- #
-# frequency to evaluate testing loss & other metrics and save results
-print_freq = 1
-
-# whether to save the followings during training
-#   hidden trajectories
-#   k-step y-hat
-save_trajectory = True
-save_y_hat = True
-
-# dir to save all results
-rslt_dir_name = "microb"
-
-# number of steps to predict y-hat and calculate R_square
-MSE_steps = 5
-
-# number of testing data used to save hidden trajectories, y-hat, gradient and etc
-# will be clipped by number of testing data
-saving_num = 30
-
-# whether to save tensorboard
-save_tensorboard = False
-
-# whether to save model
-save_model = False
 
 q0_layers = ",".join([str(x) for x in q0_layers])
 q1_layers = ",".join([str(x) for x in q1_layers])
@@ -167,43 +77,13 @@ g_layers = ",".join([str(x) for x in g_layers])
 y_smoother_Dhs = ",".join([str(x) for x in y_smoother_Dhs])
 X0_smoother_Dhs = ",".join([str(x) for x in X0_smoother_Dhs])
 
-
-# ================================================ tf.flags ================================================ #
-
-flags = tf.app.flags
-
-
-# --------------------- Training Hyperparameters --------------------- #
+batch_size = 1
 
 flags.DEFINE_integer("Dx", Dx, "dimension of hidden states")
 flags.DEFINE_integer("Dy", Dy, "dimension of observations")
 flags.DEFINE_integer("Dv", Dv, "dimension of inputs")
 flags.DEFINE_integer("Dev", Dev, "input embedding size")
 
-flags.DEFINE_integer("n_particles", n_particles, "number of particles")
-flags.DEFINE_integer("batch_size", batch_size, "batch size")
-flags.DEFINE_float("lr", lr, "learning rate")
-flags.DEFINE_integer("epoch", epoch, "number of epoch")
-
-flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
-
-
-# ------------------------------- Data ------------------------------- #
-
-flags.DEFINE_boolean("generateTrainingData", generateTrainingData, "True: generate data set from simulation; "
-                                                                   "False: read data set from the file")
-flags.DEFINE_boolean("useToyData", useToyData, "whether or not use toy data for training")
-flags.DEFINE_string("datadir", datadir, "path of the data set file relative to the repository directory")
-flags.DEFINE_string("datadict", datadict, "name of the data set file")
-flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
-
-
-flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
-flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
-flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
-
-# ------------------------ Networks parameters ----------------------- #
-# Feed-Forward Network (FFN) architectures
 flags.DEFINE_string("q0_layers", q0_layers, "architecture for q0 network, int seperated by comma, "
                                             "for example: '50,50' ")
 flags.DEFINE_string("q1_layers", q1_layers, "architecture for q1 network, int seperated by comma, "
@@ -239,7 +119,7 @@ flags.DEFINE_boolean("X0_use_separate_RNN", X0_use_separate_RNN, "whether use a 
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #
-flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
+
 flags.DEFINE_boolean("dirichlet_emission", dirichlet_emission, "whether emission uses Dirichlet_ distribution")
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "
@@ -256,41 +136,61 @@ flags.DEFINE_boolean("SVO", SVO, "Smoothing Variational Objective (use proposal 
 flags.DEFINE_boolean("AESMC", AESMC, "Auto-Encoding Sequential Monte Carlo")
 flags.DEFINE_boolean("IWAE", IWAE, "Importance Weighted Auto-Encoder")
 
-flags.DEFINE_integer("n_particles_for_BSim_proposal", n_particles_for_BSim_proposal, "number of particles used for"
-                                                                                     " each trajectory in "
-                                                                                     "backward simulation proposal")
 flags.DEFINE_boolean("BSim_use_single_RNN", BSim_use_single_RNN, "whether Backward Simulation proposal "
                                                                  "use unidirectional RNN or bidirectional RNN")
 
-# ----------------------------- Training ----------------------------- #
+flags.DEFINE_integer("batch_size", batch_size, "batch size")
 
-flags.DEFINE_integer("early_stop_patience", early_stop_patience,
-                     "stop training early if validation set does not improve for certain epochs")
-
-flags.DEFINE_integer("lr_reduce_patience", lr_reduce_patience,
-                     "educe learning rate when testing loss doesn't improve for some time")
-flags.DEFINE_float("lr_reduce_factor", lr_reduce_factor,
-                   "the factor to reduce learning rate, new_lr = old_lr * lr_reduce_factor")
-flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
-
-# --------------------- printing and data saving params --------------------- #
-
-flags.DEFINE_integer("print_freq", print_freq, "frequency to evaluate testing loss & other metrics and save results")
-
-flags.DEFINE_boolean("save_trajectory", save_trajectory, "whether to save hidden trajectories during training")
-flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat during training")
-
-flags.DEFINE_string("rslt_dir_name", rslt_dir_name, "dir to save all results")
-flags.DEFINE_integer("MSE_steps", MSE_steps, "number of steps to predict y-hat and calculate R_square")
-
-flags.DEFINE_integer("saving_num", saving_num, "number of testing data used to "
-                                               "save hidden trajectories, y-hat, gradient and etc, "
-                                               "will be clipped by number of testing data")
-
-flags.DEFINE_boolean("save_tensorboard", save_tensorboard, "whether to save tensorboard")
-flags.DEFINE_boolean("save_model", save_model, "whether to save model")
+tf.app.flags.DEFINE_string('f', '', 'kernel')
 
 FLAGS = flags.FLAGS
 
-if __name__ == "__main__":
-    tf.app.run()
+
+tf.random.set_random_seed(0)
+np.random.seed(1)
+
+model = SSM(FLAGS)
+
+############ build up computational graph ##############
+T = 30
+
+x0 = tf.placeholder(tf.float32, shape=(1, Dx))
+inputs = tf.placeholder(dtype=tf.float32, shape=(1, T, Dv))
+
+sample_z, sample_x = model.sample(T, x0=x0, inputs=inputs)
+
+############### feed values and execute the graph ###############
+
+train_num = 20
+test_num = 4
+
+x0s_val = np.random.randn(train_num+test_num, Dx) * 5   # (t+t, Dx)
+inputs_val = np.array(np.random.randn(train_num+test_num, T, Dv) > 0.3, dtype=np.float64)
+
+train_and_test_xs = []
+train_and_test_ys = []
+
+init = tf.global_variables_initializer()
+with tf.Session() as sess:
+    sess.run(init)
+    for i in range(train_num+test_num):
+        sample_xs_val, sample_ys_val = \
+            sess.run([sample_z, sample_x], feed_dict={x0: x0s_val[i:i+1], inputs: inputs_val[i:i+1]})
+        train_and_test_xs.append(sample_xs_val.squeeze(0))
+        train_and_test_ys.append(sample_ys_val.squeeze(0))
+
+
+for i, obs in enumerate(train_and_test_ys):
+    out = obs * (1 - 1e-6) + 1e-6 / Dy
+    out = out / out.sum(axis=1, keepdims=True)
+    train_and_test_ys[i] = out
+
+train_xs = train_and_test_xs[:train_num]
+test_xs = train_and_test_xs[train_num:]
+train_ys = train_and_test_ys[:train_num]
+test_ys = train_and_test_ys[train_num:]
+
+train_inputs = inputs_val[:train_num]
+test_inputs = inputs_val[train_num:]
+
+joblib.dump((train_xs, test_xs, train_ys, test_ys, train_inputs, test_inputs), "toydata")

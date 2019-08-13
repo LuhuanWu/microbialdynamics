@@ -3,7 +3,8 @@ from scipy.integrate import odeint
 import tensorflow as tf
 from tensorflow.contrib.integrate import odeint as tf_odeint
 
-from transformation.base import transformation
+from src.transformation.base import transformation
+
 
 class fhn_transformation(transformation):
 	def transform(self, X_prev):

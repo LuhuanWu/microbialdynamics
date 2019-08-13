@@ -1,7 +1,7 @@
 import numpy as np
 import tensorflow as tf
 
-from transformation.base import transformation
+from src.transformation.base import transformation
 
 class linear_transformation(transformation):
     def transform(self, Input):
