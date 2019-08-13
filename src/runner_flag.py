@@ -40,6 +40,7 @@ seed = 2
 generateTrainingData = False
 
 useToyData = False
+toyDataDir = "toydata"
 
 # if reading data from file
 datadir = "data"
@@ -95,7 +96,7 @@ use_stack_rnn = True
 use_mask = False
 
 # whether emission uses Dirichlet distribution
-dirichlet_emission = True
+dirichlet_emission = False
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -149,7 +150,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "microb"
+rslt_dir_name = "toy"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -198,6 +199,7 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generateTrainingData", generateTrainingData, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_boolean("useToyData", useToyData, "whether or not use toy data for training")
+flags.DEFINE_string("toyDataDir", toyDataDir, "the directory of toy data")
 flags.DEFINE_string("datadir", datadir, "path of the data set file relative to the repository directory")
 flags.DEFINE_string("datadict", datadict, "name of the data set file")
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
