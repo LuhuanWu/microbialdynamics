@@ -55,8 +55,8 @@ def main(_):
         T_train = obs_train[0].shape[0]
         test_num = len(obs_test)
         T_test = obs_test[0].shape[0]
-        mask_train = np.ones((train_num, T_train))
-        mask_test = np.ones((test_num, T_test))
+        mask_train = np.ones((train_num, T_train), dtype=bool)
+        mask_test = np.ones((test_num, T_test), dtype=bool)
 
     else:
         data_fname = os.path.join(FLAGS.datadir, FLAGS.datadict)
