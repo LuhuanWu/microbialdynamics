@@ -1,12 +1,12 @@
 import numpy as np
 
-from transformation.fhn import fhn_transformation
-from transformation.linear import linear_transformation
-from transformation.lorenz import lorenz_transformation
+from src.transformation.fhn import fhn_transformation
+from src.transformation.linear import linear_transformation
+from src.transformation.lorenz import lorenz_transformation
 
-from distribution.dirac_delta import dirac_delta
-from distribution.mvn import mvn
-from distribution.poisson import poisson
+from src.distribution.dirac_delta import dirac_delta
+from src.distribution.mvn import mvn
+from src.distribution.poisson import poisson
 
 
 def generate_hidden_obs(time, Dx, Dy, x_0, f, g):
@@ -27,7 +27,7 @@ def generate_hidden_obs(time, Dx, Dy, x_0, f, g):
 
 
 def generate_dataset(n_train, n_test, time,
-                     model="lorenz", Dy=1, Di=1,
+                     model="lorenz", Dx=1, Dy=1,
                      f=None, g=None,
                      x_0_in=None, lb=-2.5, ub=2.5):
 
@@ -56,7 +56,7 @@ def generate_dataset(n_train, n_test, time,
         if g is None:
             g_params = np.array([[1.0, 0.0, 0.0]])
             g_cov = 0.4 * np.eye(Dy)
-    else:
+    elif model is not None:
         raise ValueError("Unknown model {}".format(model))
 
     if g is None:
