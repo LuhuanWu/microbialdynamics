@@ -1,4 +1,4 @@
-from distribution.base import distribution
+from src.distribution.base import distribution
 
 # np ver, just used in sampler, so no need to implement log_prob
 class dirac_delta(distribution):

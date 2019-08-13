@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+
 # base class for distribution
 class distribution(object):
 	def __init__(self, params = None):

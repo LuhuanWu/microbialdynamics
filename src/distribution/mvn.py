@@ -2,8 +2,8 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
-from transformation.flow import NF
-from distribution.base import distribution
+from src.transformation.flow import NF
+from src.distribution.base import distribution
 
 
 # np ver, just used in sampler, so no need to implement log_prob
@@ -95,6 +95,12 @@ class tf_mvn(distribution):
             sample = mvn.sample(sample_shape)
             log_prob = mvn.log_prob(sample)
             return sample, log_prob
+
+    def sample(self, Input, sample_shape=(), name=None):
+        mvn = self.get_mvn(Input)
+        with tf.variable_scope(name or self.name):
+            sample = mvn.sample(sample_shape)
+            return sample
 
     def log_prob(self, Input, output, name=None):
         mvn = self.get_mvn(Input)

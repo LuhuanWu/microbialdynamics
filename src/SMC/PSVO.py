@@ -2,7 +2,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
-from SMC.SVO import SVO
+from src.SMC.SVO import SVO
 
 
 class PSVO(SVO):

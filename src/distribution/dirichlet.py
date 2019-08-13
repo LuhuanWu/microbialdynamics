@@ -3,7 +3,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
-from distribution.base import distribution
+from src.distribution.base import distribution
 
 
 class dirichlet(distribution):
@@ -38,6 +38,12 @@ class tf_dirichlet(distribution):
                                       validate_args=True,
                                       allow_nan_stats=False)
             return dirichlet
+
+    def sample(self, Input, sample_shape=(), name=None):
+        tfd = self.get_dirichlet(Input)
+        with tf.variable_scope(name or self.name):
+            sample = tfd.sample(sample_shape)
+            return sample
 
     def log_prob(self, Input, output, name=None):
         dirichlet = self.get_dirichlet(Input)
