@@ -48,7 +48,7 @@ def main(_):
     # load data from file
     elif FLAGS.useToyData:
         print("Use toy data")
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load("toydata")
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(FLAGS.toyDataDir)
         print("Finish loading the toy data.")
 
         train_num = len(obs_train)
