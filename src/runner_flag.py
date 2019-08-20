@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations
-Dv = 1                  # dimension of inputs
-Dev = 1                 # dimension of inputs
+Dx = 14                # dimension of hidden states
+Dy = 11                  # dimension of observations
+Dv = 15                  # dimension of inputs
+Dev = 8                 # dimension of inputs
 n_particles = 4        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 300
+epoch = 500
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -39,18 +39,19 @@ seed = 2
 # False: read data set from the file
 generate_training_data = False
 
-use_toy_data = True
-
-# if reading data from file
-data_dir = "data"
-datadict = "microbio.p"
-
-# Was the data pickled in Python2?
-isPython2 = False
+data_type = "count"  # chose from toy, percentage and count
 
 repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-data_dir = os.path.join(repo_dir, data_dir)
 toy_data_dir = os.path.join(repo_dir, "data/fhn_with_inputs_dirichlet")
+percentage_data_dir = os.path.join(repo_dir, "data/microbio.p")
+count_data_dir = os.path.join(repo_dir, "data/count_microbio.p")
+DATA_DIR_DICT = dict(toy=toy_data_dir, percentage=percentage_data_dir, count=count_data_dir)
+
+data_dir = DATA_DIR_DICT[data_type]
+
+isPython2 = False
+
+use_gp = False # wheter use GP for last valid value for data interpolation
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -93,10 +94,10 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
-use_mask = False
+use_mask = True
 
 # whether emission uses Dirichlet distribution
-dirichlet_emission = True
+emission = "poisson"  # chose from dirichlet, poisson and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -108,9 +109,6 @@ q_uses_true_X = False
 # if q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t)
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
-
-# whether emission uses Poisson distribution
-poisson_emission = False
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -150,7 +148,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "toy_fhn_with_inputs_dirichlet"
+rslt_dir_name = "test_count_microb"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -198,12 +196,12 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
-flags.DEFINE_boolean("use_toy_data", use_toy_data, "whether or not use toy data for training")
-flags.DEFINE_string("toy_data_dir", toy_data_dir, "the directory of toy data")
-flags.DEFINE_string("data_dir", data_dir, "path of the data set file relative to the repository directory")
-flags.DEFINE_string("datadict", datadict, "name of the data set file")
+flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
+flags.DEFINE_string("data_dir", data_dir, "The directory to load the data")
+
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
+flags.DEFINE_boolean("use_gp", use_gp, "Whether to use gaussian processes or last valid value for data interpolation")
 
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
@@ -247,14 +245,13 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
-flags.DEFINE_boolean("dirichlet_emission", dirichlet_emission, "whether emission uses Dirichlet_ distribution")
+flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "
                                                      "f and q1 can still use different networks)")
 flags.DEFINE_boolean("q_uses_true_X", q_uses_true_X, "whether q1 uses true hidden states to sample")
 flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t), "
                                          "if True, q_uses_true_X will be overwritten as False")
-flags.DEFINE_boolean("poisson_emission", poisson_emission, "whether emission uses Poisson distribution")
 
 # ------------------------- Inference Schemes ------------------------ #
 

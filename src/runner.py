@@ -46,30 +46,49 @@ def main(_):
     if FLAGS.generate_training_data:
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
-    elif FLAGS.use_toy_data:
-        print("Use toy data")
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(FLAGS.toy_data_dir)
-        print("Finish loading the toy data.")
-
-        train_num = len(obs_train)
-        T_train = obs_train[0].shape[0]
-        test_num = len(obs_test)
-        T_test = obs_test[0].shape[0]
-        mask_train = np.ones((train_num, T_train), dtype=bool)
-        mask_test = np.ones((test_num, T_test), dtype=bool)
-
-        time_interval_train = np.zeros_like(mask_train)
-        time_interval_test = np.zeros_like(mask_test)
-
     else:
-        data_fname = os.path.join(FLAGS.data_dir, FLAGS.datadict)
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
-            load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
-        FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+        if FLAGS.data_type == "toy":
+            print("Use toy data")
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(FLAGS.data_dir)
+            print("Finish loading the toy data.")
 
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        _mask_train, _mask_test, time_interval_train, time_interval_test = \
-            interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
+            train_num = len(obs_train)
+            T_train = obs_train[0].shape[0]
+            test_num = len(obs_test)
+            T_test = obs_test[0].shape[0]
+            _mask_train = np.ones((train_num, T_train), dtype=bool)
+            _mask_test = np.ones((test_num, T_test), dtype=bool)
+
+            time_interval_train = np.zeros_like(_mask_train)
+            time_interval_test = np.zeros_like(_mask_test)
+
+            extra_inputs_train = np.zeros((train_num, T_train))
+            extra_input_test = np.zeros((test_num, T_test))
+
+        elif FLAGS.data_type == "percentage":
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            extra_inputs_train, extra_input_test = \
+                load_data(FLAGS.data_dir, Dx, FLAGS.isPython2)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                                 extra_inputs_train, extra_input_test, FLAGS.use_gp)
+
+        elif FLAGS.data_type == "count":
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
+            extra_inputs_train, extra_inputs_test = \
+                load_data(FLAGS.data_dir, Dx, FLAGS.isPython2)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                                 extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
+
+        else:
+            raise ValueError("Data type must be one of toy, percentage or count.")
 
         if FLAGS.use_mask:
             mask_train, mask_test = _mask_train, _mask_test
@@ -132,6 +151,7 @@ def main(_):
                                    input_train, input_test,
                                    mask_train, mask_test,
                                    time_interval_train, time_interval_test,
+                                   extra_inputs_train, extra_input_test,
                                    print_freq)
 
     # ======================================== final data saving part ======================================== #

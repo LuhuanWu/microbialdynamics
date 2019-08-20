@@ -10,9 +10,9 @@ from src.distribution.base import distribution
 class mvn(distribution):
     # multivariate normal distribution
 
-    def __init__(self, transformation, sigma):
+    def __init__(self, transformation, name="mvn", sigma=1):
+        super(mvn, self).__init__(transformation, name)
         self.sigmaChol = np.linalg.cholesky(sigma)
-        self.transformation = transformation
 
     def sample(self, Input):
         mu = self.transformation.transform(Input)
@@ -23,13 +23,11 @@ class mvn(distribution):
 class tf_mvn(distribution):
     # multivariate normal distribution
 
-    def __init__(self, transformation,
-                 sigma_init=5, sigma_min=1,
-                 name='tf_mvn'):
-        self.transformation = transformation
+    def __init__(self, transformation, name='tf_mvn', sigma_init=5, sigma_min=1):
+        super(tf_mvn, self).__init__(transformation, name)
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
-        self.name = name
+
 
     def get_mvn(self, Input):
         if isinstance(self.transformation, NF):
@@ -102,7 +100,7 @@ class tf_mvn(distribution):
             sample = mvn.sample(sample_shape)
             return sample
 
-    def log_prob(self, Input, output, name=None):
+    def log_prob(self, Input, output, name=None, **kwargs):
         mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             return mvn.log_prob(output)

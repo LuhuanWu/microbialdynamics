@@ -7,6 +7,8 @@ from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
 
+SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet, poisson=tf_poisson, mvn=tf_mvn)
+
 
 class SSM(object):
     """
@@ -16,7 +18,7 @@ class SSM(object):
     """
 
     def __init__(self, FLAGS):
-        assert not (FLAGS.poisson_emission and FLAGS.dirichlet_emission)
+        assert FLAGS.emission in SUPPORTED_EMISSION.keys(), "Emission must be one of " + str(SUPPORTED_EMISSION.keys())
 
         self.Dx = FLAGS.Dx
         self.Dy = FLAGS.Dy
@@ -47,8 +49,7 @@ class SSM(object):
 
         self.use_bootstrap             = FLAGS.use_bootstrap
         self.use_2_q                   = FLAGS.use_2_q
-        self.poisson_emission          = FLAGS.poisson_emission
-        self.dirichlet_emission        = FLAGS.dirichlet_emission
+        self.emission                  = FLAGS.emission
 
         self.X0_use_separate_RNN       = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -70,6 +71,7 @@ class SSM(object):
         self.time = tf.placeholder(tf.int32, shape=(), name="time")
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
+        self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
 
     def init_trans(self):
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
@@ -157,17 +159,12 @@ class SSM(object):
                                  sigma_min=self.f_sigma_min,
                                  name="f_dist")
 
-        if self.poisson_emission:
-            self.g_dist = tf_poisson(self.g_tran,
-                                     name="g_dist")
-        elif self.dirichlet_emission:
-            self.g_dist = tf_dirichlet(self.g_tran,
-                                       name="g_dist")
-        else:
-            self.g_dist = tf_mvn(self.g_tran,
+        if self.emission == "mvn":
+            self.g_dist = tf_mvn(self.g_tran, name="g_dist",
                                  sigma_init=self.g_sigma_init,
-                                 sigma_min=self.g_sigma_min,
-                                 name="g_dist")
+                                 sigma_min=self.g_sigma_min)
+        else:
+            self.g_dist = SUPPORTED_EMISSION[self.emission](self.g_tran, name="g_dist")
 
     def init_RNNs(self):
         if self.SVO or self.PSVO:
@@ -237,6 +234,7 @@ class SSM(object):
 
             assert inputs_embedding.shape == (1, T, self.Dev)
 
+        # TODO: fix poisson sampling
         y0 = self.g_dist.sample(x0)
 
         x_list = [x0]
