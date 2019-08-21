@@ -49,7 +49,7 @@ class tf_dirichlet(distribution):
         with tf.variable_scope(name or self.name):
             return dirichlet.log_prob(output)
 
-    def mean(self, Input, name=None):
+    def mean(self, Input, name=None, **kwargs):
         dirichlet = self.get_dirichlet(Input)
         with tf.variable_scope(name or self.name):
             return dirichlet.mean()

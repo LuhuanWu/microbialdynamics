@@ -99,7 +99,7 @@ class SVO:
             f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_{}_log_prob".format(0))
 
         # emission log probability and log weights
-        _g_t_log_prob = self.g.log_prob(X, obs[:, 0], extra_inputs[:, 0])
+        _g_t_log_prob = self.g.log_prob(X, obs[:, 0], extra_inputs=extra_inputs[:, 0])
         _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
 
         g_t_log_prob = tf.where(mask[0][0], _g_t_log_prob, _g_t_log_prob_0, name="g_{}_log_prob".format(0))
@@ -161,7 +161,7 @@ class SVO:
                 f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
 
             # emission log probability and log weights
-            _g_t_log_prob = self.g.log_prob(X, obs[:, t], extra_inputs[:, t])
+            _g_t_log_prob = self.g.log_prob(X, obs[:, t], extra_inputs=extra_inputs[:, t])
             _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
             g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
 
@@ -421,7 +421,7 @@ class SVO:
             y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
-                y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs[:, k:])             # (batch_size, time - k, Dy)
+                y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])  # (batch_size, time - k, Dy)
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
@@ -429,7 +429,7 @@ class SVO:
                 f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
                 x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
 
-            y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs[:, n_steps:])              # (batch_size, T - N, Dy)
+            y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
             # get y_true
