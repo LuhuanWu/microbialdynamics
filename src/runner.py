@@ -9,6 +9,7 @@ import json
 import os
 import pdb
 import joblib
+import git
 
 # import from files
 from src.model import SSM
@@ -24,9 +25,9 @@ from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
 
 from src.utils.data_generator import generate_dataset
+from src.utils.available_data import DATA_DIR_DICT
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
-
 
 def main(_):
     FLAGS = tf.app.flags.FLAGS
@@ -47,9 +48,17 @@ def main(_):
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
     else:
+        #repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        repo = git.Repo('.', search_parent_directories=True)
+        repo_dir = repo.working_tree_dir  # microbialdynamics
+
+        print(repo_dir)
+
+        data_dir = DATA_DIR_DICT[FLAGS.data_type]
+        data_dir = os.path.join(repo_dir, data_dir)
         if FLAGS.data_type == "toy":
             print("Use toy data")
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(FLAGS.data_dir)
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
             print("Finish loading the toy data.")
 
             train_num = len(obs_train)
@@ -68,7 +77,7 @@ def main(_):
         elif FLAGS.data_type in ["percentage", "clv", "clv_08", "clv_06", "clv_05", "clv_04"]:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_input_test = \
-                load_data(FLAGS.data_dir, Dx, FLAGS.isPython2)
+                load_data(data_dir, Dx, FLAGS.isPython2)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
@@ -79,7 +88,7 @@ def main(_):
         elif FLAGS.data_type in ["count", "pink_count", "cyan_count"]:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
-                load_data(FLAGS.data_dir, Dx, FLAGS.isPython2)
+                load_data(data_dir, Dx, FLAGS.isPython2)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
@@ -136,7 +145,8 @@ def main(_):
                          "lr":            FLAGS.lr,
                          "epoch":         FLAGS.epoch,
                          "seed":          FLAGS.seed,
-                         "rslt_dir_name": FLAGS.rslt_dir_name}
+                         "rslt_dir_name": FLAGS.rslt_dir_name,
+                         "data_dir":      data_dir}
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)

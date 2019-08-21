@@ -22,37 +22,16 @@ print("the system uses:")
 print("\t tensorflow version:", tf.__version__)
 print("\t tensorflow_probability version:", tfp.__version__)
 
-# -------------------- available data options ----------------------- #
-toy_data_dir = "data/fhn_with_inputs_dirichlet"
-
-percentage_data_dir = "data/microbio.p"
-count_data_dir = "data/count_microbio.p"
-
-pink_count_data_dir = "data/pink_count_microbio.p"
-cyan_count_data_dir = "data/cyan_count_microbio.p"
-
-clv_data_dir = "data/clv.p"
-clv_08_data_dir = "data/clv_data_w_missing_obs/clv_0.8_obs.p"
-clv_06_data_dir = "data/clv_data_w_missing_obs/clv_0.6_obs.p"
-clv_05_data_dir = "data/clv_data_w_missing_obs/clv_0.5_obs.p"
-clv_04_data_dir = "data/clv_data_w_missing_obs/clv_0.4_obs.p"
-
-DATA_DIR_DICT = dict(toy=toy_data_dir, percentage=percentage_data_dir,
-                     count=count_data_dir,
-                     pink_count=pink_count_data_dir, cyan_count=cyan_count_data_dir,
-                     clv=clv_data_dir, clv_08=clv_08_data_dir, clv_06=clv_06_data_dir,
-                     clv_05=clv_05_data_dir, clv_04=clv_04_data_dir)
-
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 1                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 1                 # dimension of inputs.
+Dv = 0                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 0                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 200
+epoch = 10
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -60,12 +39,7 @@ seed = 2
 # False: read data set from the file
 generate_training_data = False
 
-data_type = "clv"  # choose from toy, percentage, count, pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_05
-
-repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
-data_dir = DATA_DIR_DICT[data_type]
-data_dir = os.path.join(repo_dir, data_dir)
+data_type = "clv"  # choose from toy, percentage, count, pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 
 isPython2 = False
 
@@ -114,7 +88,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # chose from dirichlet, poisson and mvn
+emission = "dirichlet"  # choose from dirichlet, poisson and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -165,7 +139,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_clv"
+rslt_dir_name = "test_dir"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -214,7 +188,6 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
-flags.DEFINE_string("data_dir", data_dir, "The directory to load the data")
 
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
