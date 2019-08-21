@@ -52,8 +52,6 @@ def main(_):
         repo = git.Repo('.', search_parent_directories=True)
         repo_dir = repo.working_tree_dir  # microbialdynamics
 
-        print(repo_dir)
-
         data_dir = DATA_DIR_DICT[FLAGS.data_type]
         data_dir = os.path.join(repo_dir, data_dir)
         if FLAGS.data_type == "toy":
@@ -141,12 +139,10 @@ def main(_):
     # =========================================== data saving part =========================================== #
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
-                         "bs":            FLAGS.batch_size,
                          "lr":            FLAGS.lr,
                          "epoch":         FLAGS.epoch,
                          "seed":          FLAGS.seed,
-                         "rslt_dir_name": FLAGS.rslt_dir_name,
-                         "data_dir":      data_dir}
+                         "rslt_dir_name": FLAGS.rslt_dir_name}
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)

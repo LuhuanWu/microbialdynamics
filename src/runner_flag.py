@@ -26,12 +26,12 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 0                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 0                 # dimension of inputs.
+Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 9                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 10
+epoch = 1
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -39,7 +39,7 @@ seed = 2
 # False: read data set from the file
 generate_training_data = False
 
-data_type = "clv"  # choose from toy, percentage, count, pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
+data_type = "percentage"  # choose from toy, percentage, count, pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 
 isPython2 = False
 
