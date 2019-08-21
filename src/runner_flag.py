@@ -26,12 +26,12 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 9                 # dimension of inputs.
+Dv = 0                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 0                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 1
+epoch = 200
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -39,7 +39,9 @@ seed = 2
 # False: read data set from the file
 generate_training_data = False
 
-data_type = "percentage"  # choose from toy, percentage, count, pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
+# choose from toy, percentage, count, percentage_noinputs, count_noinputs,
+#  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
+data_type = "clv_count"
 
 isPython2 = False
 
@@ -88,7 +90,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson and mvn
+emission = "poisson"  # choose from dirichlet, poisson and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -139,7 +141,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_dir"
+rslt_dir_name = "clv_count"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

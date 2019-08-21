@@ -72,7 +72,7 @@ def main(_):
             extra_inputs_train = np.zeros((train_num, T_train))
             extra_input_test = np.zeros((test_num, T_test))
 
-        elif FLAGS.data_type in ["percentage", "clv", "clv_08", "clv_06", "clv_05", "clv_04"]:
+        elif FLAGS.data_type in ["percentage", "percentage_noinputs", "clv", "clv_08", "clv_06", "clv_05", "clv_04"]:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_input_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2)
@@ -83,7 +83,7 @@ def main(_):
                 interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                                  extra_inputs_train, extra_input_test, FLAGS.use_gp)
 
-        elif FLAGS.data_type in ["count", "pink_count", "cyan_count"]:
+        elif FLAGS.data_type in ["count", "pink_count", "cyan_count", "clv_count"]:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2)
