@@ -4,10 +4,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 # for data saving stuff
-import pickle
-import json
-import os
-import pdb
 import joblib
 import git
 
@@ -25,7 +21,7 @@ from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
 
 from src.utils.data_generator import generate_dataset
-from src.utils.available_data import DATA_DIR_DICT
+from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_TYPE, COUNT_DATA_TYPE
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
 
@@ -72,7 +68,7 @@ def main(_):
             extra_inputs_train = np.zeros((train_num, T_train))
             extra_input_test = np.zeros((test_num, T_test))
 
-        elif FLAGS.data_type in ["percentage", "percentage_noinputs", "clv", "clv_08", "clv_06", "clv_05", "clv_04"]:
+        elif FLAGS.data_type in PERCENTAGE_DATA_TYPE:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_input_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2)
@@ -83,7 +79,7 @@ def main(_):
                 interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                                  extra_inputs_train, extra_input_test, FLAGS.use_gp)
 
-        elif FLAGS.data_type in ["count", "pink_count", "cyan_count", "clv_count"]:
+        elif FLAGS.data_type in COUNT_DATA_TYPE:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2)
