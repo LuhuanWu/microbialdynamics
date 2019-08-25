@@ -9,8 +9,8 @@ from src.distribution.base import distribution
 class poisson(distribution):
     # multivariate poisson distribution
 
-    def __init__(self, transformation):
-        self.transformation = transformation
+    def __init__(self, transformation, name="poisson"):
+        super(poisson, self).__init__(transformation, name)
 
     def sample(self, Input):
         assert isinstance(Input, np.ndarray), "Input for poisson must be np.ndarray, {} is given".format(type(Input))
@@ -27,24 +27,30 @@ class tf_poisson(distribution):
     # multivariate poisson distribution, can only be used as emission distribution
 
     def __init__(self, transformation, name='tf_poisson'):
-        self.transformation = transformation
-        self.name = name
+        super(tf_poisson, self).__init__(transformation, name)
 
-    def get_poisson(self, Input):
+    def get_poisson(self, Input, extra_inputs=None):
+        """
+
+        :param Input: (T, Dx)
+        :param external_inputs:  total counts, (T, )
+        :return:
+        """
         with tf.variable_scope(self.name):
             lambdas, _ = self.transformation.transform(Input)
-            lambdas = tf.nn.softplus(lambdas) + 1e-6
-            poisson = tfd.MultivariateNormalDiag(lambdas,
-                                                 validate_args=True,
-                                                 allow_nan_stats=False)
+            lambdas = tf.nn.softmax(lambdas, axis=-1) + 1e-6  # (T, Dy)
+            lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)
+            poisson = tfd.Poisson(rate=lambdas,
+                                  validate_args=True,
+                                  allow_nan_stats=False)
             return poisson
 
-    def log_prob(self, Input, output, name=None):
-        poisson = self.get_poisson(Input)
+    def log_prob(self, Input, output, extra_inputs=None, name=None):
+        poisson = self.get_poisson(Input, extra_inputs)
         with tf.variable_scope(name or self.name):
-            return poisson.log_prob(output)
+            return tf.reduce_sum(poisson.log_prob(output), axis=-1)
 
-    def mean(self, Input, name=None):
-        poisson = self.get_poisson(Input)
+    def mean(self, Input, extra_inputs, name=None):
+        poisson = self.get_poisson(Input, extra_inputs)
         with tf.variable_scope(name or self.name):
             return poisson.mean()

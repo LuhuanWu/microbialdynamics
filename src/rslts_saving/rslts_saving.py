@@ -8,7 +8,7 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from rslts_saving.datetools import addDateTime
+from src.rslts_saving.datetools import addDateTime
 
 
 def create_RLT_DIR(Experiment_params):
@@ -218,7 +218,49 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
             plt.close()
 
 
-def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
+def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar_plots"):
+    if to_normalize:
+        for i, obs in enumerate(batch_obs):
+            batch_obs[i] = obs / np.sum(obs, axis=-1, keepdims=True)
+
+    Dy = batch_obs[0].shape[-1]
+
+    for i, obs in enumerate(batch_obs):
+        time = obs.shape[0]
+        if mask is None:
+            masked_time = np.arange(time)
+            ind = np.arange(time)
+            masked_obs = obs
+        else:
+            masked_time = np.arange(time)[mask[i]]
+            ind = np.arange(len(masked_time))
+            masked_obs = obs[mask[i]]
+        plt.figure()
+        plt.title("obs idx {} ground truth".format(i))
+        plt.xlabel("Time")
+        bottom = np.zeros(masked_obs.shape[0])
+        for j in range(Dy):
+            plt.bar(ind, masked_obs[:, j], bottom=bottom, edgecolor='white')
+            bottom += masked_obs[:, j]
+
+        plt.xticks(ind, masked_time)
+        sns.despine()
+        if not os.path.exists(rslt_dir):
+            os.mkdir(rslt_dir)
+        plt.savefig(rslt_dir + "/obs_idx_{} truth".format(i))
+        plt.close()
+
+
+def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normalize=True):
+
+    if to_normalize:
+        for i, obs_i in enumerate(obs):
+            obs[i] = obs_i / np.sum(obs_i, axis=-1, keepdims=True)
+
+        for k, ys_k_hat_val in enumerate(ys_hat_val):
+            for i, ys_k_hat_val_i in enumerate(ys_k_hat_val):
+                ys_k_hat_val[i] = ys_k_hat_val_i / np.sum(ys_k_hat_val_i, axis=-1, keepdims=True)
+
     if not os.path.exists(RLT_DIR + "y_hat bar plots"):
         os.makedirs(RLT_DIR + "y_hat bar plots")
 

@@ -9,8 +9,8 @@ from src.distribution.base import distribution
 class dirichlet(distribution):
     # dirichlet distribution
 
-    def __init__(self, transformation):
-        self.transformation = transformation
+    def __init__(self, transformation, name="dirichlet"):
+        super(dirichlet, self).__init__(transformation, name)
 
     def sample(self, Input):
         assert isinstance(Input, np.ndarray), "Input for dirichlet must be np.ndarray, {} is given".format(type(Input))
@@ -27,8 +27,7 @@ class tf_dirichlet(distribution):
     # dirichlet distribution, can only be used as emission distribution
 
     def __init__(self, transformation, name='tf_dirichlet'):
-        self.transformation = transformation
-        self.name = name
+        super(tf_dirichlet, self).__init__(transformation, name)
 
     def get_dirichlet(self, Input):
         with tf.variable_scope(self.name):
@@ -45,12 +44,12 @@ class tf_dirichlet(distribution):
             sample = tfd.sample(sample_shape)
             return sample
 
-    def log_prob(self, Input, output, name=None):
+    def log_prob(self, Input, output, name=None, **kwargs):
         dirichlet = self.get_dirichlet(Input)
         with tf.variable_scope(name or self.name):
             return dirichlet.log_prob(output)
 
-    def mean(self, Input, name=None):
+    def mean(self, Input, name=None, **kwargs):
         dirichlet = self.get_dirichlet(Input)
         with tf.variable_scope(name or self.name):
             return dirichlet.mean()

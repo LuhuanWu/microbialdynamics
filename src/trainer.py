@@ -11,7 +11,7 @@ import pdb
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-from rslts_saving.rslts_saving import plot_R_square_epoch
+from src.rslts_saving.rslts_saving import plot_R_square_epoch
 
 
 class StopTraining(Exception):
@@ -46,6 +46,7 @@ class trainer:
         self.time = self.model.time
         self.mask = self.model.mask
         self.time_interval = self.model.time_interval
+        self.extra_inputs = self.model.extra_inputs
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -101,6 +102,7 @@ class trainer:
               input_train, input_test,
               mask_train, mask_test,
               time_interval_train, time_interval_test,
+              extra_inputs_train, extra_inputs_test,
               print_freq):
 
         self.obs_train,    self.obs_test    = obs_train,    obs_test
@@ -108,13 +110,16 @@ class trainer:
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
+        self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask, self.time_interval)
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
+                                                   self.time_interval, self.extra_inputs)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding, self.mask)
+        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding,
+                                                             self.mask, self.extra_inputs)
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -146,8 +151,8 @@ class trainer:
                 self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
-            obs_train, hidden_train, input_train, mask_train, time_interval_train = \
-                shuffle(obs_train, hidden_train, input_train, mask_train, time_interval_train)
+            obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
+                shuffle(obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
@@ -158,6 +163,7 @@ class trainer:
                                          self.time:          obs_train[j].shape[0],
                                          self.mask:          mask_train[j:j+self.batch_size],
                                          self.time_interval: time_interval_train[j:j+self.batch_size],
+                                         self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
                                          lr:                 self.lr})
 
             if (i + 1) % print_freq == 0:
@@ -173,7 +179,8 @@ class trainer:
                                              self.input:         input_test[0:self.saving_num],
                                              self.time:          [obs.shape[0] for obs in obs_test],
                                              self.mask:          mask_test[0:self.saving_num],
-                                             self.time_interval: time_interval_test[0:self.saving_num]}
+                                             self.time_interval: time_interval_test[0:self.saving_num],
+                                             self.extra_inputs:  extra_inputs_test[0:self.saving_num]}
 
                     Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
 
@@ -219,7 +226,8 @@ class trainer:
                                         self.input:         self.input_train,
                                         self.time:          [obs.shape[0] for obs in self.obs_train],
                                         self.mask:          self.mask_train,
-                                        self.time_interval: self.time_interval_train},
+                                        self.time_interval: self.time_interval_train,
+                                        self.extra_inputs:  self.extra_inputs_train},
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
                                       {self.obs:            self.obs_test,
@@ -227,15 +235,18 @@ class trainer:
                                        self.input:          self.input_test,
                                        self.time:           [obs.shape[0] for obs in self.obs_test],
                                        self.mask:           self.mask_test,
-                                        self.time_interval: self.time_interval_test},
+                                       self.time_interval:  self.time_interval_test,
+                                       self.extra_inputs:   self.extra_inputs_test},
                                       average=True)
 
         MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
                                                            self.hidden_train, self.obs_train, self.input_train,
-                                                           self.mask_train, self.time_interval_train)
+                                                           self.mask_train, self.time_interval_train,
+                                                           self.extra_inputs_train)
         MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
                                                          self.hidden_test, self.obs_test, self.input_test,
-                                                         self.mask_test, self.time_interval_test)
+                                                         self.mask_test, self.time_interval_test,
+                                                         self.extra_inputs_test)
 
         print()
         print("iter", iter_num + 1)
@@ -354,7 +365,8 @@ class trainer:
 
         return res
 
-    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set, mask_set, time_interval_set):
+    def evaluate_R_square(self, MSE_ks, y_means, y_vars, hidden_set, obs_set, input_set,
+                          mask_set, time_interval_set, extra_inputs):
         n_steps = y_means.shape.as_list()[0] - 1
         Dy = y_means.shape.as_list()[1]
         batch_size = self.batch_size
@@ -367,13 +379,15 @@ class trainer:
         for i in range(0, n_batches, batch_size):
             assert batch_size == 1
             time_batch = obs_set[i].shape[0]
-            batch_MSE_ks, batch_y_means, batch_y_vars = self.sess.run([MSE_ks, y_means, y_vars],
-                                                                      {self.obs: obs_set[i:i + batch_size],
-                                                                       self.hidden: hidden_set[i:i + batch_size],
-                                                                       self.input: input_set[i:i + batch_size],
-                                                                       self.time: time_batch,
-                                                                       self.mask: mask_set[i:i + batch_size],
-                                                                       self.time_interval: time_interval_set[i:i + batch_size]})
+            batch_MSE_ks, batch_y_means, batch_y_vars =\
+                self.sess.run([MSE_ks, y_means, y_vars],
+                              {self.obs: obs_set[i:i + batch_size],
+                               self.hidden: hidden_set[i:i + batch_size],
+                               self.input: input_set[i:i + batch_size],
+                               self.time: time_batch,
+                               self.mask: mask_set[i:i + batch_size],
+                               self.time_interval: time_interval_set[i:i + batch_size],
+                               self.extra_inputs: extra_inputs[i:i + batch_size]})
             # batch_MSE_ks.shape = (n_steps + 1)
             # batch_y_means.shape = (n_steps + 1, Dy)
             # batch_y_vars.shape = (n_steps + 1, Dy)

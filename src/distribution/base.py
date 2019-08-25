@@ -3,8 +3,9 @@ from abc import ABC, abstractmethod
 
 # base class for distribution
 class distribution(object):
-	def __init__(self, params = None):
-		self.params = params
+	def __init__(self, transformation, name, **kwargs):
+		self.transformation = transformation
+		self.name = name
 
 	@abstractmethod
 	def sample(self, Input):
@@ -21,3 +22,4 @@ class distribution(object):
 	@abstractmethod
 	def mean(self, Input, output):
 		pass
+

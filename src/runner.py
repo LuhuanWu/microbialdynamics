@@ -4,29 +4,26 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 # for data saving stuff
-import pickle
-import json
-import os
-import pdb
 import joblib
+import git
 
 # import from files
-from model import SSM
-from trainer import trainer
+from src.model import SSM
+from src.trainer import trainer
 
-from SMC.SVO import SVO
-from SMC.PSVO import PSVO
-from SMC.IWAE import IWAE
-from SMC.AESMC import AESMC
+from src.SMC.SVO import SVO
+from src.SMC.PSVO import PSVO
+from src.SMC.IWAE import IWAE
+from src.SMC.AESMC import AESMC
 
-from rslts_saving.rslts_saving import *
-from rslts_saving.fhn_rslts_saving import *
-from rslts_saving.lorenz_rslts_saving import *
+from src.rslts_saving.rslts_saving import *
+from src.rslts_saving.fhn_rslts_saving import *
+from src.rslts_saving.lorenz_rslts_saving import *
 
-from utils.data_generator import generate_dataset
-from utils.data_loader import load_data
-from utils.data_interpolation import interpolate_data
-
+from src.utils.data_generator import generate_dataset
+from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_TYPE, COUNT_DATA_TYPE
+from src.utils.data_loader import load_data
+from src.utils.data_interpolation import interpolate_data
 
 def main(_):
     FLAGS = tf.app.flags.FLAGS
@@ -43,30 +40,58 @@ def main(_):
 
     # ============================================= dataset part ============================================= #
     # generate data from simulation
-    if FLAGS.generateTrainingData:
+    if FLAGS.generate_training_data:
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
-    elif FLAGS.useToyData:
-        print("Use toy data")
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(FLAGS.toyDataDir)
-        print("Finish loading the toy data.")
-
-        train_num = len(obs_train)
-        T_train = obs_train[0].shape[0]
-        test_num = len(obs_test)
-        T_test = obs_test[0].shape[0]
-        mask_train = np.ones((train_num, T_train), dtype=bool)
-        mask_test = np.ones((test_num, T_test), dtype=bool)
-
     else:
-        data_fname = os.path.join(FLAGS.datadir, FLAGS.datadict)
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = \
-            load_data(data_fname, Dx, FLAGS.isPython2, FLAGS.q_uses_true_X)
-        FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+        #repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        repo = git.Repo('.', search_parent_directories=True)
+        repo_dir = repo.working_tree_dir  # microbialdynamics
 
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        _mask_train, _mask_test, time_interval_train, time_interval_test = \
-            interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, FLAGS)
+        data_dir = DATA_DIR_DICT[FLAGS.data_type]
+        data_dir = os.path.join(repo_dir, data_dir)
+        if FLAGS.data_type == "toy":
+            print("Use toy data")
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
+            print("Finish loading the toy data.")
+
+            train_num = len(obs_train)
+            T_train = obs_train[0].shape[0]
+            test_num = len(obs_test)
+            T_test = obs_test[0].shape[0]
+            _mask_train = np.ones((train_num, T_train), dtype=bool)
+            _mask_test = np.ones((test_num, T_test), dtype=bool)
+
+            time_interval_train = np.zeros_like(_mask_train)
+            time_interval_test = np.zeros_like(_mask_test)
+
+            extra_inputs_train = np.zeros((train_num, T_train))
+            extra_input_test = np.zeros((test_num, T_test))
+
+        elif FLAGS.data_type in PERCENTAGE_DATA_TYPE:
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            extra_inputs_train, extra_input_test = \
+                load_data(data_dir, Dx, FLAGS.isPython2)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                                 extra_inputs_train, extra_input_test, FLAGS.use_gp)
+
+        elif FLAGS.data_type in COUNT_DATA_TYPE:
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
+            extra_inputs_train, extra_inputs_test = \
+                load_data(data_dir, Dx, FLAGS.isPython2)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                                 extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
+
+        else:
+            raise ValueError("Data type must be one of toy, percentage or count.")
 
         if FLAGS.use_mask:
             mask_train, mask_test = _mask_train, _mask_test
@@ -81,7 +106,9 @@ def main(_):
                 mask_test.append(np.ones_like(m, dtype=bool))
 
     # clip saving_num to avoid it > n_train or n_test
-    min_time = min([obs.shape[0] for obs in obs_train + obs_test])
+    min_time_train = min([obs.shape[0] for obs in obs_train])
+    min_time_test = min([obs.shape[0] for obs in obs_test])
+    min_time = min(min_time_train, min_time_test)
     FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 1)
     FLAGS.saving_num = saving_num = min(FLAGS.saving_num, FLAGS.n_train, FLAGS.n_test)
 
@@ -108,7 +135,6 @@ def main(_):
     # =========================================== data saving part =========================================== #
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
-                         "bs":            FLAGS.batch_size,
                          "lr":            FLAGS.lr,
                          "epoch":         FLAGS.epoch,
                          "seed":          FLAGS.seed,
@@ -127,6 +153,7 @@ def main(_):
                                    input_train, input_test,
                                    mask_train, mask_test,
                                    time_interval_train, time_interval_test,
+                                   extra_inputs_train, extra_input_test,
                                    print_freq)
 
     # ======================================== final data saving part ======================================== #

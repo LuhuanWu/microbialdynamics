@@ -1,3 +1,4 @@
+import os
 import tensorflow as tf
 import numpy as np
 import joblib
@@ -193,4 +194,7 @@ test_ys = train_and_test_ys[train_num:]
 train_inputs = inputs_val[:train_num]
 test_inputs = inputs_val[train_num:]
 
-joblib.dump((train_xs, test_xs, train_ys, test_ys, train_inputs, test_inputs), "toydata")
+repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+toyDataDir = os.path.join(repo_dir, "data/toydata")
+
+joblib.dump((train_xs, test_xs, train_ys, test_ys, train_inputs, test_inputs), toyDataDir)

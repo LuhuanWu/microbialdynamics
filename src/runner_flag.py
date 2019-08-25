@@ -24,10 +24,10 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 20                # dimension of hidden states
-Dy = 11                  # dimension of observations
-Dv = 15                  # dimension of inputs
-Dev = 8                 # dimension of inputs
+Dx = 10                # dimension of hidden states
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 9                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
@@ -37,20 +37,16 @@ seed = 2
 # ------------------------------- Data ------------------------------- #
 # True: generate data set from simulation
 # False: read data set from the file
-generateTrainingData = False
+generate_training_data = False
 
-useToyData = False
-toyDataDir = "toydata"
+# choose from toy, percentage, count, percentage_noinputs, count_noinputs,
+#  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
+# more options: utils/see available_data.py
+data_type = "clvi_08"
 
-# if reading data from file
-datadir = "data"
-datadict = "microbio.p"
-
-# Was the data pickled in Python2?
 isPython2 = False
 
-repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-datadir = os.path.join(repo_dir, datadir)
+use_gp = False  # wheter use GP for last valid value for data interpolation
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -60,11 +56,11 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [16]         # target evolution
-g_layers = [16]         # target emission
+q0_layers = [32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32, 32]         # target evolution
+g_layers = [32, 32]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -79,11 +75,10 @@ output_cov = False
 # whether the networks only output diagonal value of cov matrix
 diag_cov = False
 
-
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [16]
-X0_smoother_Dhs = [16]
+y_smoother_Dhs = [32, 32]
+X0_smoother_Dhs = [32, 32]
 
 # whether use a separate RNN for getting X0
 X0_use_separate_RNN = True
@@ -93,10 +88,10 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
-use_mask = False
+use_mask = True
 
 # whether emission uses Dirichlet distribution
-dirichlet_emission = False
+emission = "dirichlet"  # choose from dirichlet, poisson and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -108,9 +103,6 @@ q_uses_true_X = False
 # if q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t)
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
-
-# whether emission uses Poisson distribution
-poisson_emission = False
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -141,7 +133,7 @@ min_lr = lr / 10
 
 # --------------------- printing and data saving params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1
+print_freq = 5
 
 # whether to save the followings during training
 #   hidden trajectories
@@ -150,7 +142,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "toy"
+rslt_dir_name = "clvi/08"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -196,14 +188,13 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 # ------------------------------- Data ------------------------------- #
 
-flags.DEFINE_boolean("generateTrainingData", generateTrainingData, "True: generate data set from simulation; "
+flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
-flags.DEFINE_boolean("useToyData", useToyData, "whether or not use toy data for training")
-flags.DEFINE_string("toyDataDir", toyDataDir, "the directory of toy data")
-flags.DEFINE_string("datadir", datadir, "path of the data set file relative to the repository directory")
-flags.DEFINE_string("datadict", datadict, "name of the data set file")
+flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
+
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
+flags.DEFINE_boolean("use_gp", use_gp, "Whether to use gaussian processes or last valid value for data interpolation")
 
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
@@ -247,14 +238,13 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
-flags.DEFINE_boolean("dirichlet_emission", dirichlet_emission, "whether emission uses Dirichlet_ distribution")
+flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "
                                                      "f and q1 can still use different networks)")
 flags.DEFINE_boolean("q_uses_true_X", q_uses_true_X, "whether q1 uses true hidden states to sample")
 flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t), "
                                          "if True, q_uses_true_X will be overwritten as False")
-flags.DEFINE_boolean("poisson_emission", poisson_emission, "whether emission uses Poisson distribution")
 
 # ------------------------- Inference Schemes ------------------------ #
 
