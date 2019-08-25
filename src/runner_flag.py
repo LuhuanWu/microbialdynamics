@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clvi_08"
+data_type = "percentage"
 
 isPython2 = False
 
@@ -56,11 +56,11 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32, 32]         # target evolution
-g_layers = [32, 32]         # target emission
+q0_layers = [32, 32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32, 32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32, 32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32, 32, 32]         # target evolution
+g_layers = [32, 32, 32]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -104,6 +104,9 @@ q_uses_true_X = False
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
 
+log_dynamics = True  # whether to set latent dynamics in the log space
+
+
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
 PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
@@ -142,7 +145,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "clvi/08"
+rslt_dir_name = "log_dynamics/percentage"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -245,6 +248,7 @@ flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the
 flags.DEFINE_boolean("q_uses_true_X", q_uses_true_X, "whether q1 uses true hidden states to sample")
 flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t), "
                                          "if True, q_uses_true_X will be overwritten as False")
+flags.DEFINE_boolean("log_dynamics", log_dynamics, "whether the dynamics happen in log space")
 
 # ------------------------- Inference Schemes ------------------------ #
 

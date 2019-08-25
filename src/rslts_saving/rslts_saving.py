@@ -235,7 +235,7 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
             masked_time = np.arange(time)[mask[i]]
             ind = np.arange(len(masked_time))
             masked_obs = obs[mask[i]]
-        plt.figure()
+        plt.figure(figsize=(15,5))
         plt.title("obs idx {} ground truth".format(i))
         plt.xlabel("Time")
         bottom = np.zeros(masked_obs.shape[0])
@@ -272,7 +272,7 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
         masked_time = np.arange(time)[mask[i]]
         ind = np.arange(len(masked_time))
         masked_obs = obs[i][mask[i]]
-        plt.figure()
+        plt.figure(figsize=(15,5))
         plt.title("obs idx {} ground truth".format(i))
         plt.xlabel("Time")
         bottom = np.zeros(masked_obs.shape[0])
@@ -290,7 +290,7 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
             masked_yhat = ys_k_hat_val[i][mask[i][k:]]
             ind = np.arange(len(masked_time))
 
-            plt.figure()
+            plt.figure(figsize=(15,5))
             plt.title("obs idx {} {}-step prediction".format(i, k))
             plt.xlabel("Time")
             bottom = np.zeros(masked_yhat.shape[0])

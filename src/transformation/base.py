@@ -8,4 +8,3 @@ class transformation(object):
 	@abstractmethod
 	def transform(self, X_prev):
 		pass
-		
