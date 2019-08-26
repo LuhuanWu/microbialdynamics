@@ -183,6 +183,7 @@ def plot_lorenz_results(RLT_DIR, Xs_val):
         plt.close()
 
 
+
 def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
     # yhat, a list of length K+1, each item is a list of k-step prediction for #n_test, each of which is an array
     # (T-k, Dy)
@@ -228,22 +229,20 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
     for i, obs in enumerate(batch_obs):
         time = obs.shape[0]
         if mask is None:
-            masked_time = np.arange(time)
-            ind = np.arange(time)
             masked_obs = obs
         else:
-            masked_time = np.arange(time)[mask[i]]
-            ind = np.arange(len(masked_time))
-            masked_obs = obs[mask[i]]
+            masked_obs = np.zeros_like(obs)
+            masked_obs[mask] = obs[mask]
+
         plt.figure(figsize=(15,5))
         plt.title("obs idx {} ground truth".format(i))
         plt.xlabel("Time")
         bottom = np.zeros(masked_obs.shape[0])
         for j in range(Dy):
-            plt.bar(ind, masked_obs[:, j], bottom=bottom, edgecolor='white')
+            plt.bar(np.arange(time), masked_obs[:, j], bottom=bottom, edgecolor='white')
             bottom += masked_obs[:, j]
 
-        plt.xticks(ind, masked_time)
+        plt.xticks(np.arange(time))
         sns.despine()
         if not os.path.exists(rslt_dir):
             os.mkdir(rslt_dir)
@@ -269,36 +268,36 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
 
     for i in range(saving_num):
         time = obs[i].shape[0]
-        masked_time = np.arange(time)[mask[i]]
-        ind = np.arange(len(masked_time))
-        masked_obs = obs[i][mask[i]]
+
+        masked_obs = np.zeros_like(obs[i])
+        masked_obs[mask[i]] = obs[i][mask[i]]
+
         plt.figure(figsize=(15,5))
         plt.title("obs idx {} ground truth".format(i))
         plt.xlabel("Time")
         bottom = np.zeros(masked_obs.shape[0])
         for j in range(Dy):
-            plt.bar(ind, masked_obs[:, j], bottom=bottom, edgecolor='white')
+            plt.bar(np.arange(time), masked_obs[:, j], bottom=bottom, edgecolor='white')
             bottom += masked_obs[:, j]
 
-        plt.xticks(ind, masked_time)
+        plt.xticks(np.arange(time))
         sns.despine()
         plt.savefig(RLT_DIR + "y_hat bar plots/obs_idx_{} truth".format(i))
         plt.close()
 
         for k, ys_k_hat_val in enumerate(ys_hat_val):
-            masked_time = np.arange(k, time)[mask[i][k:]]
-            masked_yhat = ys_k_hat_val[i][mask[i][k:]]
-            ind = np.arange(len(masked_time))
+            masked_yhat = np.zeros_like(ys_k_hat_val[i])
+            masked_yhat[mask[i][k:]] = ys_k_hat_val[i][mask[i][k:]]
 
             plt.figure(figsize=(15,5))
             plt.title("obs idx {} {}-step prediction".format(i, k))
             plt.xlabel("Time")
             bottom = np.zeros(masked_yhat.shape[0])
             for j in range(Dy):
-                plt.bar(ind, masked_yhat[:, j], bottom=bottom, edgecolor='white')
+                plt.bar(np.arange(k, time), masked_yhat[:, j], bottom=bottom, edgecolor='white')
                 bottom += masked_yhat[:, j]
 
-            plt.xticks(ind, masked_time)
+            plt.xticks(np.arange(k, time))
             sns.despine()
             plt.savefig(RLT_DIR + "y_hat bar plots/obs_idx_{}_{}_step".format(i, k))
             plt.close()
