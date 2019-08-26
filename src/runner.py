@@ -5,7 +5,7 @@ import tensorflow_probability as tfp
 
 # for data saving stuff
 import joblib
-import git
+# import git
 
 # import from files
 from src.model import SSM
@@ -44,9 +44,9 @@ def main(_):
         raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
     # load data from file
     else:
-        #repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        repo = git.Repo('.', search_parent_directories=True)
-        repo_dir = repo.working_tree_dir  # microbialdynamics
+        repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # repo = git.Repo('.', search_parent_directories=True)
+        # repo_dir = repo.working_tree_dir  # microbialdynamics
 
         data_dir = DATA_DIR_DICT[FLAGS.data_type]
         data_dir = os.path.join(repo_dir, data_dir)

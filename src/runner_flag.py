@@ -27,7 +27,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 9                 # dimension of inputs.
+Dev = 0                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "percentage"
+data_type = "clv_input_noise"
 
 isPython2 = False
 
@@ -104,7 +104,7 @@ q_uses_true_X = False
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
 
-log_dynamics = True  # whether to set latent dynamics in the log space
+log_dynamics = False  # whether to set latent dynamics in the log space
 
 
 # ------------------------- Inference Schemes ------------------------ #
@@ -152,7 +152,7 @@ MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_num = 30
+saving_num = 40
 
 # whether to save tensorboard
 save_tensorboard = False

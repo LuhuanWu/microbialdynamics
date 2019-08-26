@@ -23,6 +23,7 @@ clv_input_06_dir = clv_input_root_dir + "clv_percentage_0.6_obs.p"
 clv_input_05_dir = clv_input_root_dir + "clv_percentage_0.5_obs.p"
 clv_input_04_dir = clv_input_root_dir + "clv_percentage_0.4_obs.p"
 
+clv_input_noise_dir = "data/clv/clv_w_input_and_noise.p"
 
 clv_count_dir = "data/count_clv.p"
 
@@ -35,10 +36,11 @@ DATA_DIR_DICT = dict(toy=toy_data_dir, percentage=percentage_data_dir,
                      clv_08=clv_08_data_dir, clv_06=clv_06_data_dir,
                      clv_05=clv_05_data_dir, clv_04=clv_04_data_dir,
                      clvi=clv_input_dir, clvi_08=clv_input_08_dir,
-                     clvi_06=clv_input_06_dir, clvi_05=clv_05_data_dir, clvi_04=clv_input_04_dir)
+                     clvi_06=clv_input_06_dir, clvi_05=clv_05_data_dir, clvi_04=clv_input_04_dir,
+                     clv_input_noise=clv_input_noise_dir)
 
 PERCENTAGE_DATA_TYPE = ["percentage", "percentage_noinputs", "clv", "clv_08", "clv_06", "clv_05", "clv_04",
-                        "clvi", "clvi_08", "clvi_06", "clvi_05", "clvi_04"]
+                        "clvi", "clvi_08", "clvi_06", "clvi_05", "clvi_04", "clv_input_noise"]
 
 COUNT_DATA_TYPE = ["count", "count_noinputs", "pink_count", "cyan_count", "clv_count"]
 
