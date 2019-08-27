@@ -29,6 +29,7 @@ class tf_poisson(distribution):
     def __init__(self, transformation, name='tf_poisson'):
         super(tf_poisson, self).__init__(transformation, name)
 
+
     def get_poisson(self, Input, extra_inputs=None):
         """
 
@@ -38,7 +39,8 @@ class tf_poisson(distribution):
         """
         with tf.variable_scope(self.name):
             lambdas, _ = self.transformation.transform(Input)
-            lambdas = tf.nn.softmax(lambdas, axis=-1) + 1e-6  # (T, Dy)
+            lambdas = tf.nn.softplus(lambdas) + 1e-6  # (T, Dy)
+            lambdas = lambdas / tf.reduce_sum(lambdas, axis=-1, keepdims=True)
             lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)
             poisson = tfd.Poisson(rate=lambdas,
                                   validate_args=True,

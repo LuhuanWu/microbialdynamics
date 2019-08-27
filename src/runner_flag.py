@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clv_count_diff_length_1000"
+data_type = "clv_count_diff_length_200"
 
 isPython2 = False
 
@@ -104,7 +104,7 @@ q_uses_true_X = False
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
 
-log_dynamics = False  # whether to set latent dynamics in the log space
+log_dynamics = True  # whether to set latent dynamics in the log space
 
 
 # ------------------------- Inference Schemes ------------------------ #
