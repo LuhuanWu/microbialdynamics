@@ -23,9 +23,9 @@ def load_data(path, Dx, isPython2):
 
     if "counts_train" in data and "counts_test" in data:
         extra_inputs_train = data["counts_train"]
-        extra_input_test = data["counts_test"]
+        extra_inputs_test = data["counts_test"]
     else:
         extra_inputs_train = [None for _ in range(len(obs_train))]
-        extra_input_test = [None for _ in range(len(obs_test))]
+        extra_inputs_test = [None for _ in range(len(obs_test))]
 
-    return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, extra_inputs_train, extra_input_test
+    return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, extra_inputs_train, extra_inputs_test
