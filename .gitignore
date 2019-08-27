@@ -10,3 +10,5 @@ test.py
 **/.ipynb_checkpoints/**
 .idea
 .idea/**
+
+/**/*.png

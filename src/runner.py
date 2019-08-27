@@ -190,3 +190,6 @@ def main(_):
     plot_MSEs(RLT_DIR, history["MSE_trains"], history["MSE_tests"], print_freq)
     plot_R_square(RLT_DIR, history["R_square_trains"], history["R_square_tests"], print_freq)
     plot_log_ZSMC(RLT_DIR, history["log_ZSMC_trains"], history["log_ZSMC_tests"], print_freq)
+
+    print("finish plotting!")
+
