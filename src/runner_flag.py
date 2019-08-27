@@ -31,7 +31,7 @@ Dev = 0                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 1
+epoch = 200
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -61,6 +61,9 @@ q1_layers = [32, 32, 32]        # q(x_t|x_{t-1}), including backward evolution t
 q2_layers = [32, 32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
 f_layers = [32, 32, 32]         # target evolution
 g_layers = [32, 32, 32]         # target emission
+
+# number of f^power
+f_power = 2
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -136,7 +139,7 @@ min_lr = lr / 10
 
 # --------------------- printing and data saving params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1
+print_freq = 5
 
 # whether to save the followings during training
 #   hidden trajectories
@@ -215,6 +218,8 @@ flags.DEFINE_string("f_layers",  f_layers,  "architecture for f network, int sep
                                             "for example: '50,50' ")
 flags.DEFINE_string("g_layers",  g_layers,  "architecture for g network, int seperated by comma, "
                                             "for example: '50,50' ")
+
+flags.DEFINE_integer("f_power", f_power, "number of f^power")
 
 flags.DEFINE_float("q0_sigma_init", q0_sigma_init, "initial value of q0_sigma")
 flags.DEFINE_float("q1_sigma_init", q1_sigma_init, "initial value of q1_sigma")

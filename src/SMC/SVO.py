@@ -27,6 +27,8 @@ class SVO:
         self.smooth_obs = True
         self.resample_particles = True
 
+        self.f_power = FLAGS.f_power # power for q_1 and f
+
         self.name = name
 
     def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval, extra_inputs):
@@ -78,7 +80,6 @@ class SVO:
         q0, q1, f = self.q0, self.q1, self.f
 
         # -------------------------------------- t = 0 -------------------------------------- #
-        # print(preprocessed_X0, input[:, 0, :])
         q_f_0_feed = preprocessed_X0
 
         # proposal
@@ -151,12 +152,14 @@ class SVO:
                                                           q_cov,
                                                           sample_shape=(),
                                                           name="q_t_sample_and_log_prob")
+                f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
             else:
                 if self.model.use_2_q:
                     X, q_t_log_prob, f_t_log_prob = self.sample_from_2_dist(q1,
                                                                             self.q2,
                                                                             q_f_t_feed,
                                                                             preprocessed_obs_ta.read(t),
+                                                                            inputs=Input,
                                                                             sample_size=())
                     # q_t_log_prob = tf.where(mask[0][t], q_t_log_prob, f_t_log_prob, name="q_t_log_prob")
                 else:
@@ -214,11 +217,16 @@ class SVO:
 
         return X_prevs, X_ancestors, log_Ws
 
-    def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, sample_size=()):
+    def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, inputs=None, sample_size=()):
         d1_mvn = dist1.get_mvn(d1_input)
         d2_mvn = dist2.get_mvn(d2_input)
 
         if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
+            if inputs is not None:
+                for i in range(self.f_power-1):
+                    d1_mvn_mean = d1_mvn.mean()
+                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1))
+
             d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()
             d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.stddev()
 
