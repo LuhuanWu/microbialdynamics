@@ -31,7 +31,7 @@ Dev = 6                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 200
+epoch = 1
 seed = 2
 
 # ------------------------------- Data ------------------------------- #
@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "percentage"
+data_type = "bootstrap_600"
 
 isPython2 = False
 
@@ -63,7 +63,7 @@ f_layers = [32, 32, 32]         # target evolution
 g_layers = [32, 32, 32]         # target emission
 
 # number of f^power
-f_power = 4
+f_power = 1
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -139,7 +139,7 @@ min_lr = lr / 10
 
 # --------------------- printing and data saving params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 5
+print_freq = 1
 
 # whether to save the followings during training
 #   hidden trajectories
@@ -148,7 +148,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_percentage"
+rslt_dir_name = "test_bootstrap"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
