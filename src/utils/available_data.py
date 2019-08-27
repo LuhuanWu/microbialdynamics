@@ -35,12 +35,12 @@ clv_count_diff_length_1000_dir = "data/clv/clv_count_diff_length_1000.p"
 
 clv_count_dir = "data/count_clv.p"
 
-bootstrap_600 = "data/bootstrap/bootstrap_600.p"
-bootstrap_600_w_noise = "data/bootstrap/bootstrap_600_w_noise.p"
-train_0_purple_repeat_600 = "data/bootstrap/train_0_purple_repeat_600.p"
-train_0_purple_repeat_600_w_noise = "data/bootstrap/train_0_purple_repeat_600_w_noise.p"
-train_8_pink_repeat_600 = "data/bootstrap/train_8_pink_repeat_600.p"
-train_8_pink_repeat_600_w_noise = "data/bootstrap/train_8_pink_repeat_600_w_noise.p"
+bootstrap_600_dir = "data/bootstrap/bootstrap_600.p"
+bootstrap_600_w_noise_dir = "data/bootstrap/bootstrap_600_w_noise.p"
+train_0_purple_repeat_600_dir = "data/bootstrap/train_0_purple_repeat_600.p"
+train_0_purple_repeat_600_w_noise_dir = "data/bootstrap/train_0_purple_repeat_600_w_noise.p"
+train_8_pink_repeat_600_dir = "data/bootstrap/train_8_pink_repeat_600.p"
+train_8_pink_repeat_600_w_noise_dir = "data/bootstrap/train_8_pink_repeat_600_w_noise.p"
 
 DATA_DIR_DICT = dict(toy=toy_data_dir, percentage=percentage_data_dir,
                      count=count_data_dir,
