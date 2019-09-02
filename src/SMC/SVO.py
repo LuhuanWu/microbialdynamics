@@ -70,7 +70,7 @@ class SVO:
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
-        if self.model.emission == "poisson":
+        if self.model.emission == "poisson" or self.model.emission == "multinomial" :
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
             obs_4_proposal = obs
