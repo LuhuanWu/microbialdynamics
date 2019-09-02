@@ -31,8 +31,8 @@ Dev = 6                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 1
-seed = 2
+epoch = 200
+seed = 0
 
 # ------------------------------- Data ------------------------------- #
 # True: generate data set from simulation
@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "bootstrap_600"
+data_type = "count"
 
 isPython2 = False
 
@@ -94,7 +94,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson and mvn
+emission = "poisson"  # choose from dirichlet, poisson and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -139,7 +139,7 @@ min_lr = lr / 10
 
 # --------------------- printing and data saving params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1
+print_freq = 5
 
 # whether to save the followings during training
 #   hidden trajectories

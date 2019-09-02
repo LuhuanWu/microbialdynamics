@@ -6,8 +6,9 @@ from src.transformation.MLP import MLP_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
+from src.distribution.multinomial import tf_multinomial
 
-SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet, poisson=tf_poisson, mvn=tf_mvn)
+SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet, poisson=tf_poisson, mvn=tf_mvn, multinomial=tf_multinomial)
 
 
 class SSM(object):
