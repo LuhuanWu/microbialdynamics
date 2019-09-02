@@ -70,11 +70,15 @@ class SVO:
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
+        if self.model.emission == "poisson":
+            obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
+        else:
+            obs_4_proposal = obs
         if self.log_dynamics:
-            log_obs = tf.log(obs)
+            log_obs = tf.log(obs_4_proposal)
             preprocessed_X0, preprocessed_obs = self.preprocess_obs(log_obs, time_interval)
         else:
-            preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs, time_interval)
+            preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
         self.preprocessed_X0  = preprocessed_X0
         self.preprocessed_obs = preprocessed_obs
         q0, q1, f = self.q0, self.q1, self.f
