@@ -37,7 +37,7 @@ class trainer:
         self.init_placeholder()
         self.init_training_param()
         self.input_embedding = model.input_embedding
-        # self.init_quiver_plotting()
+        self.init_quiver_plotting()
 
     def init_placeholder(self):
         self.obs = self.model.obs
@@ -197,7 +197,7 @@ class trainer:
 
                     if self.draw_quiver_during_training:
                         if self.Dx == 2:
-                            self.draw_2D_quiver_plot(Xs_val, self.nextX, self.lattice, i + 1)
+                            self.draw_2D_quiver_plot(Xs_val, i + 1)
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
 
@@ -419,12 +419,12 @@ class trainer:
 
         return mean_MSE_ks, R_square
 
-    def draw_2D_quiver_plot(self, Xs_val, nextX, lattice, epoch):
+    def draw_2D_quiver_plot(self, Xs_val, epoch):
         # Xs_val.shape = (saving_num, time, n_particles, Dx)
-        X_trajs = np.mean(Xs_val, axis=2)
 
         plt.figure()
-        for X_traj in X_trajs[0:self.saving_num]:
+        for X_traj in Xs_val[0:self.saving_num]:
+            X_traj = np.mean(X_traj, axis=1)
             plt.plot(X_traj[:, 0], X_traj[:, 1])
             plt.scatter(X_traj[0, 0], X_traj[0, 1])
         plt.title("quiver")
@@ -446,7 +446,6 @@ class trainer:
 
     def draw_3D_quiver_plot(self, Xs_val, epoch):
         # Xs_val.shape = (saving_num, time, n_particles, Dx)
-        X_trajs = np.mean(Xs_val, axis=2)
 
         fig = plt.figure()
         ax = fig.gca(projection="3d")
@@ -454,7 +453,8 @@ class trainer:
         ax.set_xlabel("x_dim 1")
         ax.set_ylabel("x_dim 2")
         ax.set_zlabel("x_dim 3")
-        for X_traj in X_trajs:
+        for X_traj in Xs_val[0:self.saving_num]:
+            X_traj = np.mean(X_traj, axis=1)
             ax.plot(X_traj[:, 0], X_traj[:, 1], X_traj[:, 2])
             ax.scatter(X_traj[0, 0], X_traj[0, 1], X_traj[0, 2])
 
