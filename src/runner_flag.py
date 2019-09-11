@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 1                # dimension of hidden states
-Dy = 2                  # dimension of observations. for microbio data, Dy = 11
+Dx = 2                # dimension of hidden states
+Dy = 3                  # dimension of observations. for microbio data, Dy = 11
 Dv = 10                  # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clv_count_diff_length_200_Dx_2"
+data_type = "clv_diff_length_200_Dx_3"
 
 isPython2 = False
 
@@ -56,11 +56,11 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32, 32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32, 32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32, 32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32, 32, 32]         # target evolution
-g_layers = [32, 32, 32]         # target emission
+q0_layers = [16, 16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [16, 16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [16, 16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [16, 16, 16]         # target evolution
+g_layers = [16, 16, 16]         # target emission
 
 # number of f^power
 f_power = 1
@@ -80,8 +80,8 @@ diag_cov = False
 
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [32, 32]
-X0_smoother_Dhs = [32, 32]
+y_smoother_Dhs = [16, 16]
+X0_smoother_Dhs = [16, 16]
 
 # whether use a separate RNN for getting X0
 X0_use_separate_RNN = True
@@ -94,7 +94,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)

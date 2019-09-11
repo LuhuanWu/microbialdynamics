@@ -474,6 +474,15 @@ class SVO:
             y_means = []    # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
             y_vars = []     # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
             for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+                # convert count into percentage
+                y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+
+                # convert percentage into log space
+                y_hat_BxTmkxDy = (y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
+                y_BxTmkxDy = (y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
+                y_hat_BxTmkxDy = tf.log(y_hat_BxTmkxDy)
+                y_BxTmkxDy = tf.log(y_BxTmkxDy)
 
                 difference = y_hat_BxTmkxDy - y_BxTmkxDy   # (batch_size, time-k, Dy)
                 masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
