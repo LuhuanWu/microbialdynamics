@@ -31,7 +31,10 @@ def main(_):
     # ========================================= parameter part begins ========================================== #
     Dx = FLAGS.Dx
     print_freq = FLAGS.print_freq
+
+    # evaluation parameters
     n_step_MSE_in_log_space = FLAGS.n_step_MSE_in_log_space
+    y_hat_bar_plot_to_normalize = FLAGS.y_hat_bar_plot_to_normalize
 
     if FLAGS.use_2_q:
         FLAGS.q_uses_true_X = False
@@ -169,7 +172,8 @@ def main(_):
 
     # plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
     plot_y_hat(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
-    plot_y_hat_bar_plot(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
+    plot_y_hat_bar_plot(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num,
+                        to_normalize=y_hat_bar_plot_to_normalize)
 
     if Dx == 2:
         plot_fhn_results(RLT_DIR, Xs_val)

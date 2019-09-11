@@ -24,10 +24,10 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations. for microbio data, Dy = 11
-Dv = 10                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
+Dx = 6                # dimension of hidden states
+Dy = 10                  # dimension of observations. for microbio data, Dy = 11
+Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
@@ -66,11 +66,11 @@ g_layers = [16, 16, 16]         # target emission
 f_power = 1
 
 # Covariance Terms
-q0_sigma_init, q0_sigma_min = 5, 1
-q1_sigma_init, q1_sigma_min = 5, 1
-q2_sigma_init, q2_sigma_min = 5, 1
-f_sigma_init, f_sigma_min = 5, 1
-g_sigma_init, g_sigma_min = 5, 1
+q0_sigma_init, q0_sigma_min = 1, 0.0001
+q1_sigma_init, q1_sigma_min = 1, 0.0001
+q2_sigma_init, q2_sigma_min = 1, 0.0001
+f_sigma_init, f_sigma_min = 1, 0.0001
+g_sigma_init, g_sigma_min = 1, 0.0001
 
 # if q, f and g networks also output covariance (sigma)
 output_cov = False
@@ -137,12 +137,15 @@ lr_reduce_factor = 1 / np.sqrt(2)
 # minimum lr
 min_lr = lr / 10
 
-# --------------------- printing and data saving params --------------------- #
+# --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
 print_freq = 5
 
 # whether to evaluate n-step MSE in log space
 n_step_MSE_in_log_space = True
+
+# whether to normalize in y hat bar plots
+y_hat_bar_plot_to_normalize = True
 
 # whether to save the followings during training
 #   hidden trajectories
@@ -282,11 +285,12 @@ flags.DEFINE_float("lr_reduce_factor", lr_reduce_factor,
                    "the factor to reduce learning rate, new_lr = old_lr * lr_reduce_factor")
 flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
 
-# --------------------- printing and data saving params --------------------- #
+# --------------------- printing, data saving and evaluation params --------------------- #
 
 flags.DEFINE_integer("print_freq", print_freq, "frequency to evaluate testing loss & other metrics and save results")
 
 flags.DEFINE_boolean("n_step_MSE_in_log_space", n_step_MSE_in_log_space, "whether to evaluate n-step MSE in log space")
+flags.DEFINE_boolean("y_hat_bar_plot_to_normalize", y_hat_bar_plot_to_normalize, "whether to normalize in y hat bar plot")
 
 flags.DEFINE_boolean("save_trajectory", save_trajectory, "whether to save hidden trajectories during training")
 flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat during training")
