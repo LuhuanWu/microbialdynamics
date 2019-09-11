@@ -8,7 +8,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import numpy as np
 
-from src.runner import main
+from src.runner_vrnnsvo import main
 
 np.warnings.filterwarnings('ignore')          # to avoid np deprecation warning
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"      # to avoid lots of log about the device
@@ -24,15 +24,19 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations. for microbio data, Dy = 11
-Dv = 10                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
-n_particles = 32        # number of particles
+Dx = 25                # dimension of hidden states
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
+Dh = 20
+
+Dx_encoded = 10
+Dv_encoed = 10
+
+n_particles = 16        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
 epoch = 200
-seed = 0
+seed = 2
 
 # ------------------------------- Data ------------------------------- #
 # True: generate data set from simulation
@@ -42,7 +46,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clv_diff_length_200_Dx_3"
+data_type = "clv_diff_length_200"
 
 isPython2 = False
 
@@ -56,14 +60,12 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [16, 16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [16, 16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [16, 16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [16, 16, 16]         # target evolution
-g_layers = [16, 16, 16]         # target emission
+q0_layers = [32, 32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32, 32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32, 32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32, 32, 32]         # target evolution
+g_layers = [32, 32, 32]         # target emission
 
-# number of f^power
-f_power = 1
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1
@@ -94,34 +96,10 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
-
-# whether q1 (evolution term in proposal) and f share the same network
-# (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
-use_bootstrap = True
-
-# should q use true_X to sample? (useful for debugging)
-q_uses_true_X = False
-
-# if q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t)
-# if True, q_uses_true_X will be overwritten as False
-use_2_q = True
+emission = "dirichlet"  # choose from dirichlet, poisson and mvn
 
 log_dynamics = True  # whether to set latent dynamics in the log space
 
-
-# ------------------------- Inference Schemes ------------------------ #
-# Choose one of the following objectives
-PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
-AESMC = False    # Auto-Encoding Sequential Monte Carlo
-IWAE = False     # Importance Weighted Auto-Encoder
-
-# number of subparticles sampled when augmenting the trajectory backwards
-n_particles_for_BSim_proposal = 16
-
-# whether Backward Simulation proposal use unidirectional RNN or bidirectional RNN
-BSim_use_single_RNN = False
 
 # ----------------------------- Training ----------------------------- #
 
@@ -141,9 +119,6 @@ min_lr = lr / 10
 # frequency to evaluate testing loss & other metrics and save results
 print_freq = 5
 
-# whether to evaluate n-step MSE in log space
-n_step_MSE_in_log_space = True
-
 # whether to save the followings during training
 #   hidden trajectories
 #   k-step y-hat
@@ -151,7 +126,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_bootstrap"
+rslt_dir_name = "test_vrnnsvo"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -185,7 +160,10 @@ flags = tf.app.flags
 flags.DEFINE_integer("Dx", Dx, "dimension of hidden states")
 flags.DEFINE_integer("Dy", Dy, "dimension of observations")
 flags.DEFINE_integer("Dv", Dv, "dimension of inputs")
-flags.DEFINE_integer("Dev", Dev, "input embedding size")
+flags.DEFINE_integer("Dh", Dh, "dimension of LSTM states")
+
+flags.DEFINE_integer("Dx_encoded", Dx_encoded, "dimension of latent encoding")
+flags.DEFINE_integer("Dv_encoded", Dv_encoed, "dimension of input encoding")
 
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")
@@ -215,14 +193,10 @@ flags.DEFINE_string("q0_layers", q0_layers, "architecture for q0 network, int se
                                             "for example: '50,50' ")
 flags.DEFINE_string("q1_layers", q1_layers, "architecture for q1 network, int seperated by comma, "
                                             "for example: '50,50' ")
-flags.DEFINE_string("q2_layers", q2_layers, "architecture for q2 network, int seperated by comma, "
-                                            "for example: '50,50' ")
 flags.DEFINE_string("f_layers",  f_layers,  "architecture for f network, int seperated by comma, "
                                             "for example: '50,50' ")
 flags.DEFINE_string("g_layers",  g_layers,  "architecture for g network, int seperated by comma, "
                                             "for example: '50,50' ")
-
-flags.DEFINE_integer("f_power", f_power, "number of f^power")
 
 flags.DEFINE_float("q0_sigma_init", q0_sigma_init, "initial value of q0_sigma")
 flags.DEFINE_float("q1_sigma_init", q1_sigma_init, "initial value of q1_sigma")
@@ -250,26 +224,9 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
-flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
-                                                     "(ATTENTION: even if use_2_q == True, "
-                                                     "f and q1 can still use different networks)")
-flags.DEFINE_boolean("q_uses_true_X", q_uses_true_X, "whether q1 uses true hidden states to sample")
-flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t), "
-                                         "if True, q_uses_true_X will be overwritten as False")
+
 flags.DEFINE_boolean("log_dynamics", log_dynamics, "whether the dynamics happen in log space")
 
-# ------------------------- Inference Schemes ------------------------ #
-
-flags.DEFINE_boolean("PSVO", PSVO, "Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)")
-flags.DEFINE_boolean("SVO", SVO, "Smoothing Variational Objective (use proposal based on bRNN)")
-flags.DEFINE_boolean("AESMC", AESMC, "Auto-Encoding Sequential Monte Carlo")
-flags.DEFINE_boolean("IWAE", IWAE, "Importance Weighted Auto-Encoder")
-
-flags.DEFINE_integer("n_particles_for_BSim_proposal", n_particles_for_BSim_proposal, "number of particles used for"
-                                                                                     " each trajectory in "
-                                                                                     "backward simulation proposal")
-flags.DEFINE_boolean("BSim_use_single_RNN", BSim_use_single_RNN, "whether Backward Simulation proposal "
-                                                                 "use unidirectional RNN or bidirectional RNN")
 
 # ----------------------------- Training ----------------------------- #
 
@@ -285,8 +242,6 @@ flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
 # --------------------- printing and data saving params --------------------- #
 
 flags.DEFINE_integer("print_freq", print_freq, "frequency to evaluate testing loss & other metrics and save results")
-
-flags.DEFINE_boolean("n_step_MSE_in_log_space", n_step_MSE_in_log_space, "whether to evaluate n-step MSE in log space")
 
 flags.DEFINE_boolean("save_trajectory", save_trajectory, "whether to save hidden trajectories during training")
 flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat during training")

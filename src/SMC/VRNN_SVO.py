@@ -3,31 +3,26 @@ import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
 
-class SVO:
-    def __init__(self, model, FLAGS, name="log_ZSMC"):
+class VRNNSVO:
+    def __init__(self, rnn_cell, FLAGS, name="log_ZSMC"):
 
-        self.model = model
+        self.rnn_cell = rnn_cell
+        self.FLAGS = FLAGS
 
-        # SSM distributions
-        self.q0 = model.q0_dist
-        self.q1 = model.q1_dist
-        self.q2 = model.q2_dist
-        self.f  = model.f_dist
-        self.g  = model.g_dist
+        self.Dh = self.rnn_cell.Dh
+        self.Dx = self.rnn_cell.Dx
+        self.Dy = self.rnn_cell.Dy
+        self.Dv = self.rnn_cell.Dv
 
         self.n_particles = FLAGS.n_particles
-        self.q_uses_true_X = FLAGS.q_uses_true_X
 
         # bidirectional RNN as full sequence observations encoder
         self.X0_use_separate_RNN = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn = FLAGS.use_stack_rnn
 
-        self.model = model
         self.log_dynamics = FLAGS.log_dynamics
         self.smooth_obs = True
         self.resample_particles = True
-
-        self.f_power = FLAGS.f_power # power for q_1 and f
 
         self.name = name
 
@@ -47,7 +42,6 @@ class SVO:
             log: stuff to debug
         """
         self.batch_size, _, _ = obs.get_shape().as_list()
-        self.Dx = self.model.Dx
         self.time = time
 
         with tf.variable_scope(self.name):
@@ -55,64 +49,52 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs)
+            X_prevs, X_ancestors, log_Ws, lstm_states_h, lstm_states_c = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
-            Xs = X_ancestors
 
             # shape = (batch_size, time, n_particles, Dx)
-            Xs = tf.transpose(Xs, perm=[2, 0, 1, 3], name="Xs")
+            X_ancestors = tf.transpose(X_ancestors, perm=[2, 0, 1, 3], name="Xs")
 
-            log["Xs"] = Xs
+            # (batch_size, time, n_particles, Dh)
+            lstm_states_h = tf.transpose(lstm_states_h, perm=[2, 0, 1, 3], name="lstm_states_h")
+            lstm_states_c = tf.transpose(lstm_states_c, perm=[2, 0, 1, 3], name="lstm_states_c")
+
+            log["Xs"] = X_ancestors
+            log["lstm_states_h"] = lstm_states_h
+            log["lstm_states_c"] = lstm_states_c
 
         return log_ZSMC, log
 
     def SMC(self, hidden, obs, input, mask, time_interval, extra_inputs, q_cov=1.0):
-        Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
+        # hidden only useful when using true X
+
+        Dh, Dx, n_particles, batch_size, time = self.Dh, self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
-        if self.model.emission == "poisson" or self.model.emission == "multinomial" :
-            obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
-        else:
-            obs_4_proposal = obs
         if self.log_dynamics:
-            log_obs = tf.log(obs_4_proposal)
+            log_obs = tf.log(obs)
             preprocessed_X0, preprocessed_obs = self.preprocess_obs(log_obs, time_interval)
         else:
-            preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
+            preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs, time_interval)
         self.preprocessed_X0  = preprocessed_X0
         self.preprocessed_obs = preprocessed_obs
-        q0, q1, f = self.q0, self.q1, self.f
 
         # -------------------------------------- t = 0 -------------------------------------- #
-        q_f_0_feed = preprocessed_X0
+        c_0, h_0 = self.rnn_cell.reset()  # (n_particles, batch_size, Dh)
 
         # proposal
-        if self.q_uses_true_X:
-            X, q_0_log_prob = self.sample_from_true_X(hidden[:, 0, :],
-                                                      q_cov,
-                                                      sample_shape=n_particles,
-                                                      name="q_{}_sample_and_log_prob".format(0))
-        else:
-            if self.model.use_2_q:
-                X, q_0_log_prob, f_0_log_prob = self.sample_from_2_dist(q0,
-                                                                        self.q2,
-                                                                        q_f_0_feed,
-                                                                        preprocessed_obs[0],
-                                                                        sample_size=n_particles)
-            else:
-                X, q_0_log_prob = q0.sample_and_log_prob(q_f_0_feed,
-                                                         sample_shape=n_particles,
-                                                         name="q_{}_sample_and_log_prob".format(0))
+        X, q_0_log_prob = self.rnn_cell.get_q0_sample_and_log_prob(preprocessed_X0)
+        assert X.shape == (n_particles, batch_size, Dx), X.shape
+        assert q_0_log_prob.shape == (n_particles, batch_size), q_0_log_prob.shape
 
-                # only when use_bootstrap and use_2_q, f_t_log_prob has been calculated
-                assert not self.model.use_bootstrap
-                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_{}_log_prob".format(0))
+        f_0_log_prob = self.rnn_cell.get_f_log_prob(X)
+        assert f_0_log_prob.shape == (n_particles, batch_size), f_0_log_prob.shape
 
         # emission log probability and log weights
         if self.log_dynamics:
-            _g_0_log_prob = self.g.log_prob(tf.exp(X), obs[:, 0], extra_inputs=extra_inputs[:, 0])
+            _g_0_log_prob = self.rnn_cell.get_g_log_prob(tf.exp(X), obs[:, 0], extra_inputs=extra_inputs[:, 0])
         else:
-            _g_0_log_prob = self.g.log_prob(X, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+            _g_0_log_prob = self.rnn_cell.get_g_log_prob(X, obs[:, 0], extra_inputs=extra_inputs[:, 0])
         _g_0_log_prob_0 = tf.zeros_like(_g_0_log_prob)  # dummy values for missing observations
 
         g_0_log_prob = tf.where(mask[0][0], _g_0_log_prob, _g_0_log_prob_0, name="g_{}_log_prob".format(0))
@@ -133,7 +115,7 @@ class SVO:
 
         # tensor arrays to write
         # particles, resampled particles (mean), log weights of particles
-        log_names = ["X_prevs", "X_ancestors", "log_weights"]
+        log_names = ["X_prevs", "X_ancestors", "log_weights", "lstm_states_h", "lstm_states_c"]
         log = [tf.TensorArray(tf.float32, size=time, clear_after_read=False, name="{}_ta".format(name))
                for name in log_names]
 
@@ -143,42 +125,25 @@ class SVO:
         def while_cond(t, *unused_args):
             return t < time
 
-        def while_body(t, X_prev, log_normalized_weight_tminus1, log):
+        def while_body(t, X_prev, log_normalized_weight_tminus1, h_prev, c_prev, log):
             # resampling
-            X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
-                                         resample_particles=self.resample_particles)
-            Input = tf.tile(tf.expand_dims(input[:, t-1, :], axis=0), (n_particles, 1, 1)) # (n_particles, batch_size, Dev)
-            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)
+            X_ancestor, h_ancestores, c_ancestors = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
+                                         resample_particles=self.resample_particles, hs=h_prev, cs=c_prev)
+
+            c_t, h_t = self.rnn_cell.update_lstm(X_ancestor, input[:, t-1, :])
 
             # proposal
-            if self.q_uses_true_X:
-                X, q_t_log_prob = self.sample_from_true_X(hidden[:, t, :],
-                                                          q_cov,
-                                                          sample_shape=(),
-                                                          name="q_t_sample_and_log_prob")
-                f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
-            else:
-                if self.model.use_2_q:
-                    X, q_t_log_prob, f_t_log_prob = self.sample_from_2_dist(q1,
-                                                                            self.q2,
-                                                                            q_f_t_feed,
-                                                                            preprocessed_obs_ta.read(t),
-                                                                            inputs=Input,
-                                                                            sample_size=())
-                    # q_t_log_prob = tf.where(mask[0][t], q_t_log_prob, f_t_log_prob, name="q_t_log_prob")
-                else:
-                    X, q_t_log_prob = q1.sample_and_log_prob(q_f_t_feed,
-                                                             sample_shape=(),
-                                                             name="q_t_sample_and_log_prob")
+            X, q_t_log_prob = self.rnn_cell.get_q_sample_and_log_prob(preprocessed_obs_ta.read(t))
+            assert X.shape == (n_particles, batch_size, Dx)
+            assert q_t_log_prob.shape == (n_particles, batch_size)
 
-                    # transition log probability
-                    f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
+            f_t_log_prob = self.rnn_cell.get_f_log_prob(X)
 
             # emission log probability and log weights
             if self.log_dynamics:
-                _g_t_log_prob = self.g.log_prob(tf.exp(X), obs[:, t], extra_inputs=extra_inputs[:, t])
+                _g_t_log_prob = self.rnn_cell.get_g_log_prob(tf.exp(X), obs[:, t], extra_inputs=extra_inputs[:, t])
             else:
-                _g_t_log_prob = self.g.log_prob(X, obs[:, t], extra_inputs=extra_inputs[:, t])
+                _g_t_log_prob = self.rnn_cell.get_g_log_prob(X, obs[:, t], extra_inputs=extra_inputs[:, t])
             _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
             g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
 
@@ -195,99 +160,38 @@ class SVO:
                                                  name="log_normalized_weight_t")
 
             # write results in this loop to tensor arrays
-            idxs = [t - 1, t - 1, t]
-            log_contents = [X_prev, X_ancestor, log_weight_t]
+            idxs = [t - 1, t - 1, t, t - 1, t - 1]
+            log_contents = [X_prev, X_ancestor, log_weight_t, h_ancestores, c_ancestors]
             log = [ta.write(idx, log_content) for ta, idx, log_content in zip(log, idxs, log_contents)]
 
-            return t + 1, X, log_normalized_weight_t, log
+            return t + 1, X, log_normalized_weight_t, h_t, c_t, log
 
         # conduct the while loop
-        init_state = (1, X, log_normalized_weight_0, log)
-        t_final, X_T, log_normalized_weight_T, log = tf.while_loop(while_cond, while_body, init_state)
+        init_state = (1, X, log_normalized_weight_0, h_0, c_0, log)
+        t_final, X_T, log_normalized_weight_T, h_T, c_T, log = tf.while_loop(while_cond, while_body, init_state)
 
         # write final results at t = T - 1 to tensor arrays
-        X_T_resampled = self.resample_X(X_T, log_normalized_weight_T, sample_size=n_particles,
-                                        resample_particles=self.resample_particles)
+        X_T_resampled, h_T_resampled, c_T_resampled = self.resample_X(X_T, log_normalized_weight_T,
+                                                                      sample_size=n_particles,
+                                                                      resample_particles=self.resample_particles,
+                                                                      hs=h_T, cs=c_T)
         log[0] = log[0].write(t_final - 1, X_T)
         log[1] = log[1].write(t_final - 1, X_T_resampled)
+        log[3] = log[3].write(t_final - 1, h_T_resampled)
+        log[4] = log[4].write(t_final - 1, c_T_resampled)
 
         # convert tensor arrays to tensors
-        log_shapes = [(None, n_particles, batch_size, Dx)] * 2 + [(None, n_particles, batch_size)]
+        log_shapes = [(None, n_particles, batch_size, Dx)] * 2 + [(None, n_particles, batch_size)] + \
+                     [(None, n_particles, batch_size, Dh)] * 2
+
         log = [ta.stack(name=name) for ta, name in zip(log, log_names)]
+
         for tensor, shape in zip(log, log_shapes):
             tensor.set_shape(shape)
 
-        X_prevs, X_ancestors, log_Ws = log
+        return log
 
-        return X_prevs, X_ancestors, log_Ws
-
-    def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, inputs=None, sample_size=()):
-        d1_mvn = dist1.get_mvn(d1_input)
-        d2_mvn = dist2.get_mvn(d2_input)
-
-        if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
-            if inputs is not None:
-                for i in range(self.f_power-1):
-                    d1_mvn_mean = d1_mvn.mean()
-                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1))
-
-            d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()
-            d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.stddev()
-
-            d1_mvn_cov_inv, d2_mvn_cov_inv = 1 / d1_mvn_cov, 1 / d2_mvn_cov
-            combined_cov = 1 / (d1_mvn_cov_inv + d2_mvn_cov_inv)
-            combined_mean = combined_cov * (d1_mvn_cov_inv * d1_mvn_mean + d2_mvn_cov_inv * d2_mvn_mean)
-
-            mvn = tfd.MultivariateNormalDiag(combined_mean,
-                                             combined_cov,
-                                             validate_args=True,
-                                             allow_nan_stats=False)
-        else:
-            if isinstance(d1_mvn, tfd.MultivariateNormalDiag):
-                d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), tf.diag(d1_mvn.stddev())
-            elif isinstance(d1_mvn, tfd.MultivariateNormalFullCovariance):
-                d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.covariance()
-
-            if isinstance(d2_mvn, tfd.MultivariateNormalDiag):
-                d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), tf.diag(d2_mvn.stddev())
-            elif isinstance(d2_mvn, tfd.MultivariateNormalFullCovariance):
-                d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.covariance()
-
-            if len(d1_mvn_cov.shape.as_list()) == 2:
-                d1_mvn_cov = tf.expand_dims(d1_mvn_cov, axis=0)
-
-            d1_mvn_cov_inv, d2_mvn_cov_inv = tf.linalg.inv(d1_mvn_cov), tf.linalg.inv(d2_mvn_cov)
-            combined_cov = tf.linalg.inv(d1_mvn_cov_inv + d2_mvn_cov_inv)
-            perm = list(range(len(combined_cov.shape)))
-            perm[-2], perm[-1] = perm[-1], perm[-2]
-            combined_cov = (combined_cov + tf.transpose(combined_cov, perm=perm)) / 2
-            combined_mean = tf.matmul(combined_cov,
-                                      tf.matmul(d1_mvn_cov_inv, tf.expand_dims(d1_mvn_mean, axis=-1)) +
-                                      tf.matmul(d2_mvn_cov_inv, tf.expand_dims(d2_mvn_mean, axis=-1))
-                                      )
-            combined_mean = tf.squeeze(combined_mean, axis=-1)
-
-            mvn = tfd.MultivariateNormalFullCovariance(combined_mean,
-                                                       combined_cov,
-                                                       validate_args=True,
-                                                       allow_nan_stats=False)
-
-        X = mvn.sample(sample_size)
-        q_t_log_prob = mvn.log_prob(X)
-        f_t_log_prob = d1_mvn.log_prob(X)
-
-        return X, q_t_log_prob, f_t_log_prob
-
-    def sample_from_true_X(self, hidden, q_cov, sample_shape=(), name="q_t_mvn"):
-        mvn = tfd.MultivariateNormalDiag(hidden,
-                                         q_cov * tf.ones(self.Dx, dtype=tf.float32),
-                                         name=name)
-        X = mvn.sample(sample_shape)
-        q_t_log_prob = mvn.log_prob(X)
-
-        return X, q_t_log_prob
-
-    def resample_X(self, X, log_W, sample_size=(), resample_particles=True):
+    def resample_X(self, X, log_W, sample_size=(), resample_particles=True, hs=None, cs=None):
         """
         Resample X using categorical with logits = log_W
         Input:
@@ -298,16 +202,22 @@ class SVO:
         if resample_particles:
             if log_W.shape.as_list()[0] != 1:
                 resample_idx = self.get_resample_idx(log_W, sample_size)
-                if isinstance(X, list):
-                    X_resampled = [tf.gather_nd(item, resample_idx) for item in X]
-                else:
-                    X_resampled = tf.gather_nd(X, resample_idx)
+                X_resampled = self.resample_according_to_idx(X, resample_idx)
+                if hs is not None:
+                    hs_resampled = self.resample_according_to_idx(hs, resample_idx)
+                if cs is not None:
+                    cs_resampled = self.resample_according_to_idx(cs, resample_idx)
             else:
                 assert sample_size == 1
-                X_resampled = X
-        else:
-            X_resampled = X
+                return X, hs, cs
 
+        return X, hs, cs
+
+    def resample_according_to_idx(self, X, resample_idx):
+        if isinstance(X, list):
+            X_resampled = [tf.gather_nd(item, resample_idx) for item in X]
+        else:
+            X_resampled = tf.gather_nd(X, resample_idx)
         return X_resampled
 
     def get_resample_idx(self, log_W, sample_size=()):
@@ -364,7 +274,6 @@ class SVO:
         :return: preprocessed_obs, a list of length time, each item is of shape (batch_size, smoother_Dhs*2)
         """
         # if self.smooth_obs, smooth obs with bidirectional RNN
-
         with tf.variable_scope("smooth_obs"):
             if not self.smooth_obs:
                 preprocessed_obs = tf.transpose(obs, perm=[1, 0, 2])
@@ -372,13 +281,14 @@ class SVO:
             else:
                 preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
 
+            """
             if not (self.model.use_bootstrap and self.model.use_2_q):
                 preprocessed_X0 = self.model.X0_transformer(preprocessed_X0)
-
+            """
         return preprocessed_X0, preprocessed_obs
 
     def preprocess_obs_w_bRNN(self, obs, time_interval):
-        self.y_smoother_f, self.y_smoother_b, self.X0_smoother_f, self.X0_smoother_b = self.model.bRNN
+        self.y_smoother_f, self.y_smoother_b, self.X0_smoother_f, self.X0_smoother_b = self.rnn_cell.model.bRNN
         rnn_input = tf.concat([obs, time_interval[:, :, tf.newaxis]], axis=-1)
 
         if self.use_stack_rnn:
@@ -415,10 +325,12 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, hidden, obs, input, mask, extra_inputs, log_space=True):
+    def n_step_MSE(self, n_steps, lstm_states_h, lstm_states_c, hidden, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
+        :param lstm_states_h: (batch_size, time, n_particles, Dh)
+        :param lstm_states_c: (batch_size, time, n_particles, Dh)
         :param hidden: (batch_size, time, n_particles, Dx)
         :param obs: (batch_size, time, Dy)
         :param input: (batch_size, time, Dv)
@@ -436,30 +348,40 @@ class SVO:
 
         with tf.variable_scope(self.name):
 
-            hidden = tf.reduce_mean(hidden, axis=2)  # average over paths (n_particles),shape (batch_size, time, Dx)
+            # average over paths
+            lstm_states_h = tf.reduce_mean(lstm_states_h, axis=2)  # (batch_size, time, Dh)
+            lstm_states_c = tf.reduce_mean(lstm_states_c, axis=2)  # (batch_size, time, Dh)
+            hidden = tf.reduce_mean(hidden, axis=2)  # (batch_size, time, Dx)
             x_BxTmkxDz = hidden
+            h_BxTmkxDh = lstm_states_h
+            c_BxTmkxDh = lstm_states_c
 
             # get y_hat
             y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
                 if self.log_dynamics:
-                    y_hat_BxTmkxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, k:])
+                    y_hat_BxTmkxDy = self.rnn_cell.get_g_mean(h_BxTmkxDh, tf.exp(x_BxTmkxDz),
+                                                              extra_inputs=extra_inputs[:, k:])
                 else:
-                    y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
-                    # (batch_size, time - k, Dy)
-                y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
+                    y_hat_BxTmkxDy = self.rnn_cell.get_g_mean(h_BxTmkxDh, x_BxTmkxDz,
+                                                              extra_inputs=extra_inputs[:, k:])
+
+                y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)  # each item is (batch_size, time - k, Dy)
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
+                h_BxTmkxDh = h_BxTmkxDh[:, :-1]  # (batch_size, time - k - 1, Dh)
+                c_BxTmkxDh = c_BxTmkxDh[:, :-1]  # (batch_size, time - k - 1, Dh)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
-                x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
+                # (batch_size, time - k - 1, Dh)
+                c_BxTmkxDh, h_BxTmkxDh = self.rnn_cell.compute_lstm(x_BxTmkxDz, input[:, k:-1], h_BxTmkxDh, c_BxTmkxDh)
+                x_BxTmkxDz = self.rnn_cell.get_f_mean(h_BxTmkxDh) # (batch_size, time - k - 1, Dx)
 
             if self.log_dynamics:
-                y_hat_BxTmNxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, n_steps:])
+                y_hat_BxTmNxDy = self.rnn_cell.get_g_mean(h_BxTmkxDh, tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, n_steps:])
             else:
-                y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
-            y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
+                y_hat_BxTmNxDy = self.rnn_cell.get_g_mean(h_BxTmkxDh, x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])
+            y_hat_N_BxTxDy.append(y_hat_BxTmNxDy) # each item is # (batch_size, T - N, Dy)
 
             # get y_true
             y_N_BxTxDy = []
@@ -474,16 +396,17 @@ class SVO:
             y_means = []    # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
             y_vars = []     # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
             for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-                # convert count into percentage
-                y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
-                y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
 
-                if log_space:
-                    # convert percentage into log space
-                    y_hat_BxTmkxDy = (y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                    y_BxTmkxDy = (y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                    y_hat_BxTmkxDy = tf.log(y_hat_BxTmkxDy)
-                    y_BxTmkxDy = tf.log(y_BxTmkxDy)
+                if self.FLAGS.emission == "poisson" or "multinomial":
+                    # convert count into percentage
+                    y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                    y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+
+                # convert percentage into log percentage
+                y_hat_BxTmkxDy = (y_hat_BxTmkxDy + 1e-9) / (1 + Dy * 1e-9)
+                y_hat_BxTmkxDy = tf.log(y_hat_BxTmkxDy)
+                y_BxTmkxDy = (y_BxTmkxDy + 1e-9) / (1 + Dy * 1e-9)
+                y_BxTmkxDy = tf.log(y_BxTmkxDy)
 
                 difference = y_hat_BxTmkxDy - y_BxTmkxDy   # (batch_size, time-k, Dy)
                 masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
@@ -505,7 +428,10 @@ class SVO:
 
             return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
 
+    """
     def get_nextX(self, X):
+        # TODO: fix this
         # only used for drawing 2D quiver plot
         with tf.variable_scope(self.name):
             return self.f.mean(X)
+    """

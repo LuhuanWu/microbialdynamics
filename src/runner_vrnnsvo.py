@@ -9,12 +9,11 @@ import joblib
 
 # import from files
 from src.model import SSM
-from src.trainer import trainer
+from src.trainer_vrnn import trainer
 
-from src.SMC.SVO import SVO
-from src.SMC.PSVO import PSVO
-from src.SMC.IWAE import IWAE
-from src.SMC.AESMC import AESMC
+from src.SMC.VRNN_SVO import VRNNSVO
+from src.vrnn_ssm_model import SSM
+from src.VRNN import VartiationalRNN
 
 from src.rslts_saving.rslts_saving import *
 from src.rslts_saving.fhn_rslts_saving import *
@@ -25,16 +24,13 @@ from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_TYPE, COUNT_
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
 
+
 def main(_):
     FLAGS = tf.app.flags.FLAGS
 
     # ========================================= parameter part begins ========================================== #
     Dx = FLAGS.Dx
     print_freq = FLAGS.print_freq
-    n_step_MSE_in_log_space = FLAGS.n_step_MSE_in_log_space
-
-    if FLAGS.use_2_q:
-        FLAGS.q_uses_true_X = False
 
     tf.set_random_seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
@@ -81,7 +77,7 @@ def main(_):
                                  extra_inputs_train, extra_input_test, FLAGS.use_gp)
 
         elif FLAGS.data_type in COUNT_DATA_TYPE:
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
+            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
@@ -117,28 +113,17 @@ def main(_):
 
     # ============================================== model part ============================================== #
     SSM_model = SSM(FLAGS)
-
-    # at most one of them can be set to True
-    assert FLAGS.PSVO + FLAGS.SVO + FLAGS.AESMC + FLAGS.IWAE < 2
+    rnn_cell = VartiationalRNN(SSM_model, FLAGS)
 
     # SMC class to calculate loss
-    if FLAGS.PSVO:
-        SMC_train = PSVO(SSM_model, FLAGS)
-    elif FLAGS.SVO:
-        SMC_train = SVO(SSM_model, FLAGS)
-    elif FLAGS.AESMC:
-        SMC_train = AESMC(SSM_model, FLAGS)
-    elif FLAGS.IWAE:
-        SMC_train = IWAE(SSM_model, FLAGS)
-    else:
-        raise ValueError("Choose one of objectives among: PSVO, SVO, AESMC, IWAE")
+    SMC_train = VRNNSVO(rnn_cell, FLAGS)
 
     # =========================================== data saving part =========================================== #
     # create dir to save results
-    Experiment_params = {"np":            FLAGS.n_particles,
-                         "lr":            FLAGS.lr,
-                         "epoch":         FLAGS.epoch,
-                         "seed":          FLAGS.seed,
+    Experiment_params = {"np": FLAGS.n_particles,
+                         "lr": FLAGS.lr,
+                         "epoch": FLAGS.epoch,
+                         "seed": FLAGS.seed,
                          "rslt_dir_name": FLAGS.rslt_dir_name}
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
@@ -155,19 +140,20 @@ def main(_):
                                    mask_train, mask_test,
                                    time_interval_train, time_interval_test,
                                    extra_inputs_train, extra_input_test,
-                                   print_freq, n_step_MSE_in_log_space)
+                                   print_freq)
 
     # ======================================== final data saving part ======================================== #
     with open(RLT_DIR + "history.json", "w") as f:
         json.dump(history, f, indent=4, cls=NumpyEncoder)
 
-    Xs, y_hat = log["Xs"], log["y_hat"]
+    Xs = log["Xs"]
+    y_hat = log["y_hat"]
     Xs_val = mytrainer.evaluate(Xs, mytrainer.saving_feed_dict)
 
     y_hat_val = mytrainer.evaluate(y_hat, mytrainer.saving_feed_dict)
     print("finish evaluating training results")
 
-    # plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
+    plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
     plot_y_hat(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
     plot_y_hat_bar_plot(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
 
@@ -179,12 +165,12 @@ def main(_):
     testing_data_dict = {"hidden_test": hidden_test[0:saving_num],
                          "obs_test": obs_test[0:saving_num],
                          "input_test": input_test[0:saving_num]}
-    
-    learned_model_dict = {"Xs_val": Xs_val,
-                          "y_hat_val": y_hat_val}
+
+    learned_model_dict = {"Xs_val": Xs_val}
+                          #"y_hat_val": y_hat_val}
     data_dict = {"testing_data_dict": testing_data_dict,
                  "learned_model_dict": learned_model_dict}
-    
+
     with open(RLT_DIR + "data.p", "wb") as f:
         pickle.dump(data_dict, f)
 
