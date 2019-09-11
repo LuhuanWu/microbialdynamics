@@ -111,7 +111,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp):
         for t in np.arange(days[0], days[-1] + 1):
             if t == days[i]:
                 smoothed_obs = obs[i, 1:]
-                if np.sum(smoothed_obs) == 1: # if use percentage data & dirichlet emission
+                if np.abs(np.sum(smoothed_obs) - 1) < 1e-6: # if use percentage data & dirichlet emission
                     smoothed_obs = smoothed_obs * (1 - 1e-6) + 1e-6 / Dy
                 interpolated_obs[t - days[0]] = smoothed_obs
                 last_valid_value = smoothed_obs
