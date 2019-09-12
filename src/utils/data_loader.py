@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 
 
-def load_data(path, Dx, isPython2):
+def load_data(path, Dx, isPython2, training_sample_idx=None):
     with open(path, "rb") as handle:
         if isPython2:
             data = pickle.load(handle, encoding="latin1")
@@ -27,5 +27,21 @@ def load_data(path, Dx, isPython2):
     else:
         extra_inputs_train = [None for _ in range(len(obs_train))]
         extra_inputs_test = [None for _ in range(len(obs_test))]
+
+    if training_sample_idx is not None:
+        assert isinstance(training_sample_idx, list)
+        # use selected training samples for bothh training and evaluation
+
+        hidden_train = [hidden_train[i] for i in training_sample_idx]
+        hidden_test = hidden_train
+
+        obs_train = [obs_train[i] for i in training_sample_idx]
+        obs_test = obs_train
+
+        input_train = [input_train[i] for i in training_sample_idx]
+        input_test = input_train
+
+        extra_inputs_train = [extra_inputs_train[i] for i in training_sample_idx]
+        extra_inputs_test = extra_inputs_train
 
     return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, extra_inputs_train, extra_inputs_test

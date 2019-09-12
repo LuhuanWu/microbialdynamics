@@ -74,10 +74,21 @@ class trainer:
         # metrics
         self.log_ZSMC_trains = []
         self.log_ZSMC_tests = []
-        self.MSE_trains = []
-        self.MSE_tests = []
-        self.R_square_trains = []
-        self.R_square_tests = []
+
+        self.MSE_original_trains = []
+        self.MSE_original_tests = []
+        self.R_square_original_trains = []
+        self.R_square_original_tests = []
+
+        self.MSE_percentage_trains = []
+        self.MSE_percentage_tests = []
+        self.R_square_percentage_trains = []
+        self.R_square_percentage_tests = []
+
+        self.MSE_logp_trains = []
+        self.MSE_logp_tests = []
+        self.R_square_logp_trains = []
+        self.R_square_logp_tests = []
 
         # epoch data (trajectory, y_hat and quiver lattice)
         epoch_data_DIR = self.RLT_DIR.split("/")
@@ -103,8 +114,7 @@ class trainer:
               mask_train, mask_test,
               time_interval_train, time_interval_test,
               extra_inputs_train, extra_inputs_test,
-              print_freq,
-              n_step_MSE_in_log_space):
+              print_freq):
 
         self.obs_train,    self.obs_test    = obs_train,    obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
@@ -119,8 +129,12 @@ class trainer:
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding,
-                                                             self.mask, self.extra_inputs, n_step_MSE_in_log_space)
+        t1, t2, t3 = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding,
+                                                             self.mask, self.extra_inputs)
+
+        MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original = t1
+        MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = t2
+        MSE_ks_logp, y_means_logp, y_vars_logp, y_hat_N_BxTxDy_logp = t3
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -149,7 +163,9 @@ class trainer:
             start = time.time()
 
             if i == 0:
-                self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
+                self.evaluate_and_save_metrics(i, MSE_ks_original, y_means_original, y_vars_original,
+                                               MSE_ks_percentage, y_means_percentage, y_vars_percentage,
+                                               MSE_ks_logp, y_means_logp, y_vars_logp)
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -169,7 +185,9 @@ class trainer:
 
             if (i + 1) % print_freq == 0:
                 try:
-                    self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
+                    self.evaluate_and_save_metrics(i, MSE_ks_original, y_means_original, y_vars_original,
+                                                   MSE_ks_percentage, y_means_percentage, y_vars_percentage,
+                                                   MSE_ks_logp, y_means_logp, y_vars_logp)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
@@ -191,7 +209,7 @@ class trainer:
                             pickle.dump(trajectory_dict, f)
 
                     if self.save_y_hat:
-                        y_hat_val = self.evaluate(y_hat, self.saving_feed_dict, average=False)
+                        y_hat_val = self.evaluate(y_hat_N_BxTxDy_logp, self.saving_feed_dict, average=False)
                         y_hat_dict = {"y_hat": y_hat_val}
                         with open(self.epoch_data_DIR + "y_hat_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_dict, f)
@@ -203,24 +221,26 @@ class trainer:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
 
             end = time.time()
-            print("epoch {:<4} took {:.3f} seconds".format(i + 1, end - start))
+            print("epoch {:<14} took {:.3f} seconds".format(i + 1, end - start))
 
         print("finished training...")
 
         metrics = {"log_ZSMC_trains": self.log_ZSMC_trains,
                    "log_ZSMC_tests":  self.log_ZSMC_tests,
-                   "MSE_trains":      self.MSE_trains,
-                   "MSE_tests":       self.MSE_tests,
-                   "R_square_trains": self.R_square_trains,
-                   "R_square_tests":  self.R_square_tests}
-        log["y_hat"] = y_hat
+                   "MSE_trains":      self.MSE_percentage_trains,
+                   "MSE_tests":       self.MSE_percentage_tests,
+                   "R_square_trains": self.R_square_percentage_trains,
+                   "R_square_tests":  self.R_square_percentage_tests}
+        log["y_hat"] = y_hat_N_BxTxDy_logp
         
         return metrics, log
 
     def close_session(self):
         self.sess.close()
 
-    def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
+    def evaluate_and_save_metrics(self, iter_num, MSE_ks_original, y_means_original, y_vars_original,
+                                  MSE_ks_percentage, y_means_percentage, y_vars_percentage,
+                                  MSE_ks_logp, y_means_logp, y_vars_logp):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
                                        {self.obs:           self.obs_train,
                                         self.hidden:        self.hidden_train,
@@ -240,21 +260,54 @@ class trainer:
                                        self.extra_inputs:   self.extra_inputs_test},
                                       average=True)
 
-        MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
+        MSE_original_train, R_square_original_train = self.evaluate_R_square(MSE_ks_original,
+                                                                             y_means_original, y_vars_original,
                                                            self.hidden_train, self.obs_train, self.input_train,
                                                            self.mask_train, self.time_interval_train,
                                                            self.extra_inputs_train)
-        MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
+        MSE_original_test, R_square_original_test = self.evaluate_R_square(MSE_ks_original,
+                                                                           y_means_original, y_vars_original,
                                                          self.hidden_test, self.obs_test, self.input_test,
                                                          self.mask_test, self.time_interval_test,
                                                          self.extra_inputs_test)
+
+        MSE_percentage_train, R_square_percentage_train = self.evaluate_R_square(MSE_ks_percentage,
+                                                                             y_means_percentage, y_vars_percentage,
+                                                                             self.hidden_train, self.obs_train,
+                                                                             self.input_train,
+                                                                             self.mask_train, self.time_interval_train,
+                                                                             self.extra_inputs_train)
+
+        MSE_percentage_test, R_square_percentage_test = self.evaluate_R_square(MSE_ks_percentage,
+                                                                           y_means_original, y_vars_original,
+                                                                           self.hidden_test, self.obs_test,
+                                                                           self.input_test,
+                                                                           self.mask_test, self.time_interval_test,
+                                                                           self.extra_inputs_test)
+
+        MSE_logp_train, R_square_logp_train = self.evaluate_R_square(MSE_ks_logp,
+                                                                             y_means_logp, y_vars_logp,
+                                                                             self.hidden_train, self.obs_train,
+                                                                             self.input_train,
+                                                                             self.mask_train, self.time_interval_train,
+                                                                             self.extra_inputs_train)
+        MSE_logp_test, R_square_logp_test = self.evaluate_R_square(MSE_ks_logp,
+                                                                           y_means_logp, y_vars_logp,
+                                                                           self.hidden_test, self.obs_test,
+                                                                           self.input_test,
+                                                                           self.mask_test, self.time_interval_test,
+                                                                           self.extra_inputs_test)
 
         print()
         print("iter", iter_num + 1)
         print("Train log_ZSMC: {:>7.3f}, valid log_ZSMC: {:>7.3f}"
               .format(log_ZSMC_train, log_ZSMC_test))
 
-        print("Train, Valid k-step Rsq:\n", R_square_train, "\n", R_square_test)
+        print("Train, Valid k-step Rsq (original space):\n", R_square_original_train, "\n", R_square_original_test)
+
+        print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
+
+        print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
 
         if not math.isfinite(log_ZSMC_train):
             print("Nan in log_ZSMC, stop training")
@@ -263,19 +316,30 @@ class trainer:
         if self.save_res:
             self.log_ZSMC_trains.append(log_ZSMC_train)
             self.log_ZSMC_tests.append(log_ZSMC_test)
-            self.MSE_trains.append(MSE_train)
-            self.MSE_tests.append(MSE_test)
-            self.R_square_trains.append(R_square_train)
-            self.R_square_tests.append(R_square_test)
 
-            plot_R_square_epoch(self.RLT_DIR, R_square_train, R_square_test, iter_num + 1)
+            self.MSE_original_trains.append(MSE_original_train)
+            self.MSE_original_tests.append(MSE_original_test)
+            self.R_square_original_trains.append(R_square_original_train)
+            self.R_square_original_tests.append(R_square_original_test)
+
+            self.MSE_percentage_trains.append(MSE_percentage_train)
+            self.MSE_percentage_tests.append(MSE_percentage_test)
+            self.R_square_percentage_trains.append(R_square_percentage_train)
+            self.R_square_percentage_tests.append(R_square_percentage_test)
+
+            self.MSE_logp_trains.append(MSE_logp_train)
+            self.MSE_logp_tests.append(MSE_logp_test)
+            self.R_square_logp_trains.append(R_square_logp_train)
+            self.R_square_logp_tests.append(R_square_logp_test)
+
+            plot_R_square_epoch(self.RLT_DIR, R_square_percentage_train, R_square_percentage_test, iter_num + 1)
 
             if not os.path.exists(self.epoch_data_DIR):
                 os.makedirs(self.epoch_data_DIR)
             metric_dict = {"log_ZSMC_train": log_ZSMC_train,
                            "log_ZSMC_test":  log_ZSMC_test,
-                           "R_square_train": R_square_train,
-                           "R_square_test":  R_square_test}
+                           "R_square_percentage_train": R_square_percentage_train,
+                           "R_square_percentage_test":  R_square_percentage_test}
             with open(self.epoch_data_DIR + "metric_{}.p".format(iter_num + 1), "wb") as f:
                 pickle.dump(metric_dict, f)
 
@@ -290,6 +354,7 @@ class trainer:
 
         if self.bestCost != len(self.log_ZSMC_tests) - 1:
             self.early_stop_count += 1
+
             if self.early_stop_count * print_freq == self.early_stop_patience:
                 print("valid cost not improving. stopping training...")
                 raise StopTraining()

@@ -18,6 +18,8 @@ class SVO:
         self.n_particles = FLAGS.n_particles
         self.q_uses_true_X = FLAGS.q_uses_true_X
 
+        self.emission = FLAGS.emission
+
         # bidirectional RNN as full sequence observations encoder
         self.X0_use_separate_RNN = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn = FLAGS.use_stack_rnn
@@ -71,6 +73,7 @@ class SVO:
 
         # preprocessing obs
         if self.model.emission == "poisson" or self.model.emission == "multinomial" :
+            # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
             obs_4_proposal = obs
@@ -415,7 +418,32 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, hidden, obs, input, mask, extra_inputs, log_space=True):
+    @staticmethod
+    def compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask):
+        MSE_ks = []  # [MSE_0, MSE_1, ..., MSE_N]
+        y_means = []  # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
+        y_vars = []  # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
+        for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+            difference = y_hat_BxTmkxDy - y_BxTmkxDy  # (batch_size, time-k, Dy)
+            masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
+            masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
+
+            MSE_k = tf.reduce_sum(masked_difference ** 2, name="MSE_{}".format(k))
+            MSE_ks.append(MSE_k)
+
+            masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])  # (mask_time, Dy)
+            masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
+            y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
+            y_means.append(y_mean)
+            y_var = tf.reduce_sum((masked_y - y_mean) ** 2, axis=[0, 1], name="y_var_{}".format(k))  # (Dy,)
+            y_vars.append(y_var)
+
+        MSE_ks = tf.stack(MSE_ks, name="MSE_ks")  # (n_steps + 1)
+        y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
+        y_vars = tf.stack(y_vars, name="y_vars")  # (n_steps + 1, Dy)
+        return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
+
+    def n_step_MSE(self, n_steps, hidden, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -470,40 +498,37 @@ class SVO:
             # compare y_hat and y_true to get MSE_k, y_mean, y_var
             # FOR THE BATCH and FOR k = 0, ..., n_steps
 
-            MSE_ks = []     # [MSE_0, MSE_1, ..., MSE_N]
-            y_means = []    # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
-            y_vars = []     # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
+            t1 = MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original = \
+                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+
+            # percentage
+            if self.emission == "poisson" or "multinomial":
+                for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+                    # convert count into percentage
+                    y_hat_N_BxTxDy[k] = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                    y_N_BxTxDy[k] = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+
+
+                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage =\
+                    self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+            elif self.emission == "dirichlet" or "mvn":
+                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = \
+                    MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original
+            else:
+                raise ValueError("Unsupported emission!")
+
+            # log percentage
             for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-                # convert count into percentage
-                y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
-                y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
 
-                if log_space:
-                    # convert percentage into log space
-                    y_hat_BxTmkxDy = (y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                    y_BxTmkxDy = (y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                    y_hat_BxTmkxDy = tf.log(y_hat_BxTmkxDy)
-                    y_BxTmkxDy = tf.log(y_BxTmkxDy)
+                # convert percentage into log space
+                y_hat_N_BxTxDy[k] = tf.log((y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
+                y_N_BxTxDy[k] = tf.log((y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
 
-                difference = y_hat_BxTmkxDy - y_BxTmkxDy   # (batch_size, time-k, Dy)
-                masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
-                masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
 
-                MSE_k = tf.reduce_sum(masked_difference**2, name="MSE_{}".format(k))
-                MSE_ks.append(MSE_k)
+            t3 = MSE_ks_logp, y_means_logp, y_vars_logp, y_hat_N_BxTxDy_logp = \
+                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
 
-                masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])   # (mask_time, Dy)
-                masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
-                y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
-                y_means.append(y_mean)
-                y_var = tf.reduce_sum((masked_y - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))   # (Dy,)
-                y_vars.append(y_var)
-
-            MSE_ks = tf.stack(MSE_ks, name="MSE_ks")     # (n_steps + 1)
-            y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
-            y_vars = tf.stack(y_vars, name="y_vars")     # (n_steps + 1, Dy)
-
-            return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
+            return t1, t2, t3
 
     def get_nextX(self, X):
         # only used for drawing 2D quiver plot

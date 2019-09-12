@@ -25,13 +25,13 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 6                # dimension of hidden states
-Dy = 10                  # dimension of observations. for microbio data, Dy = 11
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 200
+epoch = 5 # 100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -42,7 +42,10 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clv_diff_length_200_Dx_3"
+data_type = "percentage"
+
+# choose samples from the training set for training and test. -1 indicates use all.
+training_sample_idx = [-1]
 
 isPython2 = False
 
@@ -56,21 +59,21 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [16, 16, 16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [16, 16, 16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [16, 16, 16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [16, 16, 16]         # target evolution
-g_layers = [16, 16, 16]         # target emission
+q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32]         # target evolution
+g_layers = [32]         # target emission
 
 # number of f^power
 f_power = 1
 
 # Covariance Terms
-q0_sigma_init, q0_sigma_min = 1, 0.0001
-q1_sigma_init, q1_sigma_min = 1, 0.0001
-q2_sigma_init, q2_sigma_min = 1, 0.0001
-f_sigma_init, f_sigma_min = 1, 0.0001
-g_sigma_init, g_sigma_min = 1, 0.0001
+q0_sigma_init, q0_sigma_min = 5, 1e-8
+q1_sigma_init, q1_sigma_min = 5, 1e-8
+q2_sigma_init, q2_sigma_min = 5, 1e-8
+f_sigma_init, f_sigma_min = 5, 1e-8
+g_sigma_init, g_sigma_min = 5, 1e-8
 
 # if q, f and g networks also output covariance (sigma)
 output_cov = False
@@ -107,7 +110,7 @@ q_uses_true_X = False
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
 
-log_dynamics = True  # whether to set latent dynamics in the log space
+log_dynamics = False  # whether to set latent dynamics in the log space
 
 
 # ------------------------- Inference Schemes ------------------------ #
@@ -126,7 +129,7 @@ BSim_use_single_RNN = False
 # ----------------------------- Training ----------------------------- #
 
 # stop training early if validation set does not improve
-early_stop_patience = 200
+early_stop_patience = 1000
 
 # reduce learning rate when testing loss doesn't improve for some time
 lr_reduce_patience = 30
@@ -139,13 +142,7 @@ min_lr = lr / 10
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 5
-
-# whether to evaluate n-step MSE in log space
-n_step_MSE_in_log_space = True
-
-# whether to normalize in y hat bar plots
-y_hat_bar_plot_to_normalize = True
+print_freq = 1 # 200
 
 # whether to save the followings during training
 #   hidden trajectories
@@ -154,7 +151,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test_bootstrap"
+rslt_dir_name = "test/general"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -176,6 +173,8 @@ f_layers = ",".join([str(x) for x in f_layers])
 g_layers = ",".join([str(x) for x in g_layers])
 y_smoother_Dhs = ",".join([str(x) for x in y_smoother_Dhs])
 X0_smoother_Dhs = ",".join([str(x) for x in X0_smoother_Dhs])
+
+training_sample_idx = ",".join([str(x) for x in training_sample_idx])
 
 
 # ================================================ tf.flags ================================================ #
@@ -203,6 +202,7 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
+flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from training set for training and test")
 
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
@@ -288,9 +288,6 @@ flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
 # --------------------- printing, data saving and evaluation params --------------------- #
 
 flags.DEFINE_integer("print_freq", print_freq, "frequency to evaluate testing loss & other metrics and save results")
-
-flags.DEFINE_boolean("n_step_MSE_in_log_space", n_step_MSE_in_log_space, "whether to evaluate n-step MSE in log space")
-flags.DEFINE_boolean("y_hat_bar_plot_to_normalize", y_hat_bar_plot_to_normalize, "whether to normalize in y hat bar plot")
 
 flags.DEFINE_boolean("save_trajectory", save_trajectory, "whether to save hidden trajectories during training")
 flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat during training")

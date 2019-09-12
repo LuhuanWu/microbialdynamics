@@ -33,8 +33,16 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    n_step_MSE_in_log_space = FLAGS.n_step_MSE_in_log_space
-    y_hat_bar_plot_to_normalize = FLAGS.y_hat_bar_plot_to_normalize
+    if FLAGS.emission == "dirichlet" or "mvn":
+        y_hat_bar_plot_to_normalize = False
+    elif FLAGS.emission == "poisson" or "multinomial":
+        y_hat_bar_plot_to_normalize = True
+    else:
+        raise ValueError("Unsupported emission!")
+
+    training_sample_idx = [int(x) for x in FLAGS.training_sample_idx.split(",")]
+    if training_sample_idx == [-1]:
+        training_sample_idx = None
 
     if FLAGS.use_2_q:
         FLAGS.q_uses_true_X = False
@@ -70,32 +78,40 @@ def main(_):
             time_interval_test = np.zeros_like(_mask_test)
 
             extra_inputs_train = np.zeros((train_num, T_train))
-            extra_input_test = np.zeros((test_num, T_test))
+            extra_inputs_test = np.zeros((test_num, T_test))
 
         elif FLAGS.data_type in PERCENTAGE_DATA_TYPE:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            extra_inputs_train, extra_input_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2)
+            extra_inputs_train, extra_inputs_test = \
+                load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
                 interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                                 extra_inputs_train, extra_input_test, FLAGS.use_gp)
+                                 extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
+
+            if FLAGS.emission == "mvn":
+                # transform to log additive ratio
+               for i in range(len(obs_train)):
+                    obs_train[i] = np.log(obs_train[i][:,:-1]) - np.log(obs_train[i][:, -1:])
+
+               for i in range(len(obs_test)):
+                   obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
 
         elif FLAGS.data_type in COUNT_DATA_TYPE:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2)
+                load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_input_test = \
+            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
                 interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                                  extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
 
         else:
-            raise ValueError("Data type must be one of toy, percentage or count.")
+            raise ValueError("Data type must be one of available data types.")
 
         if FLAGS.use_mask:
             mask_train, mask_test = _mask_train, _mask_test
@@ -113,7 +129,7 @@ def main(_):
     min_time_train = min([obs.shape[0] for obs in obs_train])
     min_time_test = min([obs.shape[0] for obs in obs_test])
     min_time = min(min_time_train, min_time_test)
-    FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 1)
+    FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 2)
     FLAGS.saving_num = saving_num = min(FLAGS.saving_num, FLAGS.n_train, FLAGS.n_test)
 
     print("finished preparing dataset")
@@ -157,8 +173,8 @@ def main(_):
                                    input_train, input_test,
                                    mask_train, mask_test,
                                    time_interval_train, time_interval_test,
-                                   extra_inputs_train, extra_input_test,
-                                   print_freq, n_step_MSE_in_log_space)
+                                   extra_inputs_train, extra_inputs_test,
+                                   print_freq)
 
     # ======================================== final data saving part ======================================== #
     with open(RLT_DIR + "history.json", "w") as f:
@@ -172,6 +188,21 @@ def main(_):
 
     # plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
     plot_y_hat(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
+
+    if FLAGS.emission == "mvn":
+        # transform log additive ratio back to observation
+
+        for i in range(len(obs_test)):
+            obs_test[i] = np.exp(obs_test[i])
+            p11 = 1 / (1 + obs_test[i].sum(axis=-1, keepdims=True))  # (n_days, 1)
+            obs_test[i] = p11 * obs_test[i]
+
+        for i in range(len(y_hat_val)):
+            for j in range(len(y_hat_val[i])):
+                y_hat_val[i][j] = np.exp(y_hat_val[i][j])
+                p11 = 1 / (1 + y_hat_val[i][j].sum(axis=-1, keepdims=True))  # (n_days, 1)
+                y_hat_val[i][j] = p11 * y_hat_val[i][j]
+
     plot_y_hat_bar_plot(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num,
                         to_normalize=y_hat_bar_plot_to_normalize)
 

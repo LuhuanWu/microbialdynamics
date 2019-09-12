@@ -87,7 +87,7 @@ class tf_mvn(distribution):
         sigma_con = tf.maximum(sigma_con, self.sigma_min)
         return sigma_con
 
-    def sample_and_log_prob(self, Input, sample_shape=(), name=None):
+    def sample_and_log_prob(self, Input, sample_shape=(), name=None, **kwargs):
         mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             sample = mvn.sample(sample_shape)
@@ -105,7 +105,7 @@ class tf_mvn(distribution):
         with tf.variable_scope(name or self.name):
             return mvn.log_prob(output)
 
-    def mean(self, Input, name=None):
+    def mean(self, Input, name=None, **kwargs):
         mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             if isinstance(self.transformation, NF):

@@ -80,6 +80,9 @@ PERCENTAGE_DATA_TYPE = ["percentage", "percentage_noinputs",
                         "clv_percentage_Dx_10_ntrain_1000",
                         "clv_percentage_Dx_10_ntrain_1200"]
 
+# add 10 dim observation fata to percentage data ( for mvn emission)
+
+
 COUNT_DATA_TYPE = ["count", "count_noinputs", "pink_count", "cyan_count",
                    "clv_count_Dx_1",
                    "clv_count_Dx_2",
