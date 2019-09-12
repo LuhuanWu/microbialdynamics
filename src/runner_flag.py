@@ -42,10 +42,10 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "percentage"
+data_type = "count"
 
 # choose samples from the training set for training and test. -1 indicates use all.
-training_sample_idx = [-1]
+training_sample_idx = [3]
 
 isPython2 = False
 
@@ -97,7 +97,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "poisson"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -151,7 +151,7 @@ save_trajectory = True
 save_y_hat = True
 
 # dir to save all results
-rslt_dir_name = "test/general"
+rslt_dir_name = "test_poisson"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

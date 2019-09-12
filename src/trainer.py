@@ -231,7 +231,7 @@ class trainer:
                    "MSE_tests":       self.MSE_percentage_tests,
                    "R_square_trains": self.R_square_percentage_trains,
                    "R_square_tests":  self.R_square_percentage_tests}
-        log["y_hat"] = y_hat_N_BxTxDy_logp
+        log["y_hat"] = y_hat_N_BxTxDy_original
         
         return metrics, log
 

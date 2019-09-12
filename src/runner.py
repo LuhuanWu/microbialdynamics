@@ -33,9 +33,9 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    if FLAGS.emission == "dirichlet" or "mvn":
+    if FLAGS.emission == "dirichlet" or FLAGS.emission == "mvn":
         y_hat_bar_plot_to_normalize = False
-    elif FLAGS.emission == "poisson" or "multinomial":
+    elif FLAGS.emission == "poisson" or FLAGS.emission == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
         raise ValueError("Unsupported emission!")
