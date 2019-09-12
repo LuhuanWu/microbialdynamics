@@ -279,7 +279,7 @@ class trainer:
                                                                              self.extra_inputs_train)
 
         MSE_percentage_test, R_square_percentage_test = self.evaluate_R_square(MSE_ks_percentage,
-                                                                           y_means_original, y_vars_original,
+                                                                           y_means_percentage, y_vars_percentage,
                                                                            self.hidden_test, self.obs_test,
                                                                            self.input_test,
                                                                            self.mask_test, self.time_interval_test,
