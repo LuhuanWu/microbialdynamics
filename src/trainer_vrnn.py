@@ -421,7 +421,7 @@ class trainer:
         return mean_MSE_ks, R_square
 
     def draw_2D_quiver_plot(self, Xs_val, nextX, lattice, epoch):
-        # Xs_val.shape = (saving_num, time, n_particles, Dx)
+        # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
         X_trajs = np.mean(Xs_val, axis=2)
 
         plt.figure()
@@ -446,7 +446,7 @@ class trainer:
         return Xlattice
 
     def draw_3D_quiver_plot(self, Xs_val, epoch):
-        # Xs_val.shape = (saving_num, time, n_particles, Dx)
+        # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
         X_trajs = np.mean(Xs_val, axis=2)
 
         fig = plt.figure()

@@ -84,7 +84,7 @@ def main(_):
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
-            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
@@ -125,12 +125,13 @@ def main(_):
             for m in _mask_test:
                 mask_test.append(np.ones_like(m, dtype=bool))
 
-    # clip saving_num to avoid it > n_train or n_test
+    # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
     min_time_test = min([obs.shape[0] for obs in obs_test])
     min_time = min(min_time_train, min_time_test)
     FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 2)
-    FLAGS.saving_num = saving_num = min(FLAGS.saving_num, FLAGS.n_train, FLAGS.n_test)
+    FLAGS.saving_train_num = min(FLAGS.saving_train_num, FLAGS.n_train)
+    FLAGS.saving_test_num = min(FLAGS.saving_test_num, FLAGS.n_test)
 
     print("finished preparing dataset")
 
@@ -180,14 +181,13 @@ def main(_):
     with open(RLT_DIR + "history.json", "w") as f:
         json.dump(history, f, indent=4, cls=NumpyEncoder)
 
-    Xs, y_hat = log["Xs"], log["y_hat"]
-    Xs_val = mytrainer.evaluate(Xs, mytrainer.saving_feed_dict)
+    Xs, y_hat = log["Xs"], log["y_hat_original"]
+    Xs_val = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
 
-    y_hat_val = mytrainer.evaluate(y_hat, mytrainer.saving_feed_dict)
+
+    y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
+    y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
     print("finish evaluating training results")
-
-    # plot_training_data(RLT_DIR, hidden_train, obs_train, saving_num=saving_num)
-    plot_y_hat(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num)
 
     if FLAGS.emission == "mvn":
         # transform log additive ratio back to observation
@@ -197,26 +197,33 @@ def main(_):
             p11 = 1 / (1 + obs_test[i].sum(axis=-1, keepdims=True))  # (n_days, 1)
             obs_test[i] = p11 * obs_test[i]
 
-        for i in range(len(y_hat_val)):
-            for j in range(len(y_hat_val[i])):
-                y_hat_val[i][j] = np.exp(y_hat_val[i][j])
-                p11 = 1 / (1 + y_hat_val[i][j].sum(axis=-1, keepdims=True))  # (n_days, 1)
-                y_hat_val[i][j] = p11 * y_hat_val[i][j]
+        for i in range(len(y_hat_val_test)):
+            # y hat val = (batch_size, n_days, Dy)
+            for j in range(len(y_hat_val_test[i])):
+                y_hat_val_test[i][j] = np.exp(y_hat_val_test[i][j])
+                p11 = 1 / (1 + y_hat_val_test[i][j].sum(axis=-1, keepdims=True))  # (n_days, 1)
+                y_hat_val_test[i][j] = p11 * y_hat_val_test[i][j]
 
-    plot_y_hat_bar_plot(RLT_DIR, y_hat_val, obs_test, mask=mask_test, saving_num=saving_num,
-                        to_normalize=y_hat_bar_plot_to_normalize)
+    plot_y_hat(RLT_DIR + "y_hat_test_plots", y_hat_val_train, obs_train, mask=mask_train,
+               saving_num=FLAGS.saving_train_num)
+    plot_y_hat(RLT_DIR + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
+
+    plot_y_hat_bar_plot(RLT_DIR+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
+                        saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
+    plot_y_hat_bar_plot(RLT_DIR+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
+                        saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
     if Dx == 2:
         plot_fhn_results(RLT_DIR, Xs_val)
     if Dx == 3:
         plot_lorenz_results(RLT_DIR, Xs_val)
 
-    testing_data_dict = {"hidden_test": hidden_test[0:saving_num],
-                         "obs_test": obs_test[0:saving_num],
-                         "input_test": input_test[0:saving_num]}
+    testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
+                         "obs_test": obs_test[0:FLAGS.saving_test_num],
+                         "input_test": input_test[0:FLAGS.saving_test_num]}
     
     learned_model_dict = {"Xs_val": Xs_val,
-                          "y_hat_val": y_hat_val}
+                          "y_hat_val_test": y_hat_val_test}
     data_dict = {"testing_data_dict": testing_data_dict,
                  "learned_model_dict": learned_model_dict}
     

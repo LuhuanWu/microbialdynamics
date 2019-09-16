@@ -249,7 +249,7 @@ flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat dur
 flags.DEFINE_string("rslt_dir_name", rslt_dir_name, "dir to save all results")
 flags.DEFINE_integer("MSE_steps", MSE_steps, "number of steps to predict y-hat and calculate R_square")
 
-flags.DEFINE_integer("saving_num", saving_num, "number of testing data used to "
+flags.DEFINE_integer("saving_test_num", saving_num, "number of testing data used to "
                                                "save hidden trajectories, y-hat, gradient and etc, "
                                                "will be clipped by number of testing data")
 

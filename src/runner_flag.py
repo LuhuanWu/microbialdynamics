@@ -31,7 +31,7 @@ Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 100*200
+epoch = 5 # 100*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -42,10 +42,10 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "count"
+data_type = "percentage"
 
 # choose samples from the training set for training and test. -1 indicates use all.
-training_sample_idx = [8]
+training_sample_idx = [-1]
 
 isPython2 = False
 
@@ -97,7 +97,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -129,7 +129,7 @@ BSim_use_single_RNN = False
 # ----------------------------- Training ----------------------------- #
 
 # stop training early if validation set does not improve
-early_stop_patience = 1000
+early_stop_patience = 5000
 
 # reduce learning rate when testing loss doesn't improve for some time
 lr_reduce_patience = 30
@@ -142,23 +142,23 @@ min_lr = lr / 10
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 200
+print_freq = 1 # 100
 
-# whether to save the followings during training
-#   hidden trajectories
-#   k-step y-hat
-save_trajectory = True
-save_y_hat = True
+# whether to save following into epoch folder
+save_trajectory = False
+save_y_hat_train = False
+save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_multinomial/idx_08"
+rslt_dir_name = "test_dirichlet/all"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_num = 30
+saving_train_num = 30
+saving_test_num = 30
 
 # whether to save tensorboard
 save_tensorboard = False
@@ -290,12 +290,17 @@ flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
 flags.DEFINE_integer("print_freq", print_freq, "frequency to evaluate testing loss & other metrics and save results")
 
 flags.DEFINE_boolean("save_trajectory", save_trajectory, "whether to save hidden trajectories during training")
-flags.DEFINE_boolean("save_y_hat", save_y_hat, "whether to save k-step y-hat during training")
+flags.DEFINE_boolean("save_y_hat_train", save_y_hat_train, "whether to save k-step y-hat-train during training")
+flags.DEFINE_boolean("save_y_hat_test", save_y_hat_test, "whether to save k-step y-hat-test during training")
 
 flags.DEFINE_string("rslt_dir_name", rslt_dir_name, "dir to save all results")
 flags.DEFINE_integer("MSE_steps", MSE_steps, "number of steps to predict y-hat and calculate R_square")
 
-flags.DEFINE_integer("saving_num", saving_num, "number of testing data used to "
+flags.DEFINE_integer("saving_train_num", saving_test_num, "number of training data used to "
+                                               "save hidden trajectories, y-hat, gradient and etc, "
+                                               "will be clipped by number of testing data")
+
+flags.DEFINE_integer("saving_test_num", saving_test_num, "number of testing data used to "
                                                "save hidden trajectories, y-hat, gradient and etc, "
                                                "will be clipped by number of testing data")
 

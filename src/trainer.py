@@ -68,8 +68,11 @@ class trainer:
         self.save_res = True
         self.RLT_DIR = RLT_DIR
         self.save_trajectory = self.FLAGS.save_trajectory
-        self.save_y_hat = self.FLAGS.save_y_hat
-        self.saving_num = self.FLAGS.saving_num
+        self.save_y_hat_train = self.FLAGS.save_y_hat_train
+        self.saving_train_num = self.FLAGS.saving_train_num
+
+        self.save_y_hat_test = self.FLAGS.save_y_hat_test
+        self.saving_test_num = self.FLAGS.saving_test_num
 
         # metrics
         self.log_ZSMC_trains = []
@@ -125,6 +128,22 @@ class trainer:
 
         self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
                                                    self.time_interval, self.extra_inputs)
+
+        self.train_feed_dict = {self.obs: obs_train[0:self.saving_train_num],
+                                self.hidden: hidden_train[0:self.saving_train_num],
+                                self.input: input_train[0: self.saving_train_num],
+                                self.time: [obs.shape[0] for obs in obs_train[0: self.saving_train_num]],
+                                self.mask: mask_train[0: self.saving_train_num],
+                                self.time_interval: time_interval_train[0:self.saving_train_num],
+                                self.extra_inputs: extra_inputs_train[0: self.saving_train_num]}
+
+        self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
+                               self.hidden: hidden_test[0:self.saving_test_num],
+                               self.input: input_test[0:self.saving_test_num],
+                               self.time: [obs.shape[0] for obs in obs_test[0: self.saving_test_num]],
+                               self.mask: mask_test[0:self.saving_test_num],
+                               self.time_interval: time_interval_test[0:self.saving_test_num],
+                               self.extra_inputs: extra_inputs_test[0:self.saving_test_num]}
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -193,26 +212,25 @@ class trainer:
                     break
 
                 if self.save_res:
-                    self.saving_feed_dict = {self.obs:           obs_test[0:self.saving_num],
-                                             self.hidden:        hidden_test[0:self.saving_num],
-                                             self.input:         input_test[0:self.saving_num],
-                                             self.time:          [obs.shape[0] for obs in obs_test],
-                                             self.mask:          mask_test[0:self.saving_num],
-                                             self.time_interval: time_interval_test[0:self.saving_num],
-                                             self.extra_inputs:  extra_inputs_test[0:self.saving_num]}
-
-                    Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
+                    if self.save_trajectory or self.draw_quiver_during_training:
+                        Xs_val = self.evaluate(Xs, self.test_feed_dict, average=False)
 
                     if self.save_trajectory:
                         trajectory_dict = {"Xs": Xs_val}
                         with open(self.epoch_data_DIR + "trajectory_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(trajectory_dict, f)
 
-                    if self.save_y_hat:
-                        y_hat_val = self.evaluate(y_hat_N_BxTxDy_logp, self.saving_feed_dict, average=False)
-                        y_hat_dict = {"y_hat": y_hat_val}
-                        with open(self.epoch_data_DIR + "y_hat_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(y_hat_dict, f)
+                    if self.save_y_hat_train:
+                        y_hat_val_train = self.evaluate(y_hat_N_BxTxDy_original, self.train_feed_dict, average=False)
+                        y_hat_train_dict = {"y_hat_train": y_hat_val_train}
+                        with open(self.epoch_data_DIR + "y_hat_train_{}.p".format(i + 1), "wb") as f:
+                            pickle.dump(y_hat_train_dict, f)
+
+                    if self.save_y_hat_test:
+                        y_hat_val_test = self.evaluate(y_hat_N_BxTxDy_original, self.test_feed_dict, average=False)
+                        y_hat_test_dict = {"y_hat_test": y_hat_val_test}
+                        with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
+                            pickle.dump(y_hat_test_dict, f)
 
                     if self.draw_quiver_during_training:
                         if self.Dx == 2:
@@ -231,7 +249,7 @@ class trainer:
                    "MSE_tests":       self.MSE_percentage_tests,
                    "R_square_trains": self.R_square_percentage_trains,
                    "R_square_tests":  self.R_square_percentage_tests}
-        log["y_hat"] = y_hat_N_BxTxDy_original
+        log["y_hat_original"] = y_hat_N_BxTxDy_original
         
         return metrics, log
 
@@ -486,10 +504,10 @@ class trainer:
         return mean_MSE_ks, R_square
 
     def draw_2D_quiver_plot(self, Xs_val, epoch):
-        # Xs_val.shape = (saving_num, time, n_particles, Dx)
+        # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
 
         plt.figure()
-        for X_traj in Xs_val[0:self.saving_num]:
+        for X_traj in Xs_val[0:self.saving_test_num]:
             X_traj = np.mean(X_traj, axis=1)
             plt.plot(X_traj[:, 0], X_traj[:, 1])
             plt.scatter(X_traj[0, 0], X_traj[0, 1])
@@ -511,7 +529,7 @@ class trainer:
         return Xlattice
 
     def draw_3D_quiver_plot(self, Xs_val, epoch):
-        # Xs_val.shape = (saving_num, time, n_particles, Dx)
+        # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
 
         fig = plt.figure()
         ax = fig.gca(projection="3d")
@@ -519,7 +537,7 @@ class trainer:
         ax.set_xlabel("x_dim 1")
         ax.set_ylabel("x_dim 2")
         ax.set_zlabel("x_dim 3")
-        for X_traj in Xs_val[0:self.saving_num]:
+        for X_traj in Xs_val[0:self.saving_test_num]:
             X_traj = np.mean(X_traj, axis=1)
             ax.plot(X_traj[:, 0], X_traj[:, 1], X_traj[:, 2])
             ax.scatter(X_traj[0, 0], X_traj[0, 1], X_traj[0, 2])

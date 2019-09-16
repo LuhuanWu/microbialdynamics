@@ -102,7 +102,7 @@ def main(_):
             for m in _mask_test:
                 mask_test.append(np.ones_like(m, dtype=bool))
 
-    # clip saving_num to avoid it > n_train or n_test
+    # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
     min_time_test = min([obs.shape[0] for obs in obs_test])
     min_time = min(min_time_train, min_time_test)

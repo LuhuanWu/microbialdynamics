@@ -189,8 +189,8 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
     # (T-k, Dy)
     # obs, a list of length #n_test, each item is an ndarray of shape (time, Dy)
     # mask: a list of masks, each item is an array of shape (time, )
-    if not os.path.exists(RLT_DIR + "y_hat plots"):
-        os.makedirs(RLT_DIR + "y_hat plots")
+    if not os.path.exists(RLT_DIR):
+        os.makedirs(RLT_DIR)
 
     Dy = obs[0].shape[1]
     saving_num = min(len(obs), saving_num)
@@ -215,7 +215,7 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
 
             plt.legend()
             sns.despine()
-            plt.savefig(RLT_DIR + "y_hat plots/obs_dim_{}_idx_{}".format(j, i))
+            plt.savefig(RLT_DIR + "/obs_dim_{}_idx_{}".format(j, i))
             plt.close()
 
 
@@ -251,6 +251,8 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
 
 
 def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normalize=True):
+    # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
+    # each of which is an array (T-k, Dy)
 
     if to_normalize:
         for i, obs_i in enumerate(obs):
@@ -260,8 +262,8 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
             for i, ys_k_hat_val_i in enumerate(ys_k_hat_val):
                 ys_k_hat_val[i] = ys_k_hat_val_i / np.sum(ys_k_hat_val_i, axis=-1, keepdims=True)
 
-    if not os.path.exists(RLT_DIR + "y_hat bar plots"):
-        os.makedirs(RLT_DIR + "y_hat bar plots")
+    if not os.path.exists(RLT_DIR):
+        os.makedirs(RLT_DIR)
 
     Dy = obs[0].shape[1]
     saving_num = min(len(obs), saving_num)
@@ -282,22 +284,22 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
 
         plt.xticks(np.arange(time))
         sns.despine()
-        plt.savefig(RLT_DIR + "y_hat bar plots/obs_idx_{} truth".format(i))
+        plt.savefig(RLT_DIR + "/obs_idx_{} truth".format(i))
         plt.close()
 
         for k, ys_k_hat_val in enumerate(ys_hat_val):
-            masked_yhat = np.zeros_like(ys_k_hat_val[i])
-            masked_yhat[mask[i][k:]] = ys_k_hat_val[i][mask[i][k:]]
+            masked_yhat = np.zeros_like(ys_hat_val[0][i])  # (full_ndays, Dy)
+            masked_yhat[k:][mask[i][k:]] = ys_k_hat_val[i][mask[i][k:]]
 
             plt.figure(figsize=(15,5))
             plt.title("obs idx {} {}-step prediction".format(i, k))
             plt.xlabel("Time")
             bottom = np.zeros(masked_yhat.shape[0])
             for j in range(Dy):
-                plt.bar(np.arange(k, time), masked_yhat[:, j], bottom=bottom, edgecolor='white')
+                plt.bar(np.arange(0, time), masked_yhat[:, j], bottom=bottom, edgecolor='white')
                 bottom += masked_yhat[:, j]
 
-            plt.xticks(np.arange(k, time))
+            plt.xticks(np.arange(0, time))
             sns.despine()
-            plt.savefig(RLT_DIR + "y_hat bar plots/obs_idx_{}_{}_step".format(i, k))
+            plt.savefig(RLT_DIR + "/obs_idx_{}_{}_step".format(i, k))
             plt.close()
