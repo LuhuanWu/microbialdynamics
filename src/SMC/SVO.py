@@ -524,7 +524,7 @@ class SVO:
                 t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage =\
                     self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
             elif self.emission == "dirichlet":
-                MSE_ks_percentage, y_means_percentage, y_vars_percentage = \
+                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage = \
                     MSE_ks_original, y_means_original, y_vars_original
                 y_hat_N_BxTxDy_percentage = [y_hat_N_BxTxDy[i] for i in range(len(y_hat_N_BxTxDy_original))]
             elif self.emission == "mvn":
@@ -539,8 +539,8 @@ class SVO:
                     p11 = 1 / (1 + y_hat_N_BxTxDy[i].sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
                     y_hat_N_BxTxDy[i] = p11 * y_hat_N_BxTxDy[i]
 
-                    t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = \
-                        self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = \
+                    self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
 
             else:
                 raise ValueError("Unsupported emission!")
