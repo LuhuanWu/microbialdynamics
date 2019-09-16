@@ -25,9 +25,9 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 6                # dimension of hidden states
-Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 10                 # dimension of inputs.
+Dy = 7                  # dimension of observations. for microbio data, Dy = 11
+Dv = 10                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
@@ -42,14 +42,14 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "percentage"
+data_type = "clv_count_Dx_6"
 
 # choose samples from the training set for training and test. -1 indicates use all.
-training_sample_idx = [-1]
+training_sample_idx = [1]
 
 isPython2 = False
 
-use_gp = False  # wheter use GP for last valid value for data interpolation
+use_gp = False  # whether use GP for last valid value for data interpolation
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -97,7 +97,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "poisson"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -111,7 +111,7 @@ q_uses_true_X = False
 use_2_q = True
 
 log_dynamics = False  # whether to set latent dynamics in the log space
-
+lar_dynamics = True # log additive ratio transformation
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -150,7 +150,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_dirichlet/all"
+rslt_dir_name = "test_poisson/lar"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -260,6 +260,7 @@ flags.DEFINE_boolean("q_uses_true_X", q_uses_true_X, "whether q1 uses true hidde
 flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t-1) and q2(x_t|y_t), "
                                          "if True, q_uses_true_X will be overwritten as False")
 flags.DEFINE_boolean("log_dynamics", log_dynamics, "whether the dynamics happen in log space")
+flags.DEFINE_boolean("lar_dynamics", lar_dynamics, "whether the dynamics happen in ldr space")
 
 # ------------------------- Inference Schemes ------------------------ #
 

@@ -153,6 +153,9 @@ def main(_):
     else:
         raise ValueError("Choose one of objectives among: PSVO, SVO, AESMC, IWAE")
 
+    # at most of of them can be set to True
+    assert FLAGS.log_dynamics + FLAGS.lar_dynamics < 2
+
     # =========================================== data saving part =========================================== #
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
@@ -184,7 +187,6 @@ def main(_):
     Xs, y_hat = log["Xs"], log["y_hat_original"]
     Xs_val = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
 
-
     y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
     y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
     print("finish evaluating training results")
@@ -204,7 +206,7 @@ def main(_):
                 p11 = 1 / (1 + y_hat_val_test[i][j].sum(axis=-1, keepdims=True))  # (n_days, 1)
                 y_hat_val_test[i][j] = p11 * y_hat_val_test[i][j]
 
-    plot_y_hat(RLT_DIR + "y_hat_test_plots", y_hat_val_train, obs_train, mask=mask_train,
+    plot_y_hat(RLT_DIR + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                saving_num=FLAGS.saving_train_num)
     plot_y_hat(RLT_DIR + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
 
