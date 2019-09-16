@@ -449,10 +449,10 @@ class SVO:
         y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
         y_vars = tf.stack(y_vars, name="y_vars")  # (n_steps + 1, Dy)
 
-        y_hat_N_BxTxDy = [y_hat_N_BxTxDy[i] for i in range(len(y_hat_N_BxTxDy))]
+        y_hat_N_BxTxDy = list(y_hat_N_BxTxDy)  # deep copy
         return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
 
-    def n_step_MSE(self, n_steps, hidden, obs, input, mask, extra_inputs):
+    def n_step_MSE(self, n_steps, X, hidden, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -464,7 +464,7 @@ class SVO:
         :return:
         """
 
-        batch_size, _, _, _ = hidden.shape.as_list()
+        batch_size, _, _, _ = X.shape.as_list()
 
         assert batch_size == 1
 
@@ -473,8 +473,8 @@ class SVO:
 
         with tf.variable_scope(self.name):
 
-            hidden = tf.reduce_mean(hidden, axis=2)  # average over paths (n_particles),shape (batch_size, time, Dx)
-            x_BxTmkxDz = hidden
+            X = tf.reduce_mean(X, axis=2)  # average over paths (n_particles),shape (batch_size, time, Dx)
+            x_BxTmkxDz = X
 
             # get y_hat
             y_hat_N_BxTxDy = []
@@ -498,7 +498,6 @@ class SVO:
                 y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
-
             # get y_true
             y_N_BxTxDy = []
             for k in range(n_steps + 1):
@@ -507,55 +506,64 @@ class SVO:
 
             # compare y_hat and y_true to get MSE_k, y_mean, y_var
             # FOR THE BATCH and FOR k = 0, ..., n_steps
-
-            t1 = MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original = \
-                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+            t1 = self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
 
             # percentage
-            if self.emission == "poisson" or "multinomial":
-                for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+            y_hat_N_BxTxDy_percentage = []
+            y_N_BxTxDy_percentage = []
+            for y_hat_BxTmkxDy, y_BxTmkxDy in zip(y_hat_N_BxTxDy, y_N_BxTxDy):
+                if self.emission == "poisson" or "multinomial":
                     # convert count into percentage
-                    # y_hat_BxTmkxDy.shape = (batch_size, ndays, Dy)
-                    # y_BxTmkxDy.shape = (batch_size, ndays, Dy)
-                    y_hat_N_BxTxDy[k] = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
-                    y_N_BxTxDy[k] = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+                    y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                    y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+                elif self.emission == "dirichlet":
+                    pass
+                elif self.emission == "mvn":
+                    # convert log additive ratio into percentage
+                    y_hat_BxTmkxDy = np.exp(y_hat_BxTmkxDy)
+                    p11 = 1 / (1 + y_hat_BxTmkxDy.sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
+                    y_hat_BxTmkxDy = p11 * y_hat_BxTmkxDy
 
+                    y_BxTmkxDy = np.exp(y_BxTmkxDy)
+                    p11 = 1 / (1 + y_BxTmkxDy.sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
+                    y_BxTmkxDy = p11 * y_BxTmkxDy
+                else:
+                    raise ValueError("Unsupported emission!")
+                y_hat_N_BxTxDy_percentage.append(y_hat_BxTmkxDy)
+                y_N_BxTxDy_percentage.append(y_BxTmkxDy)
 
-                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage =\
-                    self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
-            elif self.emission == "dirichlet":
-                MSE_ks_percentage, y_means_percentage, y_vars_percentage = \
-                    MSE_ks_original, y_means_original, y_vars_original
-                y_hat_N_BxTxDy_percentage = [y_hat_N_BxTxDy[i] for i in range(len(y_hat_N_BxTxDy_original))]
-            elif self.emission == "mvn":
-                # transform log additive ratio to percentage
-                for i in range(len(y_N_BxTxDy)):
-
-                    y_N_BxTxDy[i] = np.exp(y_N_BxTxDy[i])
-                    p11 = 1 / (1 + y_N_BxTxDy[i].sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
-                    y_N_BxTxDy[i] = p11 * y_N_BxTxDy[i]
-
-                    y_hat_N_BxTxDy[i] = np.exp(y_hat_N_BxTxDy[i])
-                    p11 = 1 / (1 + y_hat_N_BxTxDy[i].sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
-                    y_hat_N_BxTxDy[i] = p11 * y_hat_N_BxTxDy[i]
-
-                    t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = \
-                        self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
-
-            else:
-                raise ValueError("Unsupported emission!")
+            t2 = self.compute_MSE(y_hat_N_BxTxDy_percentage, y_N_BxTxDy_percentage, mask)
 
             # log percentage
-            for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-
+            y_hat_N_BxTxDy_log_percentage = []
+            y_N_BxTxDy_log_percentage = []
+            for y_hat_BxTmkxDy, y_BxTmkxDy in zip(y_hat_N_BxTxDy_percentage, y_N_BxTxDy_percentage):
                 # convert percentage into log space
-                y_hat_N_BxTxDy[k] = tf.log((y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
-                y_N_BxTxDy[k] = tf.log((y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
+                y_hat_BxTmkxDy = tf.log((y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
+                y_BxTmkxDy = tf.log((y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
+                y_hat_N_BxTxDy_log_percentage.append(y_hat_BxTmkxDy)
+                y_N_BxTxDy_log_percentage.append(y_BxTmkxDy)
 
-            t3 = MSE_ks_logp, y_means_logp, y_vars_logp, y_hat_N_BxTxDy_logp = \
-                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+            t3 = self.compute_MSE(y_hat_N_BxTxDy_log_percentage, y_N_BxTxDy_log_percentage, mask)
 
-            return t1, t2, t3
+            # aitchison distance
+            # get percentage directly from hidden states without noise
+            y_N_BxTxDy_percentage = []
+            for k in range(n_steps + 1):
+                y_BxTmkxDy = tf.concat([hidden[:, k:, :], tf.zeros_like(hidden[:, k:, :1])], axis=-1)
+                y_sum_BxTmkx1 = tf.reduce_logsumexp(y_BxTmkxDy, axis=-1, keepdims=True)
+                y_N_BxTxDy_log_percentage.append(y_BxTmkxDy - y_sum_BxTmkx1)
+
+            y_hat_N_BxTxDy_ad = []
+            y_N_BxTxDy_ad = []
+            for y_hat_BxTmkxDy, y_BxTmkxDy in zip(y_hat_N_BxTxDy_log_percentage, y_N_BxTxDy_log_percentage):
+                y_hat_BxTmkxDy = y_hat_BxTmkxDy - tf.reduce_mean(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                y_BxTmkxDy = y_BxTmkxDy - tf.reduce_mean(y_BxTmkxDy, axis=-1, keepdims=True)
+                y_hat_N_BxTxDy_ad.append(y_hat_BxTmkxDy)
+                y_N_BxTxDy_ad.append(y_BxTmkxDy)
+
+            t4 = self.compute_MSE(y_hat_N_BxTxDy_ad, y_N_BxTxDy_ad, mask)
+            return t1, t2, t3, t4
 
     def get_nextX(self, X):
         # only used for drawing 2D quiver plot
