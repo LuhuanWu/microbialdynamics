@@ -86,7 +86,7 @@ class SSM(object):
                                               diag_cov=self.diag_cov,
                                               name="f_tran")
         elif self.f_transformation == "linear":
-            A = tf.eye(self.Dx+self.Dev, self.Dx) + 0.5 * tf.random.normal((self.Dx + self.Dev, self.Dx)) # (Dx + Dev, Dx)
+            A = tf.eye(self.Dx, self.Dx+self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dx+self.Dev)) # (Dx, Dx+Dev)
             b = 0.5 * tf.random.normal((self.Dx, ))    # (Dx, )
             self.f_tran = tf_linear_transformation(params=(A, b))
 

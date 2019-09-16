@@ -97,10 +97,10 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "poisson"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 # f_transformation
-f_transformation = "clv"  # choose from MLP, linear, clv
+f_transformation = "linear"  # choose from MLP, linear, clv
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -114,7 +114,7 @@ q_uses_true_X = False
 use_2_q = True
 
 log_dynamics = False  # whether to set latent dynamics in the log space
-lar_dynamics = True # log additive ratio transformation
+lar_dynamics = False  # log additive ratio transformation
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -153,7 +153,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_poisson/test_clv_tran"
+rslt_dir_name = "test_multinomial/test_linear_tran"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

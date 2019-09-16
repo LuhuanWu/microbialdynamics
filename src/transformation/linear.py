@@ -2,6 +2,7 @@ import numpy as np
 import tensorflow as tf
 
 from src.transformation.base import transformation
+from src.transformation.clv import batch_matmul
 
 class linear_transformation(transformation):
     def transform(self, Input, **kwargs):
@@ -19,13 +20,8 @@ class tf_linear_transformation(transformation):
 
         A, b = self.params  # A shape (Dx + Dev, Dx), b shape (Dx, )
 
-        Input_shape = Input.shape.as_list()  # (n_particles, batch_size, Dx + Dev)
-        output_shape = list(Input_shape)
-        output_shape[-1] = A.shape.as_list()[0]   # (n_particles, batch_size, Dx)
+        output = batch_matmul(A, Input) + b
 
-        Input_reshaped = tf.reshape(Input, [-1, Input_shape[-1]])
-        output_reshaped = tf.matmul(Input_reshaped, A, transpose_b=True)
-        output = tf.reshape(output_reshaped, output_shape) + b
         return output
 
 # test code

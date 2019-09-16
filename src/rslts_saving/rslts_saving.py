@@ -189,6 +189,10 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
     # (T-k, Dy)
     # obs, a list of length #n_test, each item is an ndarray of shape (time, Dy)
     # mask: a list of masks, each item is an array of shape (time, )
+
+    if saving_num == 0:
+        return
+
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
@@ -253,7 +257,8 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
 def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normalize=True):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
-
+    if saving_num == 0:
+        return
     if to_normalize:
         for i, obs_i in enumerate(obs):
             obs[i] = obs_i / np.sum(obs_i, axis=-1, keepdims=True)
