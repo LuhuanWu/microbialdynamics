@@ -36,6 +36,32 @@ clv_count_Dx_10_data_dir = "data/clv/data/clv_count_ntrain_600_Dx_10.p"
 clv_count_Dx_10_ntrain_1000_data_dir = "data/clv/data/clv_count_ntrain_1000_Dx_10.p"
 clv_count_Dx_10_ntrain_1200_data_dir = "data/clv/data/clv_count_ntrain_1200_Dx_10.p"
 
+clv_percentage_Dx_1_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_1.p"
+clv_percentage_Dx_2_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_2.p"
+clv_percentage_Dx_3_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_3.p"
+clv_percentage_Dx_4_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_4.p"
+clv_percentage_Dx_5_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_5.p"
+clv_percentage_Dx_6_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_6.p"
+clv_percentage_Dx_7_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_7.p"
+clv_percentage_Dx_8_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_8.p"
+clv_percentage_Dx_9_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_9.p"
+clv_percentage_Dx_10_no_input_data_dir = "data/clv/data_no_input/clv_ntrain_600_Dx_10.p"
+clv_percentage_Dx_10_no_input_ntrain_1200_data_dir = "data/clv/data_no_input/clv_ntrain_1200_Dx_10.p"
+clv_percentage_Dx_10_no_input_ntrain_1800_data_dir = "data/clv/data_no_input/clv_ntrain_1800_Dx_10.p"
+
+clv_count_Dx_1_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_1.p"
+clv_count_Dx_2_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_2.p"
+clv_count_Dx_3_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_3.p"
+clv_count_Dx_4_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_4.p"
+clv_count_Dx_5_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_5.p"
+clv_count_Dx_6_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_6.p"
+clv_count_Dx_7_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_7.p"
+clv_count_Dx_8_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_8.p"
+clv_count_Dx_9_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_9.p"
+clv_count_Dx_10_no_input_data_dir = "data/clv/data_no_input/clv_count_ntrain_600_Dx_10.p"
+clv_count_Dx_10_no_input_ntrain_1200_data_dir = "data/clv/data_no_input/clv_count_ntrain_1200_Dx_10.p"
+clv_count_Dx_10_no_input_ntrain_1800_data_dir = "data/clv/data_no_input/clv_count_ntrain_1800_Dx_10.p"
+
 DATA_DIR_DICT = dict(toy=toy_data_dir,
                      percentage=percentage_data_dir, percentage_noinputs=percentage_noinputs_dir,
                      count=count_data_dir, count_noinputs=count_noinputs_dir,
@@ -63,6 +89,30 @@ DATA_DIR_DICT = dict(toy=toy_data_dir,
                      clv_count_Dx_10=clv_count_Dx_10_data_dir,
                      clv_count_Dx_10_ntrain_1000=clv_count_Dx_10_ntrain_1000_data_dir,
                      clv_count_Dx_10_ntrain_1200=clv_count_Dx_10_ntrain_1200_data_dir,
+                     clv_percentage_Dx_1_no_input=clv_percentage_Dx_1_no_input_data_dir,
+                     clv_percentage_Dx_2_no_input=clv_percentage_Dx_2_no_input_data_dir,
+                     clv_percentage_Dx_3_no_input=clv_percentage_Dx_3_no_input_data_dir,
+                     clv_percentage_Dx_4_no_input=clv_percentage_Dx_4_no_input_data_dir,
+                     clv_percentage_Dx_5_no_input=clv_percentage_Dx_5_no_input_data_dir,
+                     clv_percentage_Dx_6_no_input=clv_percentage_Dx_6_no_input_data_dir,
+                     clv_percentage_Dx_7_no_input=clv_percentage_Dx_7_no_input_data_dir,
+                     clv_percentage_Dx_8_no_input=clv_percentage_Dx_8_no_input_data_dir,
+                     clv_percentage_Dx_9_no_input=clv_percentage_Dx_9_no_input_data_dir,
+                     clv_percentage_Dx_10_no_input=clv_percentage_Dx_10_no_input_data_dir,
+                     clv_percentage_Dx_10_no_input_ntrain_1200=clv_percentage_Dx_10_no_input_ntrain_1200_data_dir,
+                     clv_percentage_Dx_10_no_input_ntrain_1800=clv_percentage_Dx_10_no_input_ntrain_1800_data_dir,
+                     clv_count_Dx_1_no_input=clv_count_Dx_1_no_input_data_dir,
+                     clv_count_Dx_2_no_input=clv_count_Dx_2_no_input_data_dir,
+                     clv_count_Dx_3_no_input=clv_count_Dx_3_no_input_data_dir,
+                     clv_count_Dx_4_no_input=clv_count_Dx_4_no_input_data_dir,
+                     clv_count_Dx_5_no_input=clv_count_Dx_5_no_input_data_dir,
+                     clv_count_Dx_6_no_input=clv_count_Dx_6_no_input_data_dir,
+                     clv_count_Dx_7_no_input=clv_count_Dx_7_no_input_data_dir,
+                     clv_count_Dx_8_no_input=clv_count_Dx_8_no_input_data_dir,
+                     clv_count_Dx_9_no_input=clv_count_Dx_9_no_input_data_dir,
+                     clv_count_Dx_10_no_input=clv_count_Dx_10_no_input_data_dir,
+                     clv_count_Dx_10_no_input_ntrain_1200=clv_count_Dx_10_no_input_ntrain_1200_data_dir,
+                     clv_count_Dx_10_no_input_ntrain_1800=clv_count_Dx_10_no_input_ntrain_1800_data_dir,
                      )
 
 PERCENTAGE_DATA_TYPE = ["percentage", "percentage_noinputs",
@@ -77,7 +127,20 @@ PERCENTAGE_DATA_TYPE = ["percentage", "percentage_noinputs",
                         "clv_percentage_Dx_9",
                         "clv_percentage_Dx_10",
                         "clv_percentage_Dx_10_ntrain_1000",
-                        "clv_percentage_Dx_10_ntrain_1200"]
+                        "clv_percentage_Dx_10_ntrain_1200",
+                        "clv_percentage_Dx_1_no_input",
+                        "clv_percentage_Dx_2_no_input",
+                        "clv_percentage_Dx_3_no_input",
+                        "clv_percentage_Dx_4_no_input",
+                        "clv_percentage_Dx_5_no_input",
+                        "clv_percentage_Dx_6_no_input",
+                        "clv_percentage_Dx_7_no_input",
+                        "clv_percentage_Dx_8_no_input",
+                        "clv_percentage_Dx_9_no_input",
+                        "clv_percentage_Dx_10_no_input",
+                        "clv_percentage_Dx_10_no_input_ntrain_1200",
+                        "clv_percentage_Dx_10_no_input_ntrain_1800",
+                        ]
 
 # add 10 dim observation fata to percentage data ( for mvn emission)
 
@@ -94,4 +157,17 @@ COUNT_DATA_TYPE = ["count", "count_noinputs",
                    "clv_count_Dx_9",
                    "clv_count_Dx_10",
                    "clv_count_Dx_10_ntrain_1000",
-                   "clv_count_Dx_10_ntrain_1200"]
+                   "clv_count_Dx_10_ntrain_1200",
+                   "clv_count_Dx_1_no_input",
+                   "clv_count_Dx_2_no_input",
+                   "clv_count_Dx_3_no_input",
+                   "clv_count_Dx_4_no_input",
+                   "clv_count_Dx_5_no_input",
+                   "clv_count_Dx_6_no_input",
+                   "clv_count_Dx_7_no_input",
+                   "clv_count_Dx_8_no_input",
+                   "clv_count_Dx_9_no_input",
+                   "clv_count_Dx_10_no_input",
+                   "clv_count_Dx_10_no_input_ntrain_1200",
+                   "clv_count_Dx_10_no_input_ntrain_1800",
+                   ]
