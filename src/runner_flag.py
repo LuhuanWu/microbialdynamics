@@ -25,9 +25,9 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 6                # dimension of hidden states
-Dy = 7                  # dimension of observations. for microbio data, Dy = 11
-Dv = 10                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
+Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
@@ -42,7 +42,7 @@ generate_training_data = False
 # choose from toy, percentage, count, percentage_noinputs, count_noinputs,
 #  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
 # more options: utils/see available_data.py
-data_type = "clv_count_Dx_6"
+data_type = "percentage"
 
 # choose samples from the training set for training and test. -1 indicates use all.
 training_sample_idx = [1]
@@ -97,7 +97,7 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
 
 # f_transformation
 f_transformation = "linear"  # choose from MLP, linear, clv
@@ -153,7 +153,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_multinomial/test_linear_tran"
+rslt_dir_name = "test_dirichlet/test_linear_tran"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
