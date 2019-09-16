@@ -99,6 +99,9 @@ use_mask = True
 # whether emission uses Dirichlet distribution
 emission = "poisson"  # choose from dirichlet, poisson, multinomial and mvn
 
+# f_transformation
+f_transformation = "clv"  # choose from MLP, linear, clv
+
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
 use_bootstrap = True
@@ -150,7 +153,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_poisson/lar"
+rslt_dir_name = "test_poisson/test_clv_tran"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -253,6 +256,9 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
+
+flags.DEFINE_string("f_transformation", f_transformation, "type of f_transformation, choose from MLP, linear and clv")
+
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "
                                                      "f and q1 can still use different networks)")

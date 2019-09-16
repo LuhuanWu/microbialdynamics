@@ -12,8 +12,7 @@ class tf_multinomial(distribution):
     def __init__(self, transformation, name='tf_multinomial'):
         super(tf_multinomial, self).__init__(transformation, name)
 
-
-    def get_multinomial(self, Input, extra_inputs):
+    def get_multinomial(self, Input, extra_inputs, **kwargs):
         """
 
         :param Input: (T, Dx)
@@ -21,19 +20,19 @@ class tf_multinomial(distribution):
         :return:
         """
         with tf.variable_scope(self.name):
-            logits, _ = self.transformation.transform(Input)
+            logits, _ = self.transformation.transform(Input, **kwargs)
             multinomial = tfd.Multinomial(total_count=extra_inputs,
                                           logits=logits,
                                           validate_args=True,
                                           allow_nan_stats=False)
             return multinomial
 
-    def log_prob(self, Input, output, extra_inputs=None, name=None):
-        multinomial = self.get_multinomial(Input, extra_inputs)
+    def log_prob(self, Input, output, extra_inputs=None, name=None, **kwargs):
+        multinomial = self.get_multinomial(Input, extra_inputs, **kwargs)
         with tf.variable_scope(name or self.name):
             return multinomial.log_prob(output)
 
-    def mean(self, Input, extra_inputs, name=None):
-        multinomial = self.get_multinomial(Input, extra_inputs)
+    def mean(self, Input, extra_inputs, name=None, **kwargs):
+        multinomial = self.get_multinomial(Input, extra_inputs, **kwargs)
         with tf.variable_scope(name or self.name):
             return multinomial.mean()

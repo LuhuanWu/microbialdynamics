@@ -45,7 +45,7 @@ class MLP_transformation(transformation):
                                          bias_initializer=Constant(1.0),
                                          name="sigma_layer")
 
-    def transform(self, Input):
+    def transform(self, Input, **kwargs):
         # if self.name == "q1_tran":
         #     print(Input.get_shape().as_list())
         with tf.variable_scope(self.name):

@@ -3,6 +3,8 @@ from tensorflow.keras.layers import Dense
 
 from src.transformation.flow import NF
 from src.transformation.MLP import MLP_transformation
+from src.transformation.linear import tf_linear_transformation
+from src.transformation.clv import clv_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
@@ -27,6 +29,8 @@ class SSM(object):
         self.Dev = FLAGS.Dev
 
         self.batch_size = FLAGS.batch_size
+
+        self.f_transformation = FLAGS.f_transformation
 
         # Feed-Forward Network (FFN) architectures
         self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",")]
@@ -75,14 +79,29 @@ class SSM(object):
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
 
     def init_trans(self):
+        if self.f_transformation == "MLP":
+
+            self.f_tran = MLP_transformation(self.f_layers, self.Dx,
+                                              output_cov=self.output_cov,
+                                              diag_cov=self.diag_cov,
+                                              name="f_tran")
+        elif self.f_transformation == "linear":
+            A = tf.eye(self.Dx+self.Dev, self.Dx) + 0.5 * tf.random.normal((self.Dx + self.Dev, self.Dx)) # (Dx + Dev, Dx)
+            b = 0.5 * tf.random.normal((self.Dx, ))    # (Dx, )
+            self.f_tran = tf_linear_transformation(params=(A, b))
+
+        elif self.f_transformation == "clv":
+            A = tf.eye(self.Dx, self.Dx+1) + 0.5 * tf.random.normal((self.Dx, self.Dx + 1))  # (Dx, Dx + 1)
+            g = 0.5 * tf.random.normal((self.Dx, ))  # (Dx, )
+            Wa = tf.eye(self.Dx, self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dev))  # (Dx, Dev)
+            Wg = tf.eye(self.Dx, self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dev))  # (Dx, Dev)
+            self.f_tran = clv_transformation(params=(A, g, Wa, Wg))
+
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
                                           output_cov=self.output_cov,
                                           diag_cov=self.diag_cov,
                                           name="q0_tran")
-        self.q1_tran = MLP_transformation(self.q1_layers, self.Dx,
-                                          output_cov=self.output_cov,
-                                          diag_cov=self.diag_cov,
-                                          name="q1_tran")
+
         if self.use_2_q:
             self.q2_tran = MLP_transformation(self.q2_layers, self.Dx,
                                               output_cov=self.output_cov,
@@ -107,9 +126,9 @@ class SSM(object):
                                                    name="BSim_q2_tran")
 
         if self.use_bootstrap:
-            self.f_tran = self.q1_tran
+            self.q1_tran = self.f_tran
         else:
-            self.f_tran = MLP_transformation(self.f_layers, self.Dx,
+            self.q1_tran = MLP_transformation(self.f_layers, self.Dx,
                                              output_cov=self.output_cov,
                                              diag_cov=self.diag_cov,
                                              name="f_tran")

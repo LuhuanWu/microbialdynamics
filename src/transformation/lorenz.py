@@ -6,7 +6,7 @@ from tensorflow.contrib.integrate import odeint as tf_odeint
 from src.transformation.base import transformation
 
 class lorenz_transformation(transformation):
-    def transform(self, X_prev):
+    def transform(self, X_prev, **kwargs):
         '''
         Integrates the lorenz ODEs
         '''
@@ -27,7 +27,7 @@ class lorenz_transformation(transformation):
         return X
 
 class tf_lorenz_transformation(transformation):
-    def transform(self, X_prev):
+    def transform(self, X_prev, **kwargs):
         """
         X_prev.shape = [B0, B1, ..., Bn, Dx]
         """

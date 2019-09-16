@@ -115,7 +115,7 @@ class SVO:
 
                 # only when use_bootstrap and use_2_q, f_t_log_prob has been calculated
                 assert not self.model.use_bootstrap
-                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_{}_log_prob".format(0))
+                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_{}_log_prob".format(0), Dx=self.Dx)
 
         # emission log probability and log weights
         if self.log_dynamics or self.lar_dynamics:
@@ -158,7 +158,7 @@ class SVO:
             X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
                                          resample_particles=self.resample_particles)
             Input = tf.tile(tf.expand_dims(input[:, t-1, :], axis=0), (n_particles, 1, 1)) # (n_particles, batch_size, Dev)
-            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)
+            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)  # (n_particles, batch_size, Dx + Dev)
 
             # proposal
             if self.q_uses_true_X:
@@ -182,7 +182,7 @@ class SVO:
                                                              name="q_t_sample_and_log_prob")
 
                     # transition log probability
-                    f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
+                    f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob", Dx=self.Dx)
 
             # emission log probability and log weights
             if self.log_dynamics or self.lar_dynamics:
@@ -232,14 +232,14 @@ class SVO:
         return X_prevs, X_ancestors, log_Ws
 
     def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, inputs=None, sample_size=()):
-        d1_mvn = dist1.get_mvn(d1_input)
-        d2_mvn = dist2.get_mvn(d2_input)
+        d1_mvn = dist1.get_mvn(d1_input, Dx=self.Dx)
+        d2_mvn = dist2.get_mvn(d2_input, Dx=self.Dx)
 
         if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
             if inputs is not None:
                 for i in range(self.f_power-1):
                     d1_mvn_mean = d1_mvn.mean()
-                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1))
+                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1), Dx=self.Dx)
 
             d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()
             d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.stddev()
@@ -489,8 +489,8 @@ class SVO:
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
-                x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
+                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dev)
+                x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
 
             if self.log_dynamics or self.lar_dynamics:
                 y_hat_BxTmNxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, n_steps:])
@@ -560,7 +560,7 @@ class SVO:
     def get_nextX(self, X):
         # only used for drawing 2D quiver plot
         with tf.variable_scope(self.name):
-            return self.f.mean(X)
+            return self.f.mean(X, Dx=self.Dx)
 
 
 def lar_transform(percentages):
