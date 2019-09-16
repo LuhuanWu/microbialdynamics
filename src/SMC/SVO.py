@@ -18,12 +18,17 @@ class SVO:
         self.n_particles = FLAGS.n_particles
         self.q_uses_true_X = FLAGS.q_uses_true_X
 
+        self.emission = FLAGS.emission
+
         # bidirectional RNN as full sequence observations encoder
         self.X0_use_separate_RNN = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn = FLAGS.use_stack_rnn
 
         self.model = model
+
         self.log_dynamics = FLAGS.log_dynamics
+        self.lar_dynamics = FLAGS.lar_dynamics
+
         self.smooth_obs = True
         self.resample_particles = True
 
@@ -70,13 +75,17 @@ class SVO:
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
-        if self.model.emission == "poisson" or self.model.emission == "multinomial" :
+        if self.model.emission == "poisson" or self.model.emission == "multinomial" or self.model.emission == "mvn" :
+            # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
             obs_4_proposal = obs
         if self.log_dynamics:
             log_obs = tf.log(obs_4_proposal)
             preprocessed_X0, preprocessed_obs = self.preprocess_obs(log_obs, time_interval)
+        elif self.lar_dynamics:
+            lar_obs = lar_transform(obs_4_proposal)
+            preprocessed_X0, preprocessed_obs = self.preprocess_obs(lar_obs, time_interval)
         else:
             preprocessed_X0, preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
         self.preprocessed_X0  = preprocessed_X0
@@ -106,13 +115,14 @@ class SVO:
 
                 # only when use_bootstrap and use_2_q, f_t_log_prob has been calculated
                 assert not self.model.use_bootstrap
-                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_{}_log_prob".format(0))
+                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_{}_log_prob".format(0), Dx=self.Dx)
 
         # emission log probability and log weights
-        if self.log_dynamics:
+        if self.log_dynamics or self.lar_dynamics:
             _g_0_log_prob = self.g.log_prob(tf.exp(X), obs[:, 0], extra_inputs=extra_inputs[:, 0])
         else:
             _g_0_log_prob = self.g.log_prob(X, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+
         _g_0_log_prob_0 = tf.zeros_like(_g_0_log_prob)  # dummy values for missing observations
 
         g_0_log_prob = tf.where(mask[0][0], _g_0_log_prob, _g_0_log_prob_0, name="g_{}_log_prob".format(0))
@@ -148,7 +158,7 @@ class SVO:
             X_ancestor = self.resample_X(X_prev, log_normalized_weight_tminus1, sample_size=n_particles,
                                          resample_particles=self.resample_particles)
             Input = tf.tile(tf.expand_dims(input[:, t-1, :], axis=0), (n_particles, 1, 1)) # (n_particles, batch_size, Dev)
-            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)
+            q_f_t_feed = tf.concat((X_ancestor, Input), axis=-1)  # (n_particles, batch_size, Dx + Dev)
 
             # proposal
             if self.q_uses_true_X:
@@ -172,10 +182,10 @@ class SVO:
                                                              name="q_t_sample_and_log_prob")
 
                     # transition log probability
-                    f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob")
+                    f_t_log_prob = f.log_prob(q_f_t_feed, X, name="f_t_log_prob", Dx=self.Dx)
 
             # emission log probability and log weights
-            if self.log_dynamics:
+            if self.log_dynamics or self.lar_dynamics:
                 _g_t_log_prob = self.g.log_prob(tf.exp(X), obs[:, t], extra_inputs=extra_inputs[:, t])
             else:
                 _g_t_log_prob = self.g.log_prob(X, obs[:, t], extra_inputs=extra_inputs[:, t])
@@ -222,14 +232,14 @@ class SVO:
         return X_prevs, X_ancestors, log_Ws
 
     def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, inputs=None, sample_size=()):
-        d1_mvn = dist1.get_mvn(d1_input)
-        d2_mvn = dist2.get_mvn(d2_input)
+        d1_mvn = dist1.get_mvn(d1_input, Dx=self.Dx)
+        d2_mvn = dist2.get_mvn(d2_input, Dx=self.Dx)
 
         if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
             if inputs is not None:
                 for i in range(self.f_power-1):
                     d1_mvn_mean = d1_mvn.mean()
-                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1))
+                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1), Dx=self.Dx)
 
             d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()
             d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.stddev()
@@ -415,6 +425,33 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
+    @staticmethod
+    def compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask):
+        MSE_ks = []  # [MSE_0, MSE_1, ..., MSE_N]
+        y_means = []  # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
+        y_vars = []  # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
+        for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+            difference = y_hat_BxTmkxDy - y_BxTmkxDy  # (batch_size, time-k, Dy)
+            masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
+            masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
+
+            MSE_k = tf.reduce_sum(masked_difference ** 2, name="MSE_{}".format(k))
+            MSE_ks.append(MSE_k)
+
+            masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])  # (mask_time, Dy)
+            masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
+            y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
+            y_means.append(y_mean)
+            y_var = tf.reduce_sum((masked_y - y_mean) ** 2, axis=[0, 1], name="y_var_{}".format(k))  # (Dy,)
+            y_vars.append(y_var)
+
+        MSE_ks = tf.stack(MSE_ks, name="MSE_ks")  # (n_steps + 1)
+        y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
+        y_vars = tf.stack(y_vars, name="y_vars")  # (n_steps + 1, Dy)
+
+        y_hat_N_BxTxDy = [y_hat_N_BxTxDy[i] for i in range(len(y_hat_N_BxTxDy))]
+        return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
+
     def n_step_MSE(self, n_steps, hidden, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
@@ -443,7 +480,7 @@ class SVO:
             y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
-                if self.log_dynamics:
+                if self.log_dynamics or self.lar_dynamics:
                     y_hat_BxTmkxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, k:])
                 else:
                     y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
@@ -452,14 +489,15 @@ class SVO:
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dv)
-                x_BxTmkxDz = self.f.mean(f_k_feed)                                 # (batch_size, time - k - 1, Dx)
+                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dev)
+                x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
 
-            if self.log_dynamics:
+            if self.log_dynamics or self.lar_dynamics:
                 y_hat_BxTmNxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, n_steps:])
             else:
                 y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
+
 
             # get y_true
             y_N_BxTxDy = []
@@ -470,41 +508,67 @@ class SVO:
             # compare y_hat and y_true to get MSE_k, y_mean, y_var
             # FOR THE BATCH and FOR k = 0, ..., n_steps
 
-            MSE_ks = []     # [MSE_0, MSE_1, ..., MSE_N]
-            y_means = []    # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
-            y_vars = []     # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
+            t1 = MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original = \
+                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+
+            # percentage
+            if self.emission == "poisson" or "multinomial":
+                for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+                    # convert count into percentage
+                    # y_hat_BxTmkxDy.shape = (batch_size, ndays, Dy)
+                    # y_BxTmkxDy.shape = (batch_size, ndays, Dy)
+                    y_hat_N_BxTxDy[k] = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
+                    y_N_BxTxDy[k] = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
+
+
+                t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage =\
+                    self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+            elif self.emission == "dirichlet":
+                MSE_ks_percentage, y_means_percentage, y_vars_percentage = \
+                    MSE_ks_original, y_means_original, y_vars_original
+                y_hat_N_BxTxDy_percentage = [y_hat_N_BxTxDy[i] for i in range(len(y_hat_N_BxTxDy_original))]
+            elif self.emission == "mvn":
+                # transform log additive ratio to percentage
+                for i in range(len(y_N_BxTxDy)):
+
+                    y_N_BxTxDy[i] = np.exp(y_N_BxTxDy[i])
+                    p11 = 1 / (1 + y_N_BxTxDy[i].sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
+                    y_N_BxTxDy[i] = p11 * y_N_BxTxDy[i]
+
+                    y_hat_N_BxTxDy[i] = np.exp(y_hat_N_BxTxDy[i])
+                    p11 = 1 / (1 + y_hat_N_BxTxDy[i].sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
+                    y_hat_N_BxTxDy[i] = p11 * y_hat_N_BxTxDy[i]
+
+                    t2 = MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = \
+                        self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
+
+            else:
+                raise ValueError("Unsupported emission!")
+
+            # log percentage
             for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-                # convert count into percentage
-                y_hat_BxTmkxDy = y_hat_BxTmkxDy / tf.reduce_sum(y_hat_BxTmkxDy, axis=-1, keepdims=True)
-                y_BxTmkxDy = y_BxTmkxDy / tf.reduce_sum(y_BxTmkxDy, axis=-1, keepdims=True)
 
                 # convert percentage into log space
-                y_hat_BxTmkxDy = (y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                y_BxTmkxDy = (y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6)
-                y_hat_BxTmkxDy = tf.log(y_hat_BxTmkxDy)
-                y_BxTmkxDy = tf.log(y_BxTmkxDy)
+                y_hat_N_BxTxDy[k] = tf.log((y_hat_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
+                y_N_BxTxDy[k] = tf.log((y_BxTmkxDy + 1e-6) / (1 + Dy * 1e-6))
 
-                difference = y_hat_BxTmkxDy - y_BxTmkxDy   # (batch_size, time-k, Dy)
-                masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
-                masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
+            t3 = MSE_ks_logp, y_means_logp, y_vars_logp, y_hat_N_BxTxDy_logp = \
+                self.compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask)
 
-                MSE_k = tf.reduce_sum(masked_difference**2, name="MSE_{}".format(k))
-                MSE_ks.append(MSE_k)
-
-                masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])   # (mask_time, Dy)
-                masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
-                y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
-                y_means.append(y_mean)
-                y_var = tf.reduce_sum((masked_y - y_mean)**2, axis=[0, 1], name="y_var_{}".format(k))   # (Dy,)
-                y_vars.append(y_var)
-
-            MSE_ks = tf.stack(MSE_ks, name="MSE_ks")     # (n_steps + 1)
-            y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
-            y_vars = tf.stack(y_vars, name="y_vars")     # (n_steps + 1, Dy)
-
-            return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
+            return t1, t2, t3
 
     def get_nextX(self, X):
         # only used for drawing 2D quiver plot
         with tf.variable_scope(self.name):
-            return self.f.mean(X)
+            return self.f.mean(X, Dx=self.Dx)
+
+
+def lar_transform(percentages):
+    """
+
+    :param percentages: (..., dy),
+    :return: lars: (..., dy - 1)
+    """
+    lars = tf.log(percentages[..., :-1]) - tf.log(percentages[..., -1:])
+    return lars
+

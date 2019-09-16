@@ -8,18 +8,18 @@ class distribution(object):
 		self.name = name
 
 	@abstractmethod
-	def sample(self, Input):
+	def sample(self, Input, **kwargs):
 		pass
 		
 	@abstractmethod
-	def sample_and_log_prob(self, Input):
+	def sample_and_log_prob(self, Input, **kwargs):
 		pass
 
 	@abstractmethod
-	def log_prob(self, Input, output):
+	def log_prob(self, Input, output, **kwargs):
 		pass
 
 	@abstractmethod
-	def mean(self, Input, output):
+	def mean(self, Input, output, **kwargs):
 		pass
 

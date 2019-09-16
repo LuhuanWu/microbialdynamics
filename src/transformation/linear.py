@@ -4,26 +4,28 @@ import tensorflow as tf
 from src.transformation.base import transformation
 
 class linear_transformation(transformation):
-    def transform(self, Input):
+    def transform(self, Input, **kwargs):
         '''
         Integrates the Lorenz ODEs
         '''
         A = self.params
         return np.dot(A, Input)
 
+
 class tf_linear_transformation(transformation):
-    def transform(self, Input):
-        '''
-        Integrates the Lorenz ODEs
-        '''
-        A = self.params
-        Input_shape = Input.shape.as_list()
+
+    def transform(self, Input, **kwargs):
+        # Input shape: (n_particles, batch_size, Dx + Dev)
+
+        A, b = self.params  # A shape (Dx + Dev, Dx), b shape (Dx, )
+
+        Input_shape = Input.shape.as_list()  # (n_particles, batch_size, Dx + Dev)
         output_shape = list(Input_shape)
-        output_shape[-1] = A.shape.as_list()[0]
+        output_shape[-1] = A.shape.as_list()[0]   # (n_particles, batch_size, Dx)
 
         Input_reshaped = tf.reshape(Input, [-1, Input_shape[-1]])
-        output_reshaped = tf.matmul(Input_reshaped, A, transpose_b = True)
-        output = tf.reshape(output_reshaped, output_shape)
+        output_reshaped = tf.matmul(Input_reshaped, A, transpose_b=True)
+        output = tf.reshape(output_reshaped, output_shape) + b
         return output
 
 # test code

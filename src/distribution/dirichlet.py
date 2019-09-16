@@ -29,17 +29,17 @@ class tf_dirichlet(distribution):
     def __init__(self, transformation, name='tf_dirichlet'):
         super(tf_dirichlet, self).__init__(transformation, name)
 
-    def get_dirichlet(self, Input):
+    def get_dirichlet(self, Input, **kwargs):
         with tf.variable_scope(self.name):
-            alphas, _ = self.transformation.transform(Input)
+            alphas, _ = self.transformation.transform(Input, **kwargs)
             alphas = tf.nn.softplus(alphas) + 1e-6
             dirichlet = tfd.Dirichlet(alphas,
                                       validate_args=True,
                                       allow_nan_stats=False)
             return dirichlet
 
-    def sample(self, Input, sample_shape=(), name=None):
-        tfd = self.get_dirichlet(Input)
+    def sample(self, Input, sample_shape=(), name=None, **kwargs):
+        tfd = self.get_dirichlet(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             sample = tfd.sample(sample_shape)
             return sample
@@ -50,6 +50,6 @@ class tf_dirichlet(distribution):
             return dirichlet.log_prob(output)
 
     def mean(self, Input, name=None, **kwargs):
-        dirichlet = self.get_dirichlet(Input)
+        dirichlet = self.get_dirichlet(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             return dirichlet.mean()

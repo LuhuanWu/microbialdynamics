@@ -29,11 +29,11 @@ class tf_mvn(distribution):
         self.sigma_min = sigma_min
 
 
-    def get_mvn(self, Input):
+    def get_mvn(self, Input, **kwargs):
         if isinstance(self.transformation, NF):
             dist = self.get_mvn_from_flow(Input)
         else:
-            dist = self.get_mvn_from_transformation(Input)
+            dist = self.get_mvn_from_transformation(Input, **kwargs)
         return dist
 
     def get_mvn_from_flow(self, Input):
@@ -46,11 +46,11 @@ class tf_mvn(distribution):
             dist = self.transformation.transform(dist)
             return dist
 
-    def get_mvn_from_transformation(self, Input):
+    def get_mvn_from_transformation(self, Input, **kwargs):
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
             sigma = None
 
-            mu = self.transformation.transform(Input)
+            mu = self.transformation.transform(Input, **kwargs)
             if isinstance(mu, tuple):
                 assert len(mu) == 2, "output of {} should contain 2 elements".format(self.transformation.name)
                 mu, sigma = mu
@@ -87,26 +87,26 @@ class tf_mvn(distribution):
         sigma_con = tf.maximum(sigma_con, self.sigma_min)
         return sigma_con
 
-    def sample_and_log_prob(self, Input, sample_shape=(), name=None):
-        mvn = self.get_mvn(Input)
+    def sample_and_log_prob(self, Input, sample_shape=(), name=None, **kwargs):
+        mvn = self.get_mvn(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             sample = mvn.sample(sample_shape)
             log_prob = mvn.log_prob(sample)
             return sample, log_prob
 
-    def sample(self, Input, sample_shape=(), name=None):
-        mvn = self.get_mvn(Input)
+    def sample(self, Input, sample_shape=(), name=None, **kwargs):
+        mvn = self.get_mvn(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             sample = mvn.sample(sample_shape)
             return sample
 
     def log_prob(self, Input, output, name=None, **kwargs):
-        mvn = self.get_mvn(Input)
+        mvn = self.get_mvn(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             return mvn.log_prob(output)
 
-    def mean(self, Input, name=None):
-        mvn = self.get_mvn(Input)
+    def mean(self, Input, name=None, **kwargs):
+        mvn = self.get_mvn(Input, **kwargs)
         with tf.variable_scope(name or self.name):
             if isinstance(self.transformation, NF):
                 # for flow, choose the point with max prob

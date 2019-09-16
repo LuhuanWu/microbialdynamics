@@ -12,14 +12,14 @@ class poisson(distribution):
     def __init__(self, transformation, name="poisson"):
         super(poisson, self).__init__(transformation, name)
 
-    def sample(self, Input):
+    def sample(self, Input, **kwargs):
         assert isinstance(Input, np.ndarray), "Input for poisson must be np.ndarray, {} is given".format(type(Input))
 
         def safe_softplus(x, limit=30):
             x[x < limit] = np.log(1.0 + np.exp(x[x < limit]))
             return x
 
-        lambdas = safe_softplus(self.transformation.transform(Input))
+        lambdas = safe_softplus(self.transformation.transform(Input, **kwargs))
         return np.random.poisson(lambdas)
 
 
@@ -30,7 +30,7 @@ class tf_poisson(distribution):
         super(tf_poisson, self).__init__(transformation, name)
 
 
-    def get_poisson(self, Input, extra_inputs=None):
+    def get_poisson(self, Input, extra_inputs=None, **kwargs):
         """
 
         :param Input: (T, Dx)
@@ -38,7 +38,7 @@ class tf_poisson(distribution):
         :return:
         """
         with tf.variable_scope(self.name):
-            lambdas, _ = self.transformation.transform(Input)
+            lambdas, _ = self.transformation.transform(Input, **kwargs)
             lambdas = tf.nn.softplus(lambdas) + 1e-6  # (T, Dy)
             lambdas = lambdas / tf.reduce_sum(lambdas, axis=-1, keepdims=True)
             lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)
@@ -47,12 +47,12 @@ class tf_poisson(distribution):
                                   allow_nan_stats=False)
             return poisson
 
-    def log_prob(self, Input, output, extra_inputs=None, name=None):
-        poisson = self.get_poisson(Input, extra_inputs)
+    def log_prob(self, Input, output, extra_inputs=None, name=None, **kwargs):
+        poisson = self.get_poisson(Input, extra_inputs, **kwargs)
         with tf.variable_scope(name or self.name):
             return tf.reduce_sum(poisson.log_prob(output), axis=-1)
 
-    def mean(self, Input, extra_inputs, name=None):
-        poisson = self.get_poisson(Input, extra_inputs)
+    def mean(self, Input, extra_inputs, name=None, **kwargs):
+        poisson = self.get_poisson(Input, extra_inputs, **kwargs)
         with tf.variable_scope(name or self.name):
             return poisson.mean()

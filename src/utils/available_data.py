@@ -39,7 +39,6 @@ clv_count_Dx_10_ntrain_1200_data_dir = "data/clv/data/clv_count_ntrain_1200_Dx_1
 DATA_DIR_DICT = dict(toy=toy_data_dir,
                      percentage=percentage_data_dir, percentage_noinputs=percentage_noinputs_dir,
                      count=count_data_dir, count_noinputs=count_noinputs_dir,
-                     pink_count=pink_count_data_dir, cyan_count=cyan_count_data_dir,
                      clv_percentage_Dx_1=clv_percentage_Dx_1_data_dir,
                      clv_percentage_Dx_2=clv_percentage_Dx_2_data_dir,
                      clv_percentage_Dx_3=clv_percentage_Dx_3_data_dir,
@@ -80,7 +79,10 @@ PERCENTAGE_DATA_TYPE = ["percentage", "percentage_noinputs",
                         "clv_percentage_Dx_10_ntrain_1000",
                         "clv_percentage_Dx_10_ntrain_1200"]
 
-COUNT_DATA_TYPE = ["count", "count_noinputs", "pink_count", "cyan_count",
+# add 10 dim observation fata to percentage data ( for mvn emission)
+
+
+COUNT_DATA_TYPE = ["count", "count_noinputs",
                    "clv_count_Dx_1",
                    "clv_count_Dx_2",
                    "clv_count_Dx_3",

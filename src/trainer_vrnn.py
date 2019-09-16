@@ -36,8 +36,6 @@ class trainer:
 
         self.init_placeholder()
         self.init_training_param()
-        self.input_embedding = model.input_embedding
-        self.init_quiver_plotting()
 
     def init_placeholder(self):
         self.obs = self.model.obs
@@ -68,30 +66,16 @@ class trainer:
         self.save_res = True
         self.RLT_DIR = RLT_DIR
         self.save_trajectory = self.FLAGS.save_trajectory
-        self.save_y_hat_train = self.FLAGS.save_y_hat_train
-        self.saving_train_num = self.FLAGS.saving_train_num
-
-        self.save_y_hat_test = self.FLAGS.save_y_hat_test
-        self.saving_test_num = self.FLAGS.saving_test_num
+        self.save_y_hat = self.FLAGS.save_y_hat
+        self.saving_num = self.FLAGS.saving_num
 
         # metrics
         self.log_ZSMC_trains = []
         self.log_ZSMC_tests = []
-
-        self.MSE_original_trains = []
-        self.MSE_original_tests = []
-        self.R_square_original_trains = []
-        self.R_square_original_tests = []
-
-        self.MSE_percentage_trains = []
-        self.MSE_percentage_tests = []
-        self.R_square_percentage_trains = []
-        self.R_square_percentage_tests = []
-
-        self.MSE_logp_trains = []
-        self.MSE_logp_tests = []
-        self.R_square_logp_trains = []
-        self.R_square_logp_tests = []
+        self.MSE_trains = []
+        self.MSE_tests = []
+        self.R_square_trains = []
+        self.R_square_tests = []
 
         # epoch data (trajectory, y_hat and quiver lattice)
         epoch_data_DIR = self.RLT_DIR.split("/")
@@ -119,41 +103,29 @@ class trainer:
               extra_inputs_train, extra_inputs_test,
               print_freq):
 
-        self.obs_train,    self.obs_test    = obs_train,    obs_test
+        self.obs_train, self.obs_test = obs_train, obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
+        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input, self.time, self.mask,
                                                    self.time_interval, self.extra_inputs)
 
-        self.train_feed_dict = {self.obs: obs_train[0:self.saving_train_num],
-                                self.hidden: hidden_train[0:self.saving_train_num],
-                                self.input: input_train[0: self.saving_train_num],
-                                self.time: [obs.shape[0] for obs in obs_train[0: self.saving_train_num]],
-                                self.mask: mask_train[0: self.saving_train_num],
-                                self.time_interval: time_interval_train[0:self.saving_train_num],
-                                self.extra_inputs: extra_inputs_train[0: self.saving_train_num]}
-
-        self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
-                               self.hidden: hidden_test[0:self.saving_test_num],
-                               self.input: input_test[0:self.saving_test_num],
-                               self.time: [obs.shape[0] for obs in obs_test[0: self.saving_test_num]],
-                               self.mask: mask_test[0:self.saving_test_num],
-                               self.time_interval: time_interval_test[0:self.saving_test_num],
-                               self.extra_inputs: extra_inputs_test[0:self.saving_test_num]}
+        print("finish computing log_ZSMC")
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         Xs = log["Xs"]
-        t1, t2, t3 = self.SMC.n_step_MSE(self.MSE_steps, Xs, self.obs, self.input_embedding,
+        lstm_states_h = log["lstm_states_h"]
+        lstm_states_c = log["lstm_states_c"]
+
+        #print("start MSE")
+        MSE_ks, y_means, y_vars, y_hat = self.SMC.n_step_MSE(self.MSE_steps, lstm_states_h, lstm_states_c, Xs, self.obs, self.input,
                                                              self.mask, self.extra_inputs)
 
-        MSE_ks_original, y_means_original, y_vars_original, y_hat_N_BxTxDy_original = t1
-        MSE_ks_percentage, y_means_percentage, y_vars_percentage, y_hat_N_BxTxDy_percentage = t2
-        MSE_ks_logp, y_means_logp, y_vars_logp, y_hat_N_BxTxDy_logp = t3
+        #print("finish MSE")
 
         with tf.variable_scope("train"):
             lr = tf.placeholder(tf.float32, name="lr")
@@ -161,13 +133,6 @@ class trainer:
             train_op = optimizer.minimize(-self.log_ZSMC)
 
         init = tf.global_variables_initializer()
-
-        # if self.model.TFS and self.model.flow_transition:
-        #     from tensorflow.core.protobuf import rewriter_config_pb2
-        #     config_proto = tf.ConfigProto()
-        #     off = rewriter_config_pb2.RewriterConfig.OFF
-        #     config_proto.graph_options.rewrite_options.memory_optimization = off
-        #     self.sess = tf.Session(config=config_proto)
 
         self.sess = tf.Session()
 
@@ -182,9 +147,7 @@ class trainer:
             start = time.time()
 
             if i == 0:
-                self.evaluate_and_save_metrics(i, MSE_ks_original, y_means_original, y_vars_original,
-                                               MSE_ks_percentage, y_means_percentage, y_vars_percentage,
-                                               MSE_ks_logp, y_means_logp, y_vars_logp)
+                self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -193,139 +156,105 @@ class trainer:
                 assert self.batch_size == 1
 
                 self.sess.run(train_op,
-                              feed_dict={self.obs:           obs_train[j:j + self.batch_size],
-                                         self.hidden:        hidden_train[j:j + self.batch_size],
-                                         self.input:         input_train[j:j + self.batch_size],
-                                         self.time:          obs_train[j].shape[0],
-                                         self.mask:          mask_train[j:j+self.batch_size],
-                                         self.time_interval: time_interval_train[j:j+self.batch_size],
-                                         self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
-                                         lr:                 self.lr})
+                              feed_dict={self.obs: obs_train[j:j + self.batch_size],
+                                         self.hidden: hidden_train[j:j + self.batch_size],
+                                         self.input: input_train[j:j + self.batch_size],
+                                         self.time: obs_train[j].shape[0],
+                                         self.mask: mask_train[j:j + self.batch_size],
+                                         self.time_interval: time_interval_train[j:j + self.batch_size],
+                                         self.extra_inputs: extra_inputs_train[j:j + self.batch_size],
+                                         lr: self.lr})
 
             if (i + 1) % print_freq == 0:
                 try:
-                    self.evaluate_and_save_metrics(i, MSE_ks_original, y_means_original, y_vars_original,
-                                                   MSE_ks_percentage, y_means_percentage, y_vars_percentage,
-                                                   MSE_ks_logp, y_means_logp, y_vars_logp)
+                    self.evaluate_and_save_metrics(i, MSE_ks, y_means, y_vars)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
 
                 if self.save_res:
-                    if self.save_trajectory or self.draw_quiver_during_training:
-                        Xs_val = self.evaluate(Xs, self.test_feed_dict, average=False)
+                    self.saving_feed_dict = {self.obs: obs_test[0:self.saving_num],
+                                             self.hidden: hidden_test[0:self.saving_num],
+                                             self.input: input_test[0:self.saving_num],
+                                             self.time: [obs.shape[0] for obs in obs_test],
+                                             self.mask: mask_test[0:self.saving_num],
+                                             self.time_interval: time_interval_test[0:self.saving_num],
+                                             self.extra_inputs: extra_inputs_test[0:self.saving_num]}
+
+                    Xs_val = self.evaluate(Xs, self.saving_feed_dict, average=False)
+
 
                     if self.save_trajectory:
                         trajectory_dict = {"Xs": Xs_val}
                         with open(self.epoch_data_DIR + "trajectory_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(trajectory_dict, f)
 
-                    if self.save_y_hat_train:
-                        y_hat_val_train = self.evaluate(y_hat_N_BxTxDy_original, self.train_feed_dict, average=False)
-                        y_hat_train_dict = {"y_hat_train": y_hat_val_train}
-                        with open(self.epoch_data_DIR + "y_hat_train_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(y_hat_train_dict, f)
-
-                    if self.save_y_hat_test:
-                        y_hat_val_test = self.evaluate(y_hat_N_BxTxDy_original, self.test_feed_dict, average=False)
-                        y_hat_test_dict = {"y_hat_test": y_hat_val_test}
-                        with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(y_hat_test_dict, f)
-
+                    if self.save_y_hat:
+                        y_hat_val = self.evaluate(y_hat, self.saving_feed_dict, average=False)
+                        y_hat_dict = {"y_hat": y_hat_val}
+                        with open(self.epoch_data_DIR + "y_hat_{}.p".format(i + 1), "wb") as f:
+                            pickle.dump(y_hat_dict, f)
+                    """
                     if self.draw_quiver_during_training:
                         if self.Dx == 2:
-                            self.draw_2D_quiver_plot(Xs_val, i + 1)
+                            self.draw_2D_quiver_plot(Xs_val, self.nextX, self.lattice, i + 1)
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
+                    """
 
             end = time.time()
-            print("epoch {:<14} took {:.3f} seconds".format(i + 1, end - start))
+            print("epoch {:<4} took {:.3f} seconds".format(i + 1, end - start))
 
         print("finished training...")
 
         metrics = {"log_ZSMC_trains": self.log_ZSMC_trains,
-                   "log_ZSMC_tests":  self.log_ZSMC_tests,
-                   "MSE_trains":      self.MSE_percentage_trains,
-                   "MSE_tests":       self.MSE_percentage_tests,
-                   "R_square_trains": self.R_square_percentage_trains,
-                   "R_square_tests":  self.R_square_percentage_tests}
-        log["y_hat_original"] = y_hat_N_BxTxDy_original
-        
+                   "log_ZSMC_tests": self.log_ZSMC_tests,
+                   "MSE_trains": self.MSE_trains,
+                   "MSE_tests": self.MSE_tests,
+                   "R_square_trains": self.R_square_trains,
+                   "R_square_tests": self.R_square_tests}
+        log["y_hat"] = y_hat
+
         return metrics, log
 
     def close_session(self):
         self.sess.close()
 
-    def evaluate_and_save_metrics(self, iter_num, MSE_ks_original, y_means_original, y_vars_original,
-                                  MSE_ks_percentage, y_means_percentage, y_vars_percentage,
-                                  MSE_ks_logp, y_means_logp, y_vars_logp):
+    def evaluate_and_save_metrics(self, iter_num, MSE_ks, y_means, y_vars):
         log_ZSMC_train = self.evaluate(self.log_ZSMC,
-                                       {self.obs:           self.obs_train,
-                                        self.hidden:        self.hidden_train,
-                                        self.input:         self.input_train,
-                                        self.time:          [obs.shape[0] for obs in self.obs_train],
-                                        self.mask:          self.mask_train,
+                                       {self.obs: self.obs_train,
+                                        self.hidden: self.hidden_train,
+                                        self.input: self.input_train,
+                                        self.time: [obs.shape[0] for obs in self.obs_train],
+                                        self.mask: self.mask_train,
                                         self.time_interval: self.time_interval_train,
-                                        self.extra_inputs:  self.extra_inputs_train},
+                                        self.extra_inputs: self.extra_inputs_train},
                                        average=True)
         log_ZSMC_test = self.evaluate(self.log_ZSMC,
-                                      {self.obs:            self.obs_test,
-                                       self.hidden:         self.hidden_test,
-                                       self.input:          self.input_test,
-                                       self.time:           [obs.shape[0] for obs in self.obs_test],
-                                       self.mask:           self.mask_test,
-                                       self.time_interval:  self.time_interval_test,
-                                       self.extra_inputs:   self.extra_inputs_test},
+                                      {self.obs: self.obs_test,
+                                       self.hidden: self.hidden_test,
+                                       self.input: self.input_test,
+                                       self.time: [obs.shape[0] for obs in self.obs_test],
+                                       self.mask: self.mask_test,
+                                       self.time_interval: self.time_interval_test,
+                                       self.extra_inputs: self.extra_inputs_test},
                                       average=True)
 
-        MSE_original_train, R_square_original_train = self.evaluate_R_square(MSE_ks_original,
-                                                                             y_means_original, y_vars_original,
+        MSE_train, R_square_train = self.evaluate_R_square(MSE_ks, y_means, y_vars,
                                                            self.hidden_train, self.obs_train, self.input_train,
                                                            self.mask_train, self.time_interval_train,
                                                            self.extra_inputs_train)
-        MSE_original_test, R_square_original_test = self.evaluate_R_square(MSE_ks_original,
-                                                                           y_means_original, y_vars_original,
+        MSE_test, R_square_test = self.evaluate_R_square(MSE_ks, y_means, y_vars,
                                                          self.hidden_test, self.obs_test, self.input_test,
                                                          self.mask_test, self.time_interval_test,
                                                          self.extra_inputs_test)
-
-        MSE_percentage_train, R_square_percentage_train = self.evaluate_R_square(MSE_ks_percentage,
-                                                                             y_means_percentage, y_vars_percentage,
-                                                                             self.hidden_train, self.obs_train,
-                                                                             self.input_train,
-                                                                             self.mask_train, self.time_interval_train,
-                                                                             self.extra_inputs_train)
-
-        MSE_percentage_test, R_square_percentage_test = self.evaluate_R_square(MSE_ks_percentage,
-                                                                           y_means_percentage, y_vars_percentage,
-                                                                           self.hidden_test, self.obs_test,
-                                                                           self.input_test,
-                                                                           self.mask_test, self.time_interval_test,
-                                                                           self.extra_inputs_test)
-
-        MSE_logp_train, R_square_logp_train = self.evaluate_R_square(MSE_ks_logp,
-                                                                             y_means_logp, y_vars_logp,
-                                                                             self.hidden_train, self.obs_train,
-                                                                             self.input_train,
-                                                                             self.mask_train, self.time_interval_train,
-                                                                             self.extra_inputs_train)
-        MSE_logp_test, R_square_logp_test = self.evaluate_R_square(MSE_ks_logp,
-                                                                           y_means_logp, y_vars_logp,
-                                                                           self.hidden_test, self.obs_test,
-                                                                           self.input_test,
-                                                                           self.mask_test, self.time_interval_test,
-                                                                           self.extra_inputs_test)
 
         print()
         print("iter", iter_num + 1)
         print("Train log_ZSMC: {:>7.3f}, valid log_ZSMC: {:>7.3f}"
               .format(log_ZSMC_train, log_ZSMC_test))
 
-        print("Train, Valid k-step Rsq (original space):\n", R_square_original_train, "\n", R_square_original_test)
-
-        print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
-
-        print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
+        print("Train, Valid k-step Rsq:\n", R_square_train, "\n", R_square_test)
 
         if not math.isfinite(log_ZSMC_train):
             print("Nan in log_ZSMC, stop training")
@@ -334,30 +263,19 @@ class trainer:
         if self.save_res:
             self.log_ZSMC_trains.append(log_ZSMC_train)
             self.log_ZSMC_tests.append(log_ZSMC_test)
+            self.MSE_trains.append(MSE_train)
+            self.MSE_tests.append(MSE_test)
+            self.R_square_trains.append(R_square_train)
+            self.R_square_tests.append(R_square_test)
 
-            self.MSE_original_trains.append(MSE_original_train)
-            self.MSE_original_tests.append(MSE_original_test)
-            self.R_square_original_trains.append(R_square_original_train)
-            self.R_square_original_tests.append(R_square_original_test)
-
-            self.MSE_percentage_trains.append(MSE_percentage_train)
-            self.MSE_percentage_tests.append(MSE_percentage_test)
-            self.R_square_percentage_trains.append(R_square_percentage_train)
-            self.R_square_percentage_tests.append(R_square_percentage_test)
-
-            self.MSE_logp_trains.append(MSE_logp_train)
-            self.MSE_logp_tests.append(MSE_logp_test)
-            self.R_square_logp_trains.append(R_square_logp_train)
-            self.R_square_logp_tests.append(R_square_logp_test)
-
-            plot_R_square_epoch(self.RLT_DIR, R_square_percentage_train, R_square_percentage_test, iter_num + 1)
+            plot_R_square_epoch(self.RLT_DIR, R_square_train, R_square_test, iter_num + 1)
 
             if not os.path.exists(self.epoch_data_DIR):
                 os.makedirs(self.epoch_data_DIR)
             metric_dict = {"log_ZSMC_train": log_ZSMC_train,
-                           "log_ZSMC_test":  log_ZSMC_test,
-                           "R_square_percentage_train": R_square_percentage_train,
-                           "R_square_percentage_test":  R_square_percentage_test}
+                           "log_ZSMC_test": log_ZSMC_test,
+                           "R_square_train": R_square_train,
+                           "R_square_test": R_square_test}
             with open(self.epoch_data_DIR + "metric_{}.p".format(iter_num + 1), "wb") as f:
                 pickle.dump(metric_dict, f)
 
@@ -372,7 +290,6 @@ class trainer:
 
         if self.bestCost != len(self.log_ZSMC_tests) - 1:
             self.early_stop_count += 1
-
             if self.early_stop_count * print_freq == self.early_stop_patience:
                 print("valid cost not improving. stopping training...")
                 raise StopTraining()
@@ -456,14 +373,14 @@ class trainer:
         batch_size = self.batch_size
         n_batches = len(hidden_set)
 
-        combined_MSE_ks = np.zeros((n_steps + 1))             # combined MSE_ks across all batches
-        combined_y_means = np.zeros((n_steps + 1, Dy))        # combined y_means across all batches
-        combined_y_vars = np.zeros((n_steps + 1, Dy))         # combined y_vars across all batches
+        combined_MSE_ks = np.zeros((n_steps + 1))  # combined MSE_ks across all batches
+        combined_y_means = np.zeros((n_steps + 1, Dy))  # combined y_means across all batches
+        combined_y_vars = np.zeros((n_steps + 1, Dy))  # combined y_vars across all batches
 
         for i in range(0, n_batches, batch_size):
             assert batch_size == 1
             time_batch = obs_set[i].shape[0]
-            batch_MSE_ks, batch_y_means, batch_y_vars =\
+            batch_MSE_ks, batch_y_means, batch_y_vars = \
                 self.sess.run([MSE_ks, y_means, y_vars],
                               {self.obs: obs_set[i:i + batch_size],
                                self.hidden: hidden_set[i:i + batch_size],
@@ -482,18 +399,18 @@ class trainer:
             # update combined y_means and combined y_vars according to:
             # https://stats.stackexchange.com/questions/55999/is-it-possible-to-find-the-combined-standard-deviation
             Tmks = np.arange(time_batch - n_steps, time_batch + 1, 1)  # [time - n_steps, time - n_steps + 1, ..., time]
-            Tmks = Tmks[-1:None:-1]                                  # [time, ..., time - n_steps + 1, time - n_steps]
-            TmkxDy = np.tile(Tmks, (Dy, 1)).T                        # (n_steps + 1, Dy)
+            Tmks = Tmks[-1:None:-1]  # [time, ..., time - n_steps + 1, time - n_steps]
+            TmkxDy = np.tile(Tmks, (Dy, 1)).T  # (n_steps + 1, Dy)
 
             # for k = 0, ..., n_steps,
             # its n1 = (time - k) * i, n2 = (time - k) * batch_size respectively
-            n1 = TmkxDy * i                                     # (n_steps + 1, Dy)
-            n2 = TmkxDy * batch_size                            # (n_steps + 1, Dy)
+            n1 = TmkxDy * i  # (n_steps + 1, Dy)
+            n2 = TmkxDy * batch_size  # (n_steps + 1, Dy)
 
             combined_y_means_new = (n1 * combined_y_means + n2 * batch_y_means) / (n1 + n2)
             combined_y_vars = combined_y_vars + batch_y_vars + \
-                n1 * (combined_y_means - combined_y_means_new)**2 + \
-                n2 * (batch_y_means - combined_y_means_new)**2
+                              n1 * (combined_y_means - combined_y_means_new) ** 2 + \
+                              n2 * (batch_y_means - combined_y_means_new) ** 2
 
             combined_y_means = combined_y_means_new
 
@@ -503,12 +420,12 @@ class trainer:
 
         return mean_MSE_ks, R_square
 
-    def draw_2D_quiver_plot(self, Xs_val, epoch):
+    def draw_2D_quiver_plot(self, Xs_val, nextX, lattice, epoch):
         # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
+        X_trajs = np.mean(Xs_val, axis=2)
 
         plt.figure()
-        for X_traj in Xs_val[0:self.saving_test_num]:
-            X_traj = np.mean(X_traj, axis=1)
+        for X_traj in X_trajs[0:self.saving_num]:
             plt.plot(X_traj[:, 0], X_traj[:, 1])
             plt.scatter(X_traj[0, 0], X_traj[0, 1])
         plt.title("quiver")
@@ -530,6 +447,7 @@ class trainer:
 
     def draw_3D_quiver_plot(self, Xs_val, epoch):
         # Xs_val.shape = (saving_test_num, time, n_particles, Dx)
+        X_trajs = np.mean(Xs_val, axis=2)
 
         fig = plt.figure()
         ax = fig.gca(projection="3d")
@@ -537,8 +455,7 @@ class trainer:
         ax.set_xlabel("x_dim 1")
         ax.set_ylabel("x_dim 2")
         ax.set_zlabel("x_dim 3")
-        for X_traj in Xs_val[0:self.saving_test_num]:
-            X_traj = np.mean(X_traj, axis=1)
+        for X_traj in X_trajs:
             ax.plot(X_traj[:, 0], X_traj[:, 1], X_traj[:, 2])
             ax.scatter(X_traj[0, 0], X_traj[0, 1], X_traj[0, 2])
 
