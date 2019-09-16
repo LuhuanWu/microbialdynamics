@@ -16,21 +16,25 @@ class clv_transformation(transformation):
 
         x = Input[..., 0:Dx]
         v = Input[..., Dx:]  # (..., Dev)
+        v_size = v.shape[-1]
 
         zeros = tf.zeros_like(x[..., 0:1])
         p = tf.concat([x, zeros], axis=-1)
         p = tf.nn.softmax(p, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
-        # Wg shape (Dx, Dev).
-        Wgv = batch_matmul(Wg, v)  # (..., Dx)
+        if v_size > 0:
+            # Wg shape (Dx, Dev).
+            Wgv = batch_matmul(Wg, v)  # (..., Dx)
 
-        # Wa shape (Dx, Dev)
-        Wav = batch_matmul(Wa, v) # (..., Dx)
+            # Wa shape (Dx, Dev)
+            Wav = batch_matmul(Wa, v) # (..., Dx)
 
-        Wav_by_p = Wav * tf.reduce_sum(p, axis=-1, keepdims=True)  # (...., Dx)
+            Wav_by_p = Wav * tf.reduce_sum(p, axis=-1, keepdims=True)  # (...., Dx)
 
-        # A shape: (Dx, Dx + 1)
-        output = x + g + Wgv + batch_matmul(A, p) + Wav_by_p
+            # A shape: (Dx, Dx + 1)
+            output = x + g + Wgv + batch_matmul(A, p) + Wav_by_p
+        else:
+            output = x + g + batch_matmul(A, p)
 
         return output
 
