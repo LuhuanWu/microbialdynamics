@@ -35,6 +35,8 @@ def main(_):
     # evaluation parameters
     if FLAGS.emission == "dirichlet" or FLAGS.emission == "mvn":
         y_hat_bar_plot_to_normalize = False
+        if FLAGS.emission == "mvn":
+            assert FLAGS.data_type in PERCENTAGE_DATA_TYPE, "mvn emission is only compatible to percentage data."
     elif FLAGS.emission == "poisson" or FLAGS.emission == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
@@ -62,6 +64,7 @@ def main(_):
 
         data_dir = DATA_DIR_DICT[FLAGS.data_type]
         data_dir = os.path.join(repo_dir, data_dir)
+
         if FLAGS.data_type == "toy":
             print("Use toy data")
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
