@@ -115,6 +115,8 @@ use_2_q = True
 
 log_dynamics = False  # whether to set latent dynamics in the log space
 lar_dynamics = False  # log additive ratio transformation
+f_final_scaling = 3   # when use log_dynamics/lar_dynamics, activation
+                      # for f's final layer is tanh, choose a scaling for f
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives

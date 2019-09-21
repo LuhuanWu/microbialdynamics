@@ -11,7 +11,7 @@ class clv_transformation(transformation):
 
         # x_t + g_t + Wg v_t + (A+Wa v_t) * p_t
 
-        A, g, Wa, Wg = self.params
+        A, g, Wa, Wb, Wg = self.params
         assert Dx > 0
 
         x = Input[..., 0:Dx]
@@ -26,13 +26,15 @@ class clv_transformation(transformation):
             # Wg shape (Dx, Dev).
             Wgv = batch_matmul(Wg, v)  # (..., Dx)
 
-            # Wa shape (Dx, Dev)
-            Wav = batch_matmul(Wa, v) # (..., Dx)
+            # Wa shape (Dx + 1, Dev)
+            Wav = batch_matmul(Wa, v) # (..., Dx + 1)
 
-            Wav_by_p = Wav * tf.reduce_sum(p, axis=-1, keepdims=True)  # (...., Dx)
+            Wav = Wav[:, :, tf.newaxis, :] # (..., 1, Dx + 1)
+
+            Wavp = batch_matmul(Wav, p)  # (..., 1))
 
             # A shape: (Dx, Dx + 1)
-            output = x + g + Wgv + batch_matmul(A, p) + Wav_by_p
+            output = x + g + Wgv + batch_matmul(A, p) + batch_matmul(Wb, Wavp)
         else:
             output = x + g + batch_matmul(A, p)
 

@@ -10,6 +10,8 @@ class MLP_transformation(transformation):
                  use_residual=False,
                  output_cov=False,
                  diag_cov=False,
+                 final_activation="linear",
+                 final_scaling=1,
                  name="MLP_transformation"):
         self.Dhs = Dhs
         self.Dout = Dout
@@ -17,6 +19,8 @@ class MLP_transformation(transformation):
         self.use_residual = use_residual
         self.output_cov = output_cov
         self.diag_cov = diag_cov
+        self.final_activation = final_activation
+        self.final_scaling = final_scaling
 
         self.name = name
         self.init_FFN()
@@ -33,7 +37,7 @@ class MLP_transformation(transformation):
                 )
 
             self.mu_layer = Dense(self.Dout,
-                                  activation="linear",
+                                  activation=self.final_activation,
                                   kernel_initializer="he_normal",
                                   name="mu_layer")
 
@@ -53,7 +57,7 @@ class MLP_transformation(transformation):
             for hidden_layer in self.hidden_layers:
                 hidden = hidden_layer(hidden)
 
-            mu = self.mu_layer(hidden)
+            mu = self.mu_layer(hidden) * self.final_scaling
             if self.use_residual:
                 mu += Input
 

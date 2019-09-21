@@ -63,6 +63,10 @@ class SSM(object):
         self.SVO                       = FLAGS.SVO
         self.BSim_use_single_RNN       = FLAGS.BSim_use_single_RNN
 
+        self.log_dynamics              = FLAGS.log_dynamics
+        self.lar_dynamics              = FLAGS.lar_dynamics
+        self.f_final_scaling           = FLAGS.f_final_scaling
+
         self.init_placeholder()
         self.init_trans()
         self.init_dist()
@@ -80,22 +84,30 @@ class SSM(object):
 
     def init_trans(self):
         if self.f_transformation == "MLP":
-
+            if self.log_dynamics or self.lar_dynamics:
+                final_activation = "tanh"
+                final_scaling = self.f_final_scaling
+            else:
+                final_activation = "linear"
+                final_scaling = 1
             self.f_tran = MLP_transformation(self.f_layers, self.Dx,
-                                              output_cov=self.output_cov,
-                                              diag_cov=self.diag_cov,
-                                              name="f_tran")
+                                             output_cov=self.output_cov,
+                                             diag_cov=self.diag_cov,
+                                             final_activation=final_activation,
+                                             final_scaling=final_scaling,
+                                             name="f_tran")
         elif self.f_transformation == "linear":
-            A = tf.eye(self.Dx, self.Dx+self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dx+self.Dev)) # (Dx, Dx+Dev)
-            b = 0.5 * tf.random.normal((self.Dx, ))    # (Dx, )
+            A = tf.Variable(tf.eye(self.Dx, self.Dx+self.Dev))
+            b = tf.Variable(tf.zeros((self.Dx, )))
             self.f_tran = tf_linear_transformation(params=(A, b))
 
         elif self.f_transformation == "clv":
-            A = tf.eye(self.Dx, self.Dx+1) + 0.5 * tf.random.normal((self.Dx, self.Dx + 1))  # (Dx, Dx + 1)
-            g = 0.5 * tf.random.normal((self.Dx, ))  # (Dx, )
-            Wa = tf.eye(self.Dx, self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dev))  # (Dx, Dev)
-            Wg = tf.eye(self.Dx, self.Dev) + 0.5 * tf.random.normal((self.Dx, self.Dev))  # (Dx, Dev)
-            self.f_tran = clv_transformation(params=(A, g, Wa, Wg))
+            A = tf.Variable(tf.zeros((self.Dx, self.Dx+1)))
+            g = tf.Variable(tf.zeros((self.Dx, )))
+            Wa = tf.Variable(tf.zeros((self.Dx + 1, self.Dev)))
+            Wb = tf.Variable(tf.zeros((self.Dx, 1)))
+            Wg = tf.Variable(tf.zeros((self.Dx, self.Dev)))
+            self.f_tran = clv_transformation(params=(A, g, Wa, Wb, Wg))
 
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
                                           output_cov=self.output_cov,
