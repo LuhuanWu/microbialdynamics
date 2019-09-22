@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 
 
-def load_data(path, Dx, isPython2, training_sample_idx=None):
+def load_data(path, Dx, isPython2, training_sample_idx=None, test_sample_idx=None):
     with open(path, "rb") as handle:
         if isPython2:
             data = pickle.load(handle, encoding="latin1")
@@ -28,20 +28,28 @@ def load_data(path, Dx, isPython2, training_sample_idx=None):
         extra_inputs_train = [None for _ in range(len(obs_train))]
         extra_inputs_test = [None for _ in range(len(obs_test))]
 
+    obs = obs_train + obs_test
+    hidden = hidden_train + hidden_test
+    input = input_train + input_test
+    extra_inputs = extra_inputs_train + extra_inputs_test
+
     if training_sample_idx is not None:
         assert isinstance(training_sample_idx, list)
-        # use selected training samples for both training and evaluation
+        # use selected samples for training
 
-        hidden_train = [hidden_train[i] for i in training_sample_idx]
-        hidden_test = hidden_train
+        hidden_train = [hidden[i] for i in training_sample_idx]
+        obs_train = [obs[i] for i in training_sample_idx]
+        input_train = [input[i] for i in training_sample_idx]
+        extra_inputs_train = [extra_inputs[i] for i in training_sample_idx]
 
-        obs_train = [obs_train[i] for i in training_sample_idx]
-        obs_test = obs_train
+    if test_sample_idx is not None:
+        assert isinstance(test_sample_idx, list)
+        # use selected samples for test
 
-        input_train = [input_train[i] for i in training_sample_idx]
-        input_test = input_train
-
-        extra_inputs_train = [extra_inputs_train[i] for i in training_sample_idx]
-        extra_inputs_test = extra_inputs_train
+        hidden_test = [hidden[i] for i in test_sample_idx]
+        obs_test = [obs[i] for i in test_sample_idx]
+        input_test = [input[i] for i in test_sample_idx]
+        extra_inputs_test = [extra_inputs[i] for i in test_sample_idx]
 
     return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, extra_inputs_train, extra_inputs_test
+

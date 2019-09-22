@@ -3,6 +3,7 @@ from tensorflow.keras.layers import Dense
 
 from src.transformation.flow import NF
 from src.transformation.MLP import MLP_transformation
+from src.transformation.inverse_lar import inver_lar_transformation
 from src.transformation.linear import tf_linear_transformation
 from src.transformation.clv import clv_transformation
 from src.distribution.mvn import tf_mvn
@@ -58,6 +59,7 @@ class SSM(object):
         self.use_2_q                   = FLAGS.use_2_q
         self.emission                  = FLAGS.emission
         self.two_step_emission         = FLAGS.two_step_emission
+        self.two_step_emission_type    = FLAGS.two_step_emission_type
 
         self.X0_use_separate_RNN       = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -149,16 +151,23 @@ class SSM(object):
                                              name="f_tran")
 
         if self.two_step_emission:
-            self.h_tran = MLP_transformation(self.h_layers, self.Dx,
+                self.h_tran = MLP_transformation(self.h_layers, self.Dy-1,
+                                                 output_cov=self.output_cov,
+                                                 diag_cov=self.diag_cov,
+                                                 name="h_tran")
+
+        if self.two_step_emission:
+            if self.two_step_emission_type == "inv_lar":
+                self.g_tran = inver_lar_transformation(self.Dy-1)
+                assert self.emission == "multinomial", "Can only use multinomial as emission " \
+                                                       "when two step emission type is inv_lar"
+            else:
+                assert self.two_step_emission_type == "MLP", "must choose two step emission type form inv_lar and MLP"
+        else:
+            self.g_tran = MLP_transformation(self.g_layers, self.Dy,
                                              output_cov=self.output_cov,
                                              diag_cov=self.diag_cov,
-                                             name="h_tran")
-
-
-        self.g_tran = MLP_transformation(self.g_layers, self.Dy,
-                                         output_cov=self.output_cov,
-                                         diag_cov=self.diag_cov,
-                                         name="g_tran")
+                                             name="g_tran")
 
     def init_dist(self):
         self.q0_dist = tf_mvn(self.q0_tran,

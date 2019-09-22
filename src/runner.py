@@ -44,8 +44,11 @@ def main(_):
         raise ValueError("Unsupported emission!")
 
     training_sample_idx = [int(x) for x in FLAGS.training_sample_idx.split(",")]
+    test_sample_idx = [int(x) for x in FLAGS.test_sample_idx.split(",")]
     if training_sample_idx == [-1]:
         training_sample_idx = None
+    if test_sample_idx == [-1]:
+        test_sample_idx = None
 
     if FLAGS.use_2_q:
         FLAGS.q_uses_true_X = False
@@ -87,7 +90,8 @@ def main(_):
         elif FLAGS.data_type in PERCENTAGE_DATA_DICT:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_inputs_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
+                load_data(data_dir, Dx, FLAGS.isPython2,
+                          training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
@@ -106,7 +110,8 @@ def main(_):
         elif FLAGS.data_type in COUNT_DATA_DICT:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
+                load_data(data_dir, Dx, FLAGS.isPython2,
+                          training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
             FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \

@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 10                # dimension of hidden states
+Dx = 6                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
-n_particles = 32        # number of particles
+Dv = 15                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 10                 # dimension of inputs.
+n_particles = 64        # number of particles
 batch_size = 1          # batch size
-lr = 1e-3               # learning rate
-epoch = 10  # 100*100 #100*200
+lr = 5e-3               # learning rate
+epoch = 100*100  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -40,10 +40,12 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/see available_data.py
-data_type = "clv_noinput_percentage_Dx_10_scale_1"
+data_type = "count"
 
-# choose samples from the training set for training and test. -1 indicates use all.
-training_sample_idx = [-1]
+# choose samples from the data set for training. -1 indicates use default training set
+training_sample_idx = [0,1,2,3,4,5]
+# choose samples from the test set for test. -1 indicates default test set
+test_sample_idx = [6,7]
 
 isPython2 = False
 
@@ -57,12 +59,12 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32]         # target evolution
-h_layers = [32]         # target emission (middle step)
-g_layers = [32]         # target emission
+q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [16]         # target evolution
+h_layers = [16]         # target emission (middle step)
+g_layers = [16]         # target emission
 
 # number of f^power
 f_power = 1
@@ -97,13 +99,14 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether use two step emission
-two_step_emission = False
+two_step_emission = True
+two_step_emission_type = "inv_lar"  # choose from MLP and inv_lar
 
 # f_transformation
-f_transformation = "linear"  # choose from MLP, linear, clv
+f_transformation = "MLP"  # choose from MLP, linear, clv
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -150,7 +153,7 @@ min_lr = lr / 10
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 5 # 100
+print_freq = 100 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -158,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_dirichlet/test_clv"
+rslt_dir_name = "realdata/two_step_emission/samples_0to5"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -184,6 +187,7 @@ y_smoother_Dhs = ",".join([str(x) for x in y_smoother_Dhs])
 X0_smoother_Dhs = ",".join([str(x) for x in X0_smoother_Dhs])
 
 training_sample_idx = ",".join([str(x) for x in training_sample_idx])
+test_sample_idx = ",".join([str(x) for x in test_sample_idx])
 
 
 # ================================================ tf.flags ================================================ #
@@ -211,7 +215,8 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
-flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from training set for training and test")
+flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
+flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
 
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
 
@@ -267,6 +272,7 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
 flags.DEFINE_boolean("two_step_emission", two_step_emission, "whether add a Gaussian layer in the middle of emission")
+flags.DEFINE_string("two_step_emission_type", two_step_emission_type, "choose from inv_lar and MLP")
 
 flags.DEFINE_string("f_transformation", f_transformation, "type of f_transformation, choose from MLP, linear and clv")
 

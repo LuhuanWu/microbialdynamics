@@ -89,7 +89,7 @@ def simulate_clv_with_inputs(A, g, Wg, W1, W2, f_cov, N, inputs):
     return np.array(x), np.array(y_count), np.array(y_percentage)
 
 
-def get_dat_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
+def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
     # create data with missing observation
     simulation_time = time_max * scale
 
@@ -208,7 +208,7 @@ for Dx in range(1, 11):
         f_cov = np.random.uniform(0, 1, ntaxa - 1)
         N = 10000  # sequencing reads parameter
 
-        p_data, c_data = get_dat_to_pickle(A, g, Wg, W1, W2, f_cov, N, time_min, time_max, scale)
+        p_data, c_data = get_data_to_pickle(A, g, Wg, W1, W2, f_cov, N, time_min, time_max, scale)
 
         repo = git.Repo('.', search_parent_directories=True)
         repo_dir = repo.working_tree_dir  # microbialdynamics
