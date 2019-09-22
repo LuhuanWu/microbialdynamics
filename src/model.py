@@ -37,12 +37,14 @@ class SSM(object):
         self.q1_layers = [int(x) for x in FLAGS.q1_layers.split(",")]
         self.q2_layers = [int(x) for x in FLAGS.q2_layers.split(",")]
         self.f_layers  = [int(x) for x in FLAGS.f_layers.split(",")]
+        self.h_layers  = [int(x) for x in FLAGS.h_layers.split(",")]
         self.g_layers  = [int(x) for x in FLAGS.g_layers.split(",")]
 
         self.q0_sigma_init, self.q0_sigma_min = FLAGS.q0_sigma_init, FLAGS.q0_sigma_min
         self.q1_sigma_init, self.q1_sigma_min = FLAGS.q1_sigma_init, FLAGS.q1_sigma_min
         self.q2_sigma_init, self.q2_sigma_min = FLAGS.q2_sigma_init, FLAGS.q2_sigma_min
         self.f_sigma_init,  self.f_sigma_min  = FLAGS.f_sigma_init, FLAGS.f_sigma_min
+        self.h_sigma_init,  self.h_sigma_min  = FLAGS.h_sigma_init, FLAGS.h_sigma_min
         self.g_sigma_init,  self.g_sigma_min  = FLAGS.f_sigma_init, FLAGS.g_sigma_min
 
         # bidirectional RNN architectures
@@ -55,6 +57,7 @@ class SSM(object):
         self.use_bootstrap             = FLAGS.use_bootstrap
         self.use_2_q                   = FLAGS.use_2_q
         self.emission                  = FLAGS.emission
+        self.two_step_emission         = FLAGS.two_step_emission
 
         self.X0_use_separate_RNN       = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -145,6 +148,13 @@ class SSM(object):
                                              diag_cov=self.diag_cov,
                                              name="f_tran")
 
+        if self.two_step_emission:
+            self.h_tran = MLP_transformation(self.h_layers, self.Dx,
+                                             output_cov=self.output_cov,
+                                             diag_cov=self.diag_cov,
+                                             name="h_tran")
+
+
         self.g_tran = MLP_transformation(self.g_layers, self.Dy,
                                          output_cov=self.output_cov,
                                          diag_cov=self.diag_cov,
@@ -190,6 +200,11 @@ class SSM(object):
                                  sigma_init=self.f_sigma_init,
                                  sigma_min=self.f_sigma_min,
                                  name="f_dist")
+
+        if self.two_step_emission:
+            self.h_dist = tf_mvn(self.h_tran, name="h_dist",
+                                 sigma_init=self.h_sigma_init,
+                                 sigma_min=self.h_sigma_min)
 
         if self.emission == "mvn":
             self.g_dist = tf_mvn(self.g_tran, name="g_dist",

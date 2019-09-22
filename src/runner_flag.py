@@ -63,6 +63,7 @@ q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
 q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
 q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
 f_layers = [32]         # target evolution
+h_layers = [32]         # target emission (middle step)
 g_layers = [32]         # target emission
 
 # number of f^power
@@ -73,6 +74,7 @@ q0_sigma_init, q0_sigma_min = 5, 1e-8
 q1_sigma_init, q1_sigma_min = 5, 1e-8
 q2_sigma_init, q2_sigma_min = 5, 1e-8
 f_sigma_init, f_sigma_min = 5, 1e-8
+h_sigma_init, h_sigma_min = 5, 1e-8
 g_sigma_init, g_sigma_min = 5, 1e-8
 
 # if q, f and g networks also output covariance (sigma)
@@ -98,6 +100,9 @@ use_mask = True
 
 # whether emission uses Dirichlet distribution
 emission = "mvn"  # choose from dirichlet, poisson, multinomial and mvn
+
+# whether use two step emission
+two_step_emission = True
 
 # f_transformation
 f_transformation = "MLP"  # choose from MLP, linear, clv
@@ -175,6 +180,7 @@ q0_layers = ",".join([str(x) for x in q0_layers])
 q1_layers = ",".join([str(x) for x in q1_layers])
 q2_layers = ",".join([str(x) for x in q2_layers])
 f_layers = ",".join([str(x) for x in f_layers])
+h_layers = ",".join([str(x) for x in h_layers])
 g_layers = ",".join([str(x) for x in g_layers])
 y_smoother_Dhs = ",".join([str(x) for x in y_smoother_Dhs])
 X0_smoother_Dhs = ",".join([str(x) for x in X0_smoother_Dhs])
@@ -227,6 +233,8 @@ flags.DEFINE_string("q2_layers", q2_layers, "architecture for q2 network, int se
                                             "for example: '50,50' ")
 flags.DEFINE_string("f_layers",  f_layers,  "architecture for f network, int seperated by comma, "
                                             "for example: '50,50' ")
+flags.DEFINE_string("h_layers",  h_layers,  "architecture for h network, int seperated by comma, "
+                                            "for example: '50,50' ")
 flags.DEFINE_string("g_layers",  g_layers,  "architecture for g network, int seperated by comma, "
                                             "for example: '50,50' ")
 
@@ -236,12 +244,14 @@ flags.DEFINE_float("q0_sigma_init", q0_sigma_init, "initial value of q0_sigma")
 flags.DEFINE_float("q1_sigma_init", q1_sigma_init, "initial value of q1_sigma")
 flags.DEFINE_float("q2_sigma_init", q2_sigma_init, "initial value of q2_sigma")
 flags.DEFINE_float("f_sigma_init",  f_sigma_init,  "initial value of f_sigma")
+flags.DEFINE_float("h_sigma_init",  h_sigma_init,  "initial value of h_sigma")
 flags.DEFINE_float("g_sigma_init",  g_sigma_init,  "initial value of g_sigma")
 
 flags.DEFINE_float("q0_sigma_min", q0_sigma_min, "minimal value of q0_sigma")
 flags.DEFINE_float("q1_sigma_min", q1_sigma_min, "minimal value of q1_sigma")
 flags.DEFINE_float("q2_sigma_min", q2_sigma_min, "minimal value of q2_sigma")
 flags.DEFINE_float("f_sigma_min",  f_sigma_min,  "minimal value of f_sigma")
+flags.DEFINE_float("h_sigma_min",  h_sigma_min,  "minimal value of h_sigma")
 flags.DEFINE_float("g_sigma_min",  g_sigma_min,  "minimal value of g_sigma")
 
 flags.DEFINE_boolean("output_cov", output_cov, "whether q, f and g networks also output covariance (sigma)")
@@ -258,6 +268,7 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
+flags.DEFINE_boolean("two_step_emission", two_step_emission, "whether add a Gaussian layer in the middle of emission")
 
 flags.DEFINE_string("f_transformation", f_transformation, "type of f_transformation, choose from MLP, linear and clv")
 
@@ -269,6 +280,7 @@ flags.DEFINE_boolean("use_2_q", use_2_q, "whether q uses two networks q1(x_t|x_t
                                          "if True, q_uses_true_X will be overwritten as False")
 flags.DEFINE_boolean("log_dynamics", log_dynamics, "whether the dynamics happen in log space")
 flags.DEFINE_boolean("lar_dynamics", lar_dynamics, "whether the dynamics happen in ldr space")
+flags.DEFINE_float("f_final_scaling", f_final_scaling, "scaling of the final layer of transition MLP")
 
 # ------------------------- Inference Schemes ------------------------ #
 

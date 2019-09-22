@@ -19,6 +19,9 @@ class SVO:
         self.q_uses_true_X = FLAGS.q_uses_true_X
 
         self.emission = FLAGS.emission
+        self.two_step_emission = FLAGS.two_step_emission
+        if self.two_step_emission:
+            self.h = model.h_dist
 
         # bidirectional RNN as full sequence observations encoder
         self.X0_use_separate_RNN = FLAGS.X0_use_separate_RNN
@@ -119,15 +122,22 @@ class SVO:
 
         # emission log probability and log weights
         if self.log_dynamics or self.lar_dynamics:
-            _g_0_log_prob = self.g.log_prob(tf.exp(X), obs[:, 0], extra_inputs=extra_inputs[:, 0])
+            g_input = tf.exp(X)
         else:
-            _g_0_log_prob = self.g.log_prob(X, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+            g_input = X
+        if self.two_step_emission:
+            g_input, _h_0_log_prob = self.h.sample_and_log_prob(g_input)
+            _h_0_log_prob_0 = tf.zeros_like(_h_0_log_prob)  # dummy values for missing observations
+            h_0_log_prob = tf.where(mask[0][0], _h_0_log_prob, _h_0_log_prob_0, name="h_{}_log_prob".format(0))
+        _g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
 
         _g_0_log_prob_0 = tf.zeros_like(_g_0_log_prob)  # dummy values for missing observations
 
         g_0_log_prob = tf.where(mask[0][0], _g_0_log_prob, _g_0_log_prob_0, name="g_{}_log_prob".format(0))
 
         log_alpha_0 = tf.add(f_0_log_prob, g_0_log_prob - q_0_log_prob, name="log_alpha_{}".format(0))
+        if self.two_step_emission:
+            log_alpha_0 += h_0_log_prob - tf.stop_gradient(h_0_log_prob)
         log_weight_0 = tf.add(log_alpha_0, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
                               name="log_weight_{}".format(0))  # (n_particles, batch_size)
 
@@ -186,13 +196,20 @@ class SVO:
 
             # emission log probability and log weights
             if self.log_dynamics or self.lar_dynamics:
-                _g_t_log_prob = self.g.log_prob(tf.exp(X), obs[:, t], extra_inputs=extra_inputs[:, t])
+                g_input = tf.exp(X)
             else:
-                _g_t_log_prob = self.g.log_prob(X, obs[:, t], extra_inputs=extra_inputs[:, t])
+                g_input = X
+            if self.two_step_emission:
+                g_input, _h_t_log_prob = self.h.sample_and_log_prob(g_input)
+                _h_t_log_prob_0 = tf.zeros_like(_h_t_log_prob)  # dummy values for missing observations
+                h_t_log_prob = tf.where(mask[0][0], _h_t_log_prob, _h_t_log_prob_0, name="h_t_log_prob")
+            _g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
             _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
             g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
+            if self.two_step_emission:
+                log_alpha_t += h_t_log_prob - tf.stop_gradient(h_t_log_prob)
 
             log_weight_t = tf.add(log_alpha_t, log_normalized_weight_tminus1, name="log_weight_t")
 
@@ -481,10 +498,13 @@ class SVO:
 
             for k in range(n_steps):
                 if self.log_dynamics or self.lar_dynamics:
-                    y_hat_BxTmkxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, k:])
+                    g_input = tf.exp(x_BxTmkxDz)
                 else:
-                    y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
-                    # (batch_size, time - k, Dy)
+                    g_input = x_BxTmkxDz
+                if self.two_step_emission:
+                    g_input = self.h.mean(g_input)
+                y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
+                # (batch_size, time - k, Dy)
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
@@ -493,9 +513,12 @@ class SVO:
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
 
             if self.log_dynamics or self.lar_dynamics:
-                y_hat_BxTmNxDy = self.g.mean(tf.exp(x_BxTmkxDz), extra_inputs=extra_inputs[:, n_steps:])
+                g_input = tf.exp(x_BxTmkxDz)
             else:
-                y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
+                g_input = x_BxTmkxDz
+            if self.two_step_emission:
+                g_input = self.h.mean(g_input)
+            y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
             # get y_true
