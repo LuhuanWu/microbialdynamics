@@ -314,8 +314,8 @@ class trainer:
 
         MSE_percentage_train, R_square_percentage_train = \
             self.evaluate_R_square(MSE_ks_percentage, y_means_percentage, y_vars_percentage,
-                                   self.hidden_test, self.obs_test, self.input_test,
-                                   self.mask_test, self.time_interval_test, self.extra_inputs_test)
+                                   self.hidden_train, self.obs_train, self.input_train,
+                                   self.mask_train, self.time_interval_train, self.extra_inputs_train)
 
         MSE_percentage_test, R_square_percentage_test = \
             self.evaluate_R_square(MSE_ks_percentage, y_means_percentage, y_vars_percentage,
@@ -325,16 +325,16 @@ class trainer:
         if self.FLAGS.data_type not in ["percentage", "count"]:
             MSE_logp_train, R_square_logp_train = \
                 self.evaluate_R_square(MSE_ks_logp, y_means_logp, y_vars_logp,
-                                       self.hidden_test, self.obs_test, self.input_test,
-                                       self.mask_test, self.time_interval_test, self.extra_inputs_test)
+                                       self.hidden_train, self.obs_train, self.input_train,
+                                       self.mask_train, self.time_interval_train, self.extra_inputs_train)
             MSE_logp_test, R_square_logp_test = \
                 self.evaluate_R_square(MSE_ks_logp, y_means_logp, y_vars_logp,
                                        self.hidden_test, self.obs_test, self.input_test,
                                        self.mask_test, self.time_interval_test, self.extra_inputs_test)
             MSE_ad_train, R_square_ad_train = \
                 self.evaluate_R_square(MSE_ks_ad, y_means_ad, y_vars_ad,
-                                       self.hidden_test, self.obs_test, self.input_test,
-                                       self.mask_test, self.time_interval_test, self.extra_inputs_test)
+                                       self.hidden_train, self.obs_train, self.input_train,
+                                       self.mask_train, self.time_interval_train, self.extra_inputs_train)
             MSE_ad_test, R_square_ad_test = \
                 self.evaluate_R_square(MSE_ks_ad, y_means_ad, y_vars_ad,
                                        self.hidden_test, self.obs_test, self.input_test,
