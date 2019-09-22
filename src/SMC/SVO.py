@@ -543,13 +543,12 @@ class SVO:
                     pass
                 elif self.emission == "mvn":
                     # convert log additive ratio into percentage
-                    y_hat_BxTmkxDy = np.exp(y_hat_BxTmkxDy)
-                    p11 = 1 / (1 + y_hat_BxTmkxDy.sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
-                    y_hat_BxTmkxDy = p11 * y_hat_BxTmkxDy
+                    n_days = y_hat_BxTmkxDy.shape[1]
+                    y_hat_BxTmkxDy = tf.concat([y_hat_BxTmkxDy, tf.zeros((batch_size, n_days, 1))], axis=-1) # (batch_size, n_days, Dy+1)
+                    y_hat_BxTmkxDy = tf.exp(y_hat_BxTmkxDy - tf.reduce_logsumexp(y_hat_BxTmkxDy, axis=-1, keepdims=True))
 
-                    y_BxTmkxDy = np.exp(y_BxTmkxDy)
-                    p11 = 1 / (1 + y_BxTmkxDy.sum(axis=-1, keepdims=True))  # (batch_size, n_days, 1)
-                    y_BxTmkxDy = p11 * y_BxTmkxDy
+                    y_BxTmkxDy = tf.concat([y_BxTmkxDy, tf.zeros((batch_size, n_days, 1))], axis=-1)
+                    y_BxTmkxDy = tf.exp(y_BxTmkxDy - tf.reduce_logsumexp(y_BxTmkxDy, axis=-1, keepdims=True))
                 else:
                     raise ValueError("Unsupported emission!")
                 y_hat_N_BxTxDy_percentage.append(y_hat_BxTmkxDy)

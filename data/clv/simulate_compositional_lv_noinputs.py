@@ -173,7 +173,7 @@ for Dx in range(1, 11):
         print("Dx = {}, scale = {}".format(Dx, scale))
         ntaxa = Dy = Dx + 1
         ninput = Dv = 0  # including surgery
-        n_train, n_test = 600, 30
+        n_train, n_test = 200, 30
         time_min = 30
         time_max = 50
 

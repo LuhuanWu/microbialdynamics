@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import logsumexp
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -198,16 +199,18 @@ def main(_):
         # transform log additive ratio back to observation
 
         for i in range(len(obs_test)):
-            obs_test[i] = np.exp(obs_test[i])
-            p11 = 1 / (1 + obs_test[i].sum(axis=-1, keepdims=True))  # (n_days, 1)
-            obs_test[i] = p11 * obs_test[i]
+            n_days = obs_test[i].shape[0]
+            obs_test[i] = np.concatenate((obs_test[i], np.zeros((n_days, 1))), axis=-1) # (n_days, Dy + 1)
+            obs_test[i] = np.exp(obs_test[i] - logsumexp(obs_test[i], axis=-1, keepdims=True))
 
         for i in range(len(y_hat_val_test)):
             # y hat val = (batch_size, n_days, Dy)
             for j in range(len(y_hat_val_test[i])):
-                y_hat_val_test[i][j] = np.exp(y_hat_val_test[i][j])
-                p11 = 1 / (1 + y_hat_val_test[i][j].sum(axis=-1, keepdims=True))  # (n_days, 1)
-                y_hat_val_test[i][j] = p11 * y_hat_val_test[i][j]
+                n_days = y_hat_val_test[i][j].shape[0]
+
+                y_hat_val_test[i][j] = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)
+                y_hat_val_test[i][j] = \
+                    np.exp(y_hat_val_test[i][j] - logsumexp(y_hat_val_test[i][j], axis=-1, keepdims=True))
 
     plot_y_hat(RLT_DIR + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                saving_num=FLAGS.saving_train_num)

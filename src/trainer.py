@@ -526,7 +526,7 @@ class trainer:
 
             combined_y_means = combined_y_means_new
 
-        combined_y_vars = np.mean(combined_y_vars, axis=1)
+        combined_y_vars = np.sum(combined_y_vars, axis=1)
         R_square = 1 - combined_MSE_ks / combined_y_vars
         mean_MSE_ks = combined_MSE_ks / (Tmks * n_batches)
 
