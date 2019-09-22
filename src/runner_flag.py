@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 8                # dimension of hidden states
-Dy = 10                  # dimension of observations. for microbio data, Dy = 11
-Dv = 15                  # dimension of inputs. for microbio data, Dv = 15
-Dev = 10                 # dimension of inputs.
+Dx = 10                # dimension of hidden states
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 10 # 100*100 #100*200
+epoch = 10  # 100*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -39,10 +39,8 @@ seed = 0
 # False: read data set from the file
 generate_training_data = False
 
-# choose from toy, percentage, count, percentage_noinputs, count_noinputs,
-#  pink_count, cyan_count, clv, clv_08, clv_06, clv_05, clv_04
-# more options: utils/see available_data.py
-data_type = "percentage"
+# see options: utils/see available_data.py
+data_type = "clv_noinput_percentage_Dx_10_scale_1"
 
 # choose samples from the training set for training and test. -1 indicates use all.
 training_sample_idx = [-1]
@@ -99,13 +97,13 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "mvn"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "dirichlet"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether use two step emission
-two_step_emission = True
+two_step_emission = False
 
 # f_transformation
-f_transformation = "MLP"  # choose from MLP, linear, clv
+f_transformation = "linear"  # choose from MLP, linear, clv
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -160,15 +158,15 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_mvn/test_all"
+rslt_dir_name = "test_dirichlet/test_clv"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 30
-saving_test_num = 30
+saving_train_num = 5
+saving_test_num = 5
 
 # whether to save tensorboard
 save_tensorboard = False

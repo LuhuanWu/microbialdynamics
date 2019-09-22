@@ -21,7 +21,7 @@ from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
 
 from src.utils.data_generator import generate_dataset
-from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_TYPE, COUNT_DATA_TYPE
+from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_DICT, COUNT_DATA_DICT
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
 
@@ -36,7 +36,7 @@ def main(_):
     if FLAGS.emission == "dirichlet" or FLAGS.emission == "mvn":
         y_hat_bar_plot_to_normalize = False
         if FLAGS.emission == "mvn":
-            assert FLAGS.data_type in PERCENTAGE_DATA_TYPE, "mvn emission is only compatible to percentage data."
+            assert FLAGS.data_type in PERCENTAGE_DATA_DICT, "mvn emission is only compatible to percentage data."
     elif FLAGS.emission == "poisson" or FLAGS.emission == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
@@ -83,7 +83,7 @@ def main(_):
             extra_inputs_train = np.zeros((train_num, T_train))
             extra_inputs_test = np.zeros((test_num, T_test))
 
-        elif FLAGS.data_type in PERCENTAGE_DATA_TYPE:
+        elif FLAGS.data_type in PERCENTAGE_DATA_DICT:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)
@@ -102,7 +102,7 @@ def main(_):
                for i in range(len(obs_test)):
                    obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
 
-        elif FLAGS.data_type in COUNT_DATA_TYPE:
+        elif FLAGS.data_type in COUNT_DATA_DICT:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2, training_sample_idx=training_sample_idx)

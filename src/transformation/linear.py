@@ -20,7 +20,7 @@ class tf_linear_transformation(transformation):
 
         A, b = self.params  # A shape (Dx + Dev, Dx), b shape (Dx, )
 
-        output = batch_matmul(A, Input) + b
+        output = batch_matmul(Input, A) + b
 
         return output
 

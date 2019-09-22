@@ -100,17 +100,17 @@ class SSM(object):
                                              final_scaling=final_scaling,
                                              name="f_tran")
         elif self.f_transformation == "linear":
-            A = tf.Variable(tf.eye(self.Dx, self.Dx+self.Dev))
+            A = tf.Variable(tf.eye(self.Dx+self.Dev, self.Dx))
             b = tf.Variable(tf.zeros((self.Dx, )))
             self.f_tran = tf_linear_transformation(params=(A, b))
 
         elif self.f_transformation == "clv":
-            A = tf.Variable(tf.zeros((self.Dx, self.Dx+1)))
+            A = tf.Variable(tf.zeros((self.Dx+1, self.Dx)))
             g = tf.Variable(tf.zeros((self.Dx, )))
-            Wa = tf.Variable(tf.zeros((self.Dx + 1, self.Dev)))
-            Wb = tf.Variable(tf.zeros((self.Dx, 1)))
-            Wg = tf.Variable(tf.zeros((self.Dx, self.Dev)))
-            self.f_tran = clv_transformation(params=(A, g, Wa, Wb, Wg))
+            Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+            W1 = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+            W2 = tf.Variable(tf.zeros((self.Dx+1, 1)))
+            self.f_tran = clv_transformation(params=(A, g, Wg, W1, W2))
 
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
                                           output_cov=self.output_cov,

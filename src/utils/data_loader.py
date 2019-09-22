@@ -30,7 +30,7 @@ def load_data(path, Dx, isPython2, training_sample_idx=None):
 
     if training_sample_idx is not None:
         assert isinstance(training_sample_idx, list)
-        # use selected training samples for bothh training and evaluation
+        # use selected training samples for both training and evaluation
 
         hidden_train = [hidden_train[i] for i in training_sample_idx]
         hidden_test = hidden_train
