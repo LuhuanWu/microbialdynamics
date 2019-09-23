@@ -101,11 +101,15 @@ def main(_):
 
             if FLAGS.emission == "mvn":
                 # transform to log additive ratio
-               for i in range(len(obs_train)):
+                percentage_train = []
+                for i in range(len(obs_train)):
+                    percentage_train.append(obs_train[i])
                     obs_train[i] = np.log(obs_train[i][:,:-1]) - np.log(obs_train[i][:, -1:])
 
-               for i in range(len(obs_test)):
-                   obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
+                percentage_test = []
+                for i in range(len(obs_test)):
+                    percentage_test.append(obs_test[i])
+                    obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
 
         elif FLAGS.data_type in COUNT_DATA_DICT:
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
@@ -203,19 +207,31 @@ def main(_):
     if FLAGS.emission == "mvn":
         # transform log additive ratio back to observation
 
-        for i in range(len(obs_test)):
-            n_days = obs_test[i].shape[0]
-            obs_test[i] = np.concatenate((obs_test[i], np.zeros((n_days, 1))), axis=-1) # (n_days, Dy + 1)
-            obs_test[i] = np.exp(obs_test[i] - logsumexp(obs_test[i], axis=-1, keepdims=True))
+        percentage_hat_val_train = [[[] for _ in range(FLAGS.n_train)] for _ in range(FLAGS.MSE_steps+1)]
+        for i in range(len(y_hat_val_train)):
+            # y hat val = (batch_size, n_days, Dy)
+            for j in range(len(y_hat_val_train[i])):
+                n_days = y_hat_val_train[i][j].shape[0]  # (n_days, Dy)
 
+                percentage = np.concatenate((y_hat_val_train[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
+                percentage = \
+                    np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+                percentage_hat_val_train[i][j] = percentage
+
+        percentage_hat_val_test = [[ [] for _ in range(FLAGS.n_test) ] for _ in range(FLAGS.MSE_steps+1)]
         for i in range(len(y_hat_val_test)):
             # y hat val = (batch_size, n_days, Dy)
             for j in range(len(y_hat_val_test[i])):
-                n_days = y_hat_val_test[i][j].shape[0]
+                n_days = y_hat_val_test[i][j].shape[0] # (n_days, Dy)
 
-                y_hat_val_test[i][j] = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)
-                y_hat_val_test[i][j] = \
-                    np.exp(y_hat_val_test[i][j] - logsumexp(y_hat_val_test[i][j], axis=-1, keepdims=True))
+                percentage = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
+                percentage = \
+                    np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+
+                percentage_hat_val_test[i][j] = percentage
+
+        obs_train, obs_test, y_hat_val_train, y_hat_val_test = \
+            percentage_train, percentage_test, percentage_hat_val_train, percentage_hat_val_test
 
     plot_y_hat(RLT_DIR + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                saving_num=FLAGS.saving_train_num)

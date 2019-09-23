@@ -25,7 +25,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 6                # dimension of hidden states
-Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dy = 10                  # dimension of observations. for microbio data, Dy = 11
 Dv = 15                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
 n_particles = 64        # number of particles
@@ -40,12 +40,12 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/see available_data.py
-data_type = "count"
+data_type = "percentage"
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+training_sample_idx = [0,1,2,3,4,5] #[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [17,18,19,20]
+test_sample_idx = [6,7] #[17,18,19,20]
 
 isPython2 = False
 
@@ -99,10 +99,10 @@ use_stack_rnn = True
 use_mask = True
 
 # whether emission uses Dirichlet distribution
-emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+emission = "mvn"  # choose from dirichlet, poisson, multinomial and mvn
 
 # whether use two step emission
-two_step_emission = True
+two_step_emission = False
 two_step_emission_type = "inv_lar"  # choose from MLP and inv_lar
 
 # f_transformation
@@ -149,7 +149,7 @@ lr_reduce_patience = 100
 lr_reduce_factor = 1 / np.sqrt(2)
 
 # minimum lr
-min_lr = lr / 100
+min_lr = lr / 50
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
@@ -161,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "realdata/two_step_emission/samples_0to5"
+rslt_dir_name = "realdata/mvn/samples_0to5"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

@@ -392,10 +392,14 @@ class trainer:
 
     def adjust_lr(self, iter_num, print_freq):
         # determine whether should decrease lr or even stop training
-        if self.bestCost != np.argmax(self.log_ZSMC_tests):
+        if self.FLAGS.data_type in ["count", "percentage"]:
+            best_cost = np.argmax(self.log_ZSMC_trains)
+        else:
+            best_cost = np.argmax(self.log_ZSMC_tests)
+        if self.bestCost != best_cost:
             self.early_stop_count = 0
             self.lr_reduce_count = 0
-            self.bestCost = np.argmax(self.log_ZSMC_tests)
+            self.bestCost = best_cost
 
         print("best valid cost on iter: {}\n".format(self.bestCost * print_freq))
 
