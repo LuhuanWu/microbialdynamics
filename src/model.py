@@ -90,8 +90,10 @@ class SSM(object):
     def init_trans(self):
         if self.f_transformation == "MLP":
             if self.log_dynamics or self.lar_dynamics:
-                final_activation = "tanh"
-                final_scaling = self.f_final_scaling
+                final_activation = "linear"
+                final_scaling = 1
+                # final_activation = "tanh"
+                # final_scaling = self.f_final_scaling
             else:
                 final_activation = "linear"
                 final_scaling = 1

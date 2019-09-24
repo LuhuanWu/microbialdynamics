@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 6                # dimension of hidden states
+Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 15                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 10                 # dimension of inputs.
+Dv = 10                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 5                 # dimension of inputs.
 n_particles = 64        # number of particles
 batch_size = 1          # batch size
-lr = 5e-3               # learning rate
-epoch = 100*100  # 500*100 #100*200
+lr = 1e-3               # learning rate
+epoch = 500  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -40,12 +40,12 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/see available_data.py
-data_type = "count"
+data_type = "clv_count_Dx_10_scale_1"
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+training_sample_idx = [-1]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [17,18,19,20]
+test_sample_idx = [-1]
 
 isPython2 = False
 
@@ -59,12 +59,12 @@ n_test = 2 * batch_size
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32]         # target evolution
-h_layers = [32]         # target emission (middle step)
-g_layers = [32]         # target emission
+q0_layers = [32, 32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32, 32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32, 32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32, 32]         # target evolution
+h_layers = [32, 32]         # target emission (middle step)
+g_layers = [32, 32]         # target emission
 
 # number of f^power
 f_power = 1
@@ -85,8 +85,8 @@ diag_cov = False
 
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [16, 16]
-X0_smoother_Dhs = [16, 16]
+y_smoother_Dhs = [16]
+X0_smoother_Dhs = [16]
 
 # whether use a separate RNN for getting X0
 X0_use_separate_RNN = True
@@ -119,7 +119,7 @@ q_uses_true_X = False
 # if True, q_uses_true_X will be overwritten as False
 use_2_q = True
 
-log_dynamics = False  # whether to set latent dynamics in the log space
+log_dynamics = True  # whether to set latent dynamics in the log space
 lar_dynamics = False  # log additive ratio transformation
 f_final_scaling = 3   # when use log_dynamics/lar_dynamics, activation
                       # for f's final layer is tanh, choose a scaling for f
@@ -153,7 +153,7 @@ min_lr = lr / 100
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 100 # 100
+print_freq = 5 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -161,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "realdata/two_step_emission/samples_0to5"
+rslt_dir_name = "test_gradient"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

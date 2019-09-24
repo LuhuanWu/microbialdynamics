@@ -44,7 +44,7 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
            interpolated_extra_inputs_train, interpolated_extra_inputs_test
 
 
-def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp):
+def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count=1, pseudo_percentage=1e-6):
     """
 
     :param hidden: (n_obs, Dx)
@@ -112,7 +112,9 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp):
             if t == days[i]:
                 smoothed_obs = obs[i, 1:]
                 if np.abs(np.sum(smoothed_obs) - 1) < 1e-6: # if use percentage data & dirichlet emission
-                    smoothed_obs = smoothed_obs * (1 - 1e-6) + 1e-6 / Dy
+                    smoothed_obs = smoothed_obs * (1 - pseudo_percentage) + pseudo_percentage / Dy
+                else:
+                    smoothed_obs += pseudo_count
                 interpolated_obs[t - days[0]] = smoothed_obs
                 last_valid_value = smoothed_obs
                 i += 1
@@ -131,12 +133,12 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp):
     interpolated_extra_inputs = np.zeros(time)
 
     if extra_inputs is not None:
-        last_valid_value = extra_inputs[0]
+        last_valid_value = extra_inputs[0] + Dy * pseudo_count
         i = 0
         for t in np.arange(days[0], days[-1] + 1):
             if t == days[i]:
-                interpolated_extra_inputs[t - days[0]] = extra_inputs[i]
-                last_valid_value = extra_inputs[i]
+                interpolated_extra_inputs[t - days[0]] = extra_inputs[i] + Dy * pseudo_count
+                last_valid_value = extra_inputs[i] + Dy * pseudo_count
                 i += 1
             else:
                 interpolated_extra_inputs[t - days[0]] = last_valid_value

@@ -13,6 +13,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from src.rslts_saving.rslts_saving import plot_R_square_epoch
 
+from tensorflow.python import debug as tf_debug
+
 
 class StopTraining(Exception):
     pass
@@ -180,6 +182,11 @@ class trainer:
 
         print("initializing variables...")
         self.sess.run(init)
+
+        # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
+        # def my_filter_callable(datum, tensor):
+        #     return len(tensor.shape) == 0 and tensor == 0.0
+        # self.sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
 
         # unused tensorboard stuff
         if self.save_res and self.save_tensorboard:
@@ -447,6 +454,9 @@ class trainer:
                     value = value[0]
                 feed_dict[key] = value
             fetches_val = self.sess.run(fetches, feed_dict=feed_dict)
+            if fetches == self.log_ZSMC:
+                if not math.isfinite(fetches_val):
+                    print(i, fetches_val)
             fetches_list.append(fetches_val)
 
         res = []
