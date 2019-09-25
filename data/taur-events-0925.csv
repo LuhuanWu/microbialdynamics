@@ -1,0 +1,529 @@
+patientID,eventID,startDay,endDay
+12,surgery,0,0
+16,surgery,0,0
+25,surgery,0,0
+26,surgery,0,0
+31,surgery,0,0
+35,surgery,0,0
+45,surgery,0,0
+51,surgery,0,0
+54,surgery,0,0
+59,surgery,0,0
+68,surgery,0,0
+74,surgery,0,0
+75,surgery,0,0
+81,surgery,0,0
+85,surgery,0,0
+88,surgery,0,0
+93,surgery,0,0
+95,surgery,0,0
+97,surgery,0,0
+111,surgery,0,0
+126,surgery,0,0
+139,surgery,0,0
+146,surgery,0,0
+161,surgery,0,0
+164,surgery,0,0
+167,surgery,0,0
+169,surgery,0,0
+174,surgery,0,0
+218,surgery,0,0
+235,surgery,0,0
+239,surgery,0,0
+244,surgery,0,0
+250,surgery,0,0
+254,surgery,0,0
+255,surgery,0,0
+259,surgery,0,0
+261,surgery,0,0
+280,surgery,0,0
+284,surgery,0,0
+294,surgery,0,0
+306,surgery,0,0
+311,surgery,0,0
+312,surgery,0,0
+315,surgery,0,0
+320,surgery,0,0
+331,surgery,0,0
+336,surgery,0,0
+338,surgery,0,0
+347,surgery,0,0
+366,surgery,0,0
+367,surgery,0,0
+374,surgery,0,0
+377,surgery,0,0
+383,surgery,0,0
+386,surgery,0,0
+410,surgery,0,0
+415,surgery,0,0
+429,surgery,0,0
+436,surgery,0,0
+447,surgery,0,0
+449,surgery,0,0
+460,surgery,0,0
+463,surgery,0,0
+468,surgery,0,0
+480,surgery,0,0
+495,surgery,0,0
+501,surgery,0,0
+502,surgery,0,0
+504,surgery,0,0
+515,surgery,0,0
+523,surgery,0,0
+525,surgery,0,0
+530,surgery,0,0
+531,surgery,0,0
+536,surgery,0,0
+537,surgery,0,0
+551,surgery,0,0
+565,surgery,0,0
+566,surgery,0,0
+580,surgery,0,0
+593,surgery,0,0
+602,surgery,0,0
+605,surgery,0,0
+608,surgery,0,0
+642,surgery,0,0
+645,surgery,0,0
+666,surgery,0,0
+683,surgery,0,0
+694,surgery,0,0
+697,surgery,0,0
+698,surgery,0,0
+704,surgery,0,0
+708,surgery,0,0
+710,surgery,0,0
+715,surgery,0,0
+718,surgery,0,0
+721,surgery,0,0
+725,surgery,0,0
+738,surgery,0,0
+746,surgery,0,0
+747,surgery,0,0
+748,surgery,0,0
+750,surgery,0,0
+753,surgery,0,0
+756,surgery,0,0
+763,surgery,0,0
+765,surgery,0,0
+769,surgery,0,0
+31,PCP prophylaxis agents,77,88
+31,PCP prophylaxis agents,33,44
+31,PCP prophylaxis agents,33,44
+31,PCP prophylaxis agents,26,33
+31,PCP prophylaxis agents,94,94
+31,PCP prophylaxis agents,77,88
+31,PCP prophylaxis agents,77,88
+164,PCP prophylaxis agents,-5,-1
+721,PCP prophylaxis agents,21,36
+551,PCP prophylaxis agents,20,21
+164,PCP prophylaxis agents,21,33
+725,PCP prophylaxis agents,26,28
+704,PCP prophylaxis agents,29,40
+530,macrolides,38,40
+26,monobactams,22,27
+126,monobactams,25,32
+642,monobactams,3,19
+642,monobactams,3,19
+530,first/second generation cephalosporins,22,23
+694,first/second generation cephalosporins,-6,3
+605,fourth/fifth generation cephalosporins,12,19
+35,fourth/fifth generation cephalosporins,-1,14
+35,fourth/fifth generation cephalosporins,15,18
+580,fourth/fifth generation cephalosporins,36,39
+756,fourth/fifth generation cephalosporins,10,11
+12,fourth/fifth generation cephalosporins,11,15
+51,fourth/fifth generation cephalosporins,24,25
+35,fourth/fifth generation cephalosporins,21,26
+126,fourth/fifth generation cephalosporins,16,20
+605,fourth/fifth generation cephalosporins,6,8
+51,fourth/fifth generation cephalosporins,12,17
+704,fourth/fifth generation cephalosporins,-3,5
+756,fourth/fifth generation cephalosporins,14,18
+704,fourth/fifth generation cephalosporins,40,40
+580,fourth/fifth generation cephalosporins,4,7
+126,fourth/fifth generation cephalosporins,20,25
+580,fourth/fifth generation cephalosporins,23,32
+645,fourth/fifth generation cephalosporins,7,9
+565,fourth/fifth generation cephalosporins,57,61
+26,fourth/fifth generation cephalosporins,12,22
+645,fourth/fifth generation cephalosporins,17,28
+747,fourth/fifth generation cephalosporins,10,20
+738,fourth/fifth generation cephalosporins,17,25
+35,fourth/fifth generation cephalosporins,15,15
+715,fourth/fifth generation cephalosporins,5,11
+715,fourth/fifth generation cephalosporins,14,17
+756,third generation cephalosporins,18,26
+698,third generation cephalosporins,-4,4
+605,quinolones,1,6
+12,quinolones,-2,8
+715,quinolones,-6,-3
+551,quinolones,-2,18
+525,quinolones,-5,8
+763,quinolones,-2,17
+608,quinolones,48,49
+710,quinolones,-5,11
+126,quinolones,-4,0
+721,quinolones,-5,-3
+666,quinolones,3,6
+429,quinolones,3,12
+642,quinolones,-3,3
+259,quinolones,-2,12
+169,quinolones,-2,10
+525,quinolones,-5,8
+74,quinolones,51,52
+753,quinolones,-2,-2
+756,quinolones,-2,10
+645,quinolones,-2,7
+704,quinolones,-9,-8
+111,quinolones,-1,10
+608,quinolones,-2,4
+97,quinolones,-2,-1
+146,quinolones,-2,6
+530,quinolones,-3,11
+449,quinolones,-4,2
+31,quinolones,-2,7
+748,quinolones,-2,1
+694,quinolones,-2,13
+718,quinolones,1,9
+725,quinolones,30,30
+765,quinolones,-2,-1
+593,quinolones,-2,3
+747,quinolones,-2,10
+697,quinolones,-4,16
+74,quinolones,-5,0
+704,quinolones,-8,-3
+683,quinolones,-4,12
+164,quinolones,-5,18
+738,quinolones,-4,5
+51,quinolones,-2,6
+708,quinolones,-9,-3
+725,quinolones,-2,4
+750,quinolones,-1,10
+26,quinolones,-2,12
+645,carbapenems,9,9
+645,carbapenems,9,10
+602,carbapenems,11,15
+51,carbapenems,10,12
+580,carbapenems,7,12
+74,carbapenems,17,17
+645,carbapenems,10,17
+74,carbapenems,3,17
+666,carbapenems,9,13
+126,carbapenems,4,16
+605,carbapenems,8,12
+12,carbapenems,9,10
+51,carbapenems,17,20
+74,carbapenems,3,3
+74,carbapenems,3,3
+126,quinolones,25,32
+565,quinolones,47,50
+666,quinolones,7,8
+126,quinolones,20,25
+449,quinolones,-8,-4
+580,quinolones,36,36
+602,quinolones,18,19
+126,quinolones,35,36
+449,quinolones,-8,-8
+602,quinolones,15,17
+602,quinolones,38,40
+126,quinolones,16,20
+756,anti-VRE agents,32,42
+645,anti-VRE agents,9,9
+602,anti-VRE agents,43,43
+602,anti-VRE agents,44,46
+756,anti-VRE agents,11,32
+602,anti-VRE agents,46,47
+645,anti-VRE agents,15,15
+738,anti-VRE agents,24,25
+725,anti-VRE agents,28,28
+645,anti-VRE agents,11,15
+725,anti-VRE agents,12,28
+645,anti-VRE agents,9,11
+738,anti-VRE agents,10,24
+704,carbapenems,5,19
+750,carbapenems,14,16
+725,carbapenems,3,6
+725,carbapenems,11,19
+602,carbapenems,50,53
+756,carbapenems,12,13
+721,carbapenems,12,20
+602,carbapenems,53,55
+602,carbapenems,44,46
+602,carbapenems,46,47
+721,carbapenems,12,20
+756,carbapenems,11,12
+756,carbapenems,11,11
+602,carbapenems,47,50
+756,carbapenems,13,14
+593,carbapenems,5,5
+31,carbapenems,36,39
+750,carbapenems,14,14
+593,carbapenems,5,5
+26,anti-anaerobic agent,4,5
+111,anti-anaerobic agent,-1,13
+35,anti-anaerobic agent,22,26
+51,anti-anaerobic agent,14,15
+704,anti-anaerobic agent,3,5
+645,anti-anaerobic agent,-6,-5
+169,anti-anaerobic agent,9,11
+580,anti-anaerobic agent,4,4
+750,anti-anaerobic agent,1,2
+580,anti-anaerobic agent,4,8
+715,anti-anaerobic agent,7,11
+51,anti-anaerobic agent,13,14
+111,miscellaneous antibiotics,2,13
+31,penicillins,86,94
+31,penicillins,86,94
+31,penicillins,85,86
+31,penicillins,39,44
+525,penicillins,23,25
+164,penicillins,18,33
+530,penicillins,40,40
+530,penicillins,60,68
+530,penicillins,40,59
+449,PCP prophylaxis agents,53,54
+126,PCP prophylaxis agents,28,28
+565,PCP prophylaxis agents,51,52
+725,PCP prophylaxis agents,29,29
+565,PCP prophylaxis agents,30,31
+750,PCP prophylaxis agents,26,26
+698,beta-lactamase inhibitors,4,17
+97,beta-lactamase inhibitors,-1,14
+608,beta-lactamase inhibitors,13,16
+725,beta-lactamase inhibitors,0,3
+746,beta-lactamase inhibitors,4,12
+750,beta-lactamase inhibitors,25,25
+126,beta-lactamase inhibitors,36,37
+31,beta-lactamase inhibitors,80,94
+31,beta-lactamase inhibitors,29,35
+708,beta-lactamase inhibitors,-3,11
+608,beta-lactamase inhibitors,4,13
+126,beta-lactamase inhibitors,0,4
+74,beta-lactamase inhibitors,0,3
+111,beta-lactamase inhibitors,10,13
+769,beta-lactamase inhibitors,-3,14
+12,beta-lactamase inhibitors,9,9
+602,beta-lactamase inhibitors,19,21
+31,beta-lactamase inhibitors,29,35
+12,beta-lactamase inhibitors,10,11
+565,beta-lactamase inhibitors,4,21
+715,beta-lactamase inhibitors,-3,5
+565,beta-lactamase inhibitors,53,53
+718,beta-lactamase inhibitors,14,17
+593,beta-lactamase inhibitors,3,5
+51,beta-lactamase inhibitors,6,6
+12,beta-lactamase inhibitors,8,9
+746,beta-lactamase inhibitors,14,19
+565,beta-lactamase inhibitors,53,56
+565,beta-lactamase inhibitors,35,35
+525,beta-lactamase inhibitors,8,22
+697,beta-lactamase inhibitors,16,23
+725,beta-lactamase inhibitors,6,11
+126,beta-lactamase inhibitors,37,37
+602,beta-lactamase inhibitors,40,44
+750,beta-lactamase inhibitors,30,37
+602,beta-lactamase inhibitors,6,11
+449,beta-lactamase inhibitors,2,12
+666,beta-lactamase inhibitors,13,17
+666,beta-lactamase inhibitors,13,17
+31,beta-lactamase inhibitors,24,27
+753,beta-lactamase inhibitors,-2,31
+565,beta-lactamase inhibitors,52,52
+750,beta-lactamase inhibitors,16,25
+565,beta-lactamase inhibitors,35,45
+750,beta-lactamase inhibitors,10,14
+31,beta-lactamase inhibitors,7,24
+31,beta-lactamase inhibitors,77,78
+738,beta-lactamase inhibitors,5,17
+31,beta-lactamase inhibitors,80,94
+750,beta-lactamase inhibitors,37,39
+565,beta-lactamase inhibitors,56,57
+31,beta-lactamase inhibitors,78,80
+525,beta-lactamase inhibitors,25,27
+721,beta-lactamase inhibitors,-3,12
+769,beta-lactamase inhibitors,-4,-3
+721,beta-lactamase inhibitors,23,28
+750,beta-lactamase inhibitors,30,37
+718,beta-lactamase inhibitors,9,13
+51,beta-lactamase inhibitors,6,10
+748,beta-lactamase inhibitors,1,12
+721,beta-lactamase inhibitors,20,23
+765,beta-lactamase inhibitors,-1,12
+721,beta-lactamase inhibitors,28,33
+666,beta-lactamase inhibitors,6,9
+26,PCP prophylaxis agents,-5,4
+31,PCP prophylaxis agents,-3,-1
+31,PCP prophylaxis agents,90,92
+35,PCP prophylaxis agents,-1,-1
+51,PCP prophylaxis agents,-2,-1
+593,PCP prophylaxis agents,-2,5
+51,PCP prophylaxis agents,-2,-1
+530,PCP prophylaxis agents,36,39
+126,PCP prophylaxis agents,-2,-1
+126,PCP prophylaxis agents,-4,-2
+715,PCP prophylaxis agents,-8,7
+525,PCP prophylaxis agents,-5,4
+146,PCP prophylaxis agents,-9,6
+530,PCP prophylaxis agents,33,37
+259,PCP prophylaxis agents,-6,3
+753,PCP prophylaxis agents,-5,4
+608,PCP prophylaxis agents,-2,0
+747,PCP prophylaxis agents,-2,4
+697,PCP prophylaxis agents,-4,-1
+748,PCP prophylaxis agents,-5,-5
+530,PCP prophylaxis agents,34,36
+530,PCP prophylaxis agents,28,32
+530,PCP prophylaxis agents,-3,-1
+746,PCP prophylaxis agents,4,7
+666,PCP prophylaxis agents,3,4
+580,PCP prophylaxis agents,29,38
+645,PCP prophylaxis agents,-6,10
+642,PCP prophylaxis agents,-6,5
+704,PCP prophylaxis agents,-9,-1
+718,PCP prophylaxis agents,1,7
+756,tetracyclines,14,14
+756,tetracyclines,15,18
+12,glycopeptide,0,2
+12,glycopeptide,2,9
+12,glycopeptide,9,12
+12,glycopeptide,-2,0
+26,glycopeptide,-2,9
+26,glycopeptide,5,36
+26,glycopeptide,10,27
+31,glycopeptide,80,83
+31,glycopeptide,12,24
+31,glycopeptide,-2,11
+31,glycopeptide,31,34
+31,glycopeptide,24,25
+31,glycopeptide,12,12
+31,glycopeptide,77,80
+31,glycopeptide,77,80
+31,glycopeptide,81,81
+35,glycopeptide,15,18
+35,glycopeptide,15,15
+35,glycopeptide,-1,14
+35,glycopeptide,21,26
+593,glycopeptide,-2,5
+593,glycopeptide,-2,5
+51,glycopeptide,-2,-1
+126,glycopeptide,24,24
+51,glycopeptide,24,25
+51,glycopeptide,-1,20
+74,glycopeptide,-6,-5
+74,glycopeptide,-5,15
+74,glycopeptide,54,60
+74,glycopeptide,46,49
+429,glycopeptide,3,12
+602,glycopeptide,18,20
+602,glycopeptide,6,16
+449,glycopeptide,-4,11
+97,glycopeptide,-2,14
+608,glycopeptide,-2,10
+697,glycopeptide,-4,23
+111,glycopeptide,0,13
+698,glycopeptide,14,18
+698,glycopeptide,-3,1
+111,glycopeptide,-1,0
+126,glycopeptide,27,27
+126,glycopeptide,6,6
+126,glycopeptide,-4,2
+126,glycopeptide,13,20
+126,glycopeptide,10,10
+126,glycopeptide,8,8
+126,glycopeptide,4,4
+126,glycopeptide,25,25
+126,glycopeptide,29,32
+126,glycopeptide,11,11
+126,glycopeptide,35,37
+525,glycopeptide,19,22
+525,glycopeptide,16,19
+146,glycopeptide,-2,6
+721,glycopeptide,14,33
+551,glycopeptide,1,18
+725,glycopeptide,0,12
+164,glycopeptide,-5,18
+565,glycopeptide,59,61
+565,glycopeptide,4,5
+565,glycopeptide,35,35
+593,glycopeptide,-2,5
+259,glycopeptide,-2,12
+750,glycopeptide,-1,18
+750,glycopeptide,2,39
+602,glycopeptide,39,43
+551,glycopeptide,-2,0
+765,glycopeptide,-1,1
+525,glycopeptide,-5,15
+718,glycopeptide,14,16
+747,glycopeptide,17,17
+748,glycopeptide,-2,12
+765,glycopeptide,1,1
+645,glycopeptide,19,19
+645,glycopeptide,20,28
+565,glycopeptide,36,39
+704,glycopeptide,-9,11
+704,glycopeptide,40,40
+645,glycopeptide,21,33
+565,glycopeptide,7,21
+738,glycopeptide,-4,10
+715,glycopeptide,-6,11
+525,glycopeptide,25,27
+525,glycopeptide,-5,15
+718,glycopeptide,1,6
+718,glycopeptide,6,13
+747,glycopeptide,8,8
+747,glycopeptide,22,22
+747,glycopeptide,13,13
+530,glycopeptide,-3,11
+721,glycopeptide,-5,12
+746,glycopeptide,4,12
+725,glycopeptide,-2,-1
+698,glycopeptide,2,7
+642,glycopeptide,-1,19
+753,glycopeptide,-2,31
+763,glycopeptide,0,11
+645,glycopeptide,16,16
+645,glycopeptide,17,17
+565,glycopeptide,52,52
+565,glycopeptide,39,43
+645,glycopeptide,33,33
+565,glycopeptide,53,53
+694,glycopeptide,-2,13
+645,glycopeptide,0,5
+565,glycopeptide,6,7
+747,glycopeptide,15,15
+747,glycopeptide,-2,5
+750,glycopeptide,19,25
+721,glycopeptide,13,13
+708,glycopeptide,-3,11
+710,glycopeptide,-5,11
+580,glycopeptide,4,12
+747,glycopeptide,9,9
+746,glycopeptide,12,19
+747,glycopeptide,11,11
+747,glycopeptide,10,10
+683,glycopeptide,-4,8
+750,glycopeptide,2,39
+765,glycopeptide,1,12
+765,glycopeptide,-2,-1
+666,glycopeptide,3,10
+763,glycopeptide,-2,-1
+666,glycopeptide,10,17
+756,glycopeptide,-2,11
+645,glycopeptide,-5,0
+747,glycopeptide,19,19
+747,glycopeptide,-1,22
+738,glycopeptide,-1,25
+642,glycopeptide,-3,19
+763,glycopeptide,-2,-2
+746,glycopeptide,4,5
+769,glycopeptide,-4,13
+642,glycopeptide,-1,19
+645,glycopeptide,-2,0
+746,glycopeptide,5,12
+645,glycopeptide,0,9
+605,glycopeptide,1,18
+642,glycopeptide,-3,19
+645,glycopeptide,8,8
+645,glycopeptide,9,21
+746,glycopeptide,14,19
