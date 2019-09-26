@@ -26,7 +26,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 15                 # dimension of inputs. for microbio data, Dv = 15
+Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 64        # number of particles
 batch_size = 1          # batch size
