@@ -4,8 +4,11 @@ toy_data_dir = "data/fhn_with_inputs_dirichlet"
 percentage_data_dir = "data/microbio.p"
 count_data_dir = "data/count_microbio.p"
 
-percentage_noinputs_dir = "data/microbio_noinputs.p"
-count_noinputs_dir = "data/count_microbio_noinputs.p"
+percentage_split_dir = "data/microbio_split.p"
+count_split_dir = "data/count_microbio_split.p"
+
+percentage_small_dir = "data/microbio_small.p"
+count_small_dir = "data/count_microbio_small.p"
 
 # percentage, scale = 1
 clv_percentage_Dx_1_scale_1_data_dir = "data/clv/data/clv_percentage_Dx_1_scale_1.p"
@@ -82,7 +85,9 @@ clv_noinput_count_Dx_9_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_9_
 clv_noinput_count_Dx_10_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_10_scale_1.p"
 
 
-PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir, percentage_noinputs=percentage_noinputs_dir,
+PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
+                            percentage_split=percentage_split_dir,
+                            percentage_small=percentage_small_dir,
                             clv_percentage_Dx_1_scale_1=clv_percentage_Dx_1_scale_1_data_dir,
                             clv_percentage_Dx_2_scale_1=clv_percentage_Dx_2_scale_1_data_dir,
                             clv_percentage_Dx_3_scale_1=clv_percentage_Dx_3_scale_1_data_dir,
@@ -113,10 +118,12 @@ PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir, percentage_noinputs=
                             clv_noinput_percentage_Dx_8_scale_1=clv_noinput_percentage_Dx_8_scale_1_data_dir,
                             clv_noinput_percentage_Dx_9_scale_1=clv_noinput_percentage_Dx_9_scale_1_data_dir,
                             clv_noinput_percentage_Dx_10_scale_1=clv_noinput_percentage_Dx_10_scale_1_data_dir
-                     )
+                            )
 
 
-COUNT_DATA_DICT = dict(count=count_data_dir, count_noinputs=count_noinputs_dir,
+COUNT_DATA_DICT = dict(count=count_data_dir,
+                       count_split=count_split_dir,
+                       count_small=count_small_dir,
                        clv_count_Dx_1_scale_1=clv_count_Dx_1_scale_1_data_dir,
                        clv_count_Dx_2_scale_1=clv_count_Dx_2_scale_1_data_dir,
                        clv_count_Dx_3_scale_1=clv_count_Dx_3_scale_1_data_dir,
@@ -147,9 +154,8 @@ COUNT_DATA_DICT = dict(count=count_data_dir, count_noinputs=count_noinputs_dir,
                        clv_noinput_count_Dx_8_scale_1=clv_noinput_count_Dx_8_scale_1_data_dir,
                        clv_noinput_count_Dx_9_scale_1=clv_noinput_count_Dx_9_scale_1_data_dir,
                        clv_noinput_count_Dx_10_scale_1=clv_noinput_count_Dx_10_scale_1_data_dir
-                     )
+                       )
 
 
 DATA_DIR_DICT = {**PERCENTAGE_DATA_DICT, **COUNT_DATA_DICT}
 DATA_DIR_DICT["toy"] = toy_data_dir
-
