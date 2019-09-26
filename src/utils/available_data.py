@@ -4,8 +4,10 @@ toy_data_dir = "data/fhn_with_inputs_dirichlet"
 percentage_data_dir = "data/microbio.p"
 count_data_dir = "data/count_microbio.p"
 
-percentage_split_dir = "data/microbio_split.p"
-count_split_dir = "data/count_microbio_split.p"
+percentage_split_3_dir = "data/microbio_split_3.p"
+percentage_split_5_dir = "data/microbio_split_5.p"
+count_split_3_dir = "data/count_microbio_split_3.p"
+count_split_5_dir = "data/count_microbio_split_5.p"
 
 percentage_small_dir = "data/microbio_small.p"
 count_small_dir = "data/count_microbio_small.p"
@@ -86,7 +88,8 @@ clv_noinput_count_Dx_10_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_1
 
 
 PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
-                            percentage_split=percentage_split_dir,
+                            percentage_split_3=percentage_split_3_dir,
+                            percentage_split_5=percentage_split_5_dir,
                             percentage_small=percentage_small_dir,
                             clv_percentage_Dx_1_scale_1=clv_percentage_Dx_1_scale_1_data_dir,
                             clv_percentage_Dx_2_scale_1=clv_percentage_Dx_2_scale_1_data_dir,
@@ -122,7 +125,8 @@ PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
 
 
 COUNT_DATA_DICT = dict(count=count_data_dir,
-                       count_split=count_split_dir,
+                       count_split_3=count_split_3_dir,
+                       count_split_5=count_split_5_dir,
                        count_small=count_small_dir,
                        clv_count_Dx_1_scale_1=clv_count_Dx_1_scale_1_data_dir,
                        clv_count_Dx_2_scale_1=clv_count_Dx_2_scale_1_data_dir,
