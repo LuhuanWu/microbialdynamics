@@ -28,10 +28,10 @@ Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
-n_particles = 64        # number of particles
+n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 3e-4               # learning rate
-epoch = 10000  # 500*100 #100*200
+epoch = 200  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -39,7 +39,7 @@ seed = 0
 # False: read data set from the file
 generate_training_data = False
 
-# see options: utils/see available_data.py
+# see options: utils/available_data.py
 data_type = "count"
 
 # choose samples from the data set for training. -1 indicates use default training set
@@ -106,7 +106,7 @@ two_step_emission = True
 two_step_emission_type = "inv_lar"  # choose from MLP and inv_lar
 
 # f_transformation
-f_transformation = "MLP"  # choose from MLP, linear, clv
+f_transformation = "clv"  # choose from MLP, linear, clv
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -161,15 +161,15 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "real_count"
+rslt_dir_name = "realdata/count_longer"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 10
-saving_test_num = 5
+saving_train_num = 20
+saving_test_num = 10
 
 # whether to save tensorboard
 save_tensorboard = False
