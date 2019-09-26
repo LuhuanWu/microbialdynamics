@@ -116,7 +116,7 @@ def main(_):
             extra_inputs_train, extra_inputs_test = \
                 load_data(data_dir, Dx, FLAGS.isPython2,
                           training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
-            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_train)
+            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
 
             hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
             _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
