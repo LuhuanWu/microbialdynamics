@@ -379,7 +379,7 @@ class trainer:
                         tmp = np.stack(all_array)
                     else:
                         tmp = np.concatenate(all_array)
-                if isinstance(fetches_list[0][i], list):
+                elif isinstance(fetches_list[0][i], list):
                     # should be y_hat_N_BxTmkxDy and y_N_BxTmkxDy
                     tmp = [[x[i][j] for x in fetches_list] for j in range(len(fetches[i]))]
                 else:
