@@ -37,19 +37,20 @@ def load_data(path, Dx, isPython2, training_sample_idx=None, test_sample_idx=Non
         assert isinstance(training_sample_idx, list)
         # use selected samples for training
 
-        hidden_train = [hidden[i] for i in training_sample_idx]
-        obs_train = [obs[i] for i in training_sample_idx]
-        input_train = [input[i] for i in training_sample_idx]
-        extra_inputs_train = [extra_inputs[i] for i in training_sample_idx]
+        hidden_train = [np.array(hidden[i]) for i in training_sample_idx]
+        obs_train = [np.array(obs[i]) for i in training_sample_idx]
+        input_train = [np.array(input[i]) for i in training_sample_idx]
+        extra_inputs_train = [np.array(extra_inputs[i]) for i in training_sample_idx]
 
     if test_sample_idx is not None:
+        print("haha for test")
         assert isinstance(test_sample_idx, list)
         # use selected samples for test
 
-        hidden_test = [hidden[i] for i in test_sample_idx]
-        obs_test = [obs[i] for i in test_sample_idx]
-        input_test = [input[i] for i in test_sample_idx]
-        extra_inputs_test = [extra_inputs[i] for i in test_sample_idx]
+        hidden_test = [np.array(hidden[i]) for i in test_sample_idx]
+        obs_test = [np.array(obs[i]) for i in test_sample_idx]
+        input_test = [np.array(input[i]) for i in test_sample_idx]
+        extra_inputs_test = [np.array(extra_inputs[i]) for i in test_sample_idx]
 
     return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, extra_inputs_train, extra_inputs_test
 
