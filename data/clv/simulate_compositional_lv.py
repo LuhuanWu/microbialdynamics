@@ -89,9 +89,25 @@ def simulate_clv_with_inputs(A, g, Wg, W1, W2, f_cov, N, inputs):
     return np.array(x), np.array(y_count), np.array(y_percentage)
 
 
-def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
-    # create data with missing observation
+def get_full_inputs_and_obs(A, g, Wa, W1, W2, f_cov, N, time_max, scale):
     simulation_time = time_max * scale
+
+    # create inputs
+    batch_inputs = [simulate_single_input(simulation_time, ninput) for _ in range(n_train + n_test)]
+
+    batch_x, batch_y_count, batch_y_percentage = [], [], []
+    for i in range(n_train + n_test):
+        v = batch_inputs[i]  # (time, Dv)
+        x, y_count, y_percentage = simulate_clv_with_inputs(A, g, Wg, W1, W2, f_cov, N, v)
+        batch_x.append(x)
+        batch_y_count.append(y_count)
+        batch_y_percentage.append(y_percentage)
+
+    return batch_inputs, batch_x, batch_y_count, batch_y_percentage
+
+
+def get_data_to_pickle(batch_inputs, batch_x, batch_y_count, batch_y_percentage, time_min, time_max, scale, obs_percentage):
+    # create data with missing observation
 
     x_train = []
     x_test = []
@@ -102,12 +118,9 @@ def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
     v_train = []
     v_test = []
 
-    # create inputs
-    batch_inputs = [simulate_single_input(simulation_time, ninput) for _ in range(n_train + n_test)]
-
     for i in range(n_train + n_test):
-        v = batch_inputs[i]  # (time, Dv)
-        x, y_count, y_percentage = simulate_clv_with_inputs(A, g, Wg, W1, W2, f_cov, N, v)
+        v = batch_inputs[i]
+        x, y_count, y_percentage = batch_x[i], batch_y_count[i], batch_y_percentage[i]
 
         idx = np.arange(time_max) * scale
         ndays = np.random.randint(time_min, time_max)
@@ -120,7 +133,7 @@ def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
         v = v[idx]
 
         # make missing observations, the first day cannot be missing
-        obs_percentage = np.random.choice([0.4, 0.5, 0.6, 0.7, 0.8], p=[0.1, 0.2, 0.2, 0.2, 0.3])
+        #obs_percentage = np.random.choice([0.4, 0.5, 0.6, 0.7, 0.8], p=[0.1, 0.2, 0.2, 0.2, 0.3])
         # obs_percentage = 0.999
         obsed_days = np.random.choice(np.arange(1, ndays), int(ndays * obs_percentage), replace=False)
         obsed_days = np.sort(np.concatenate(([0], obsed_days)))
@@ -163,13 +176,6 @@ def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
     p_data["Vtrain"] = v_train
     p_data["Vtest"] = v_test
 
-    p_data["A"] = A
-    p_data["Wa"] = Wa
-    p_data["g"] = g
-    p_data["Wg"] = Wg
-    p_data["f_cov"] = f_cov
-    p_data["N"] = N
-
     c_data = {}
     c_data["Xtrain"] = x_train
     c_data["Xtest"] = x_test
@@ -180,46 +186,62 @@ def get_data_to_pickle(A, g, Wa, W1, W2, f_cov, N, time_min, time_max, scale):
     c_data["counts_train"] = counts_train
     c_data["counts_test"] = counts_test
 
-    c_data["A"] = A
-    c_data["Wa"] = Wa
-    c_data["g"] = g
-    c_data["Wg"] = Wg
-    c_data["f_cov"] = f_cov
-    c_data["N"] = N
+
 
     return p_data, c_data
 
 
-for Dx in range(1, 11):
-    for scale in [1, 4]:
-        print("Dx = {}, scale = {}".format(Dx, scale))
-        ntaxa = Dy = Dx + 1
-        ninput = Dv = 10  # including surgery
-        n_train, n_test = 200, 30
-        time_min = 30
-        time_max = 50
+for Dx in [6, 10]:
 
-        A = np.random.normal(loc=0,    scale=0.05, size=(Dx, Dx + 1))
-        g = np.random.normal(loc=0,    scale=0.05, size=(Dx,))
-        Wg = np.random.normal(loc=-0.2, scale=0.2, size=(Dx, Dv))
-        W1 = np.random.normal(loc=-0.2, scale=0.2, size=(Dx, Dv))
-        W2 = np.random.normal(loc=0.2, scale=0.2, size=(1, Dx + 1))
+    scale = 4
 
-        f_cov = np.random.uniform(0, 1, ntaxa - 1)
-        N = 10000  # sequencing reads parameter
+    ntaxa = Dy = Dx + 1
+    ninput = Dv = 10  # including surgery
+    n_train, n_test = 200, 30
+    time_min = 30
+    time_max = 50
 
-        p_data, c_data = get_data_to_pickle(A, g, Wg, W1, W2, f_cov, N, time_min, time_max, scale)
+    A = np.random.normal(loc=0, scale=0.05, size=(Dx, Dx + 1))
+    g = np.random.normal(loc=0, scale=0.05, size=(Dx,))
+    Wg = np.random.normal(loc=-0.2, scale=0.2, size=(Dx, Dv))
+    W1 = np.random.normal(loc=-0.2, scale=0.2, size=(Dx, Dv))
+    W2 = np.random.normal(loc=0.2, scale=0.2, size=(1, Dx + 1))
+
+    f_cov = np.random.uniform(0, 1, ntaxa - 1)
+    N = 10000  # sequencing reads parameter
+
+    batch_inputs, batch_x, batch_y_count, batch_y_percentage = \
+        get_full_inputs_and_obs(A, g, Wg, W1, W2, f_cov, N, time_max, scale)
+    for obs_percentage in [0.2, 0.4, 0.6]:
+        print("Dx = {}, obs_percentage = {}".format(Dx, obs_percentage))
+
+        p_data, c_data = \
+            get_data_to_pickle(batch_inputs, batch_x, batch_y_count, batch_y_percentage, time_min, time_max, scale, obs_percentage)
+
+        p_data["A"] = A
+        p_data["g"] = g
+        p_data["W1"] = W1
+        p_data["W2"] = W2
+        p_data["f_cov"] = f_cov
+        p_data["N"] = N
+
+        c_data["A"] = A
+        c_data["g"] = g
+        c_data["W1"] = W1
+        c_data["W2"] = W2
+        c_data["f_cov"] = f_cov
+        c_data["N"] = N
 
         repo = git.Repo('.', search_parent_directories=True)
         repo_dir = repo.working_tree_dir  # microbialdynamics
 
         # percentage
-        data_dir = repo_dir + "/data/clv/data/clv_percentage_Dx_{}_scale_{}.p".format(Dx, scale)
+        data_dir = repo_dir + "/data/clv/diff_percentage/clv_percentage_Dx_{}_obsp_0{}.p".format(Dx, int(obs_percentage*10))
         with open(data_dir, "wb") as f:
             pickle.dump(p_data, f)
 
         # count
-        data_dir = repo_dir + "/data/clv/data/clv_count_Dx_{}_scale_{}.p".format(Dx, scale)
+        data_dir = repo_dir + "/data/clv/diff_percentage/clv_count_Dx_{}_obsp_0{}.p".format(Dx, int(obs_percentage*10))
         with open(data_dir, "wb") as f:
             pickle.dump(c_data, f)
 

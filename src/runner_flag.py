@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 10                # dimension of hidden states
+Dx = 6                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
-lr = 3e-4               # learning rate
-epoch = 200  # 500*100 #100*200
+lr = 1e-3               # learning rate
+epoch = 5  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -43,9 +43,9 @@ generate_training_data = False
 data_type = "count"
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [-1]
+training_sample_idx = [0,1,2]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [-1]
+test_sample_idx = [0,1,2]
 
 isPython2 = False
 
@@ -153,7 +153,7 @@ min_lr = lr / 100
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 100 # 100
+print_freq = 1 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -161,15 +161,15 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "realdata/count_longer"
+rslt_dir_name = "test_difflength"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 20
-saving_test_num = 10
+saving_train_num = 5
+saving_test_num = 5
 
 # whether to save tensorboard
 save_tensorboard = False
