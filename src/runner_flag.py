@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 6                # dimension of hidden states
+Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 5  # 500*100 #100*200
+epoch = 800  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -43,9 +43,9 @@ generate_training_data = False
 data_type = "count"
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [0,1,2]
+training_sample_idx = [-1]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [0,1,2]
+test_sample_idx = [-1]
 
 isPython2 = False
 
@@ -153,7 +153,7 @@ min_lr = lr / 100
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1 # 100
+print_freq = 20 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False

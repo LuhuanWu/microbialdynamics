@@ -46,10 +46,8 @@ def main(_):
     training_sample_idx = [int(x) for x in FLAGS.training_sample_idx.split(",")]
     test_sample_idx = [int(x) for x in FLAGS.test_sample_idx.split(",")]
     if training_sample_idx == [-1]:
-        print("yes")
         training_sample_idx = None
     if test_sample_idx == [-1]:
-        print("yes for test")
         test_sample_idx = None
 
     if FLAGS.use_2_q:

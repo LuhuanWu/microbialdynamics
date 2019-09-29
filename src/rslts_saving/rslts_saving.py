@@ -296,13 +296,6 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normal
         for k, ys_k_hat_val in enumerate(ys_hat_val):
             masked_yhat = np.zeros((time, Dy))  # (full_ndays, Dy)
 
-            print("haha")
-            print(ys_k_hat_val[i].shape)  #  (5, 11)
-            print(mask[i].shape)  # (20,)
-            print(masked_yhat.shape)  # (20, 11)
-
-            print(masked_yhat[k:][mask[i][k:]].shape)
-
             masked_yhat[k:][mask[i][k:]] = ys_k_hat_val[i]
 
             plt.figure(figsize=(15,5))

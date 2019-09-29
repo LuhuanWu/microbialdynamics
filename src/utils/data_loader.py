@@ -43,7 +43,6 @@ def load_data(path, Dx, isPython2, training_sample_idx=None, test_sample_idx=Non
         extra_inputs_train = [np.array(extra_inputs[i]) for i in training_sample_idx]
 
     if test_sample_idx is not None:
-        print("haha for test")
         assert isinstance(test_sample_idx, list)
         # use selected samples for test
 
