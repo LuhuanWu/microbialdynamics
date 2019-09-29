@@ -489,7 +489,6 @@ class SVO:
         # assert n_steps < time, "n_steps = {} >= time".format(n_steps)
 
         with tf.variable_scope(self.name):
-
             X = tf.reduce_mean(X, axis=2)  # average over paths (n_particles),shape (batch_size, time, Dx)
             x_BxTmkxDz = X
 
@@ -505,7 +504,7 @@ class SVO:
                     g_input = self.h.mean(g_input)
                 y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
-                y_hat_BxTmkxDy = tf.boolean_mask(y_hat_BxTmkxDy, mask[:, k:])
+                y_hat_BxTmkxDy = tf.boolean_mask(y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
@@ -520,14 +519,14 @@ class SVO:
             if self.two_step_emission:
                 g_input = self.h.mean(g_input)
             y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
-            y_hat_BxTmNxDy = tf.boolean_mask(y_hat_BxTmNxDy, mask[:, n_steps:])
+            y_hat_BxTmNxDy = tf.boolean_mask(y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
             # get y_true
             y_N_BxTxDy = []
             for k in range(n_steps + 1):
                 y_BxTmkxDy = obs[:, k:, :]
-                y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])
+                y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_N_BxTxDy.append(y_BxTmkxDy)
 
         return y_hat_N_BxTxDy, y_N_BxTxDy

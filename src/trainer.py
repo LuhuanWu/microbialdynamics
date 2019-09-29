@@ -207,13 +207,13 @@ class trainer:
                             pickle.dump(trajectory_dict, f)
 
                     if self.save_y_hat_train:
-                        y_hat_val_train = self.evaluate(y_hat_N_BxTxDy, self.train_feed_dict, average=False)
+                        y_hat_val_train = self.evaluate([y_hat_N_BxTxDy], self.train_feed_dict, average=False)[0]
                         y_hat_train_dict = {"y_hat_train": y_hat_val_train}
                         with open(self.epoch_data_DIR + "y_hat_train_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_train_dict, f)
 
                     if self.save_y_hat_test:
-                        y_hat_val_test = self.evaluate(y_hat_N_BxTxDy, self.test_feed_dict, average=False)
+                        y_hat_val_test = self.evaluate([y_hat_N_BxTxDy], self.test_feed_dict, average=False)[0]
                         y_hat_test_dict = {"y_hat_test": y_hat_val_test}
                         with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_test_dict, f)
@@ -374,12 +374,14 @@ class trainer:
                 if isinstance(fetches_list[0][i], np.ndarray):
                     all_array = [x[i] for x in fetches_list]
                     if not all(x.shape == all_array[0].shape for x in all_array):
-                        assert all_array[0].shape[0] == 1
                         tmp = [x[0] for x in all_array]
                     elif keepdims:
                         tmp = np.stack(all_array)
                     else:
                         tmp = np.concatenate(all_array)
+                if isinstance(fetches_list[0][i], list):
+                    # should be y_hat_N_BxTmkxDy and y_N_BxTmkxDy
+                    tmp = [[x[i][j] for x in fetches_list] for j in range(len(fetches[i]))]
                 else:
                     tmp = np.array([x[i] for x in fetches_list])
                 res.append(tmp)
@@ -402,11 +404,15 @@ class trainer:
         return res
 
     def evaluate_R_square(self, y_hat_N_BxTxDy, y_N_BxTxDy):
-        n_steps = len(y_hat_N_BxTxDy[0]) - 1
-        y_hat = [[y_hat_batch[i] for y_hat_batch in y_hat_N_BxTxDy] for i in range(n_steps + 1)]
-        y = [[y_batch[i] for y_batch in y_N_BxTxDy] for i in range(n_steps + 1)]
-        y_hat = [np.concatenate(y_hat_i) for y_hat_i in y_hat]
-        y = [np.concatenate(y_i) for y_i in y]
+        n_steps = len(y_hat_N_BxTxDy) - 1
+        # y_hat = [[y_hat_batch[i] for y_hat_batch in y_hat_N_BxTxDy] for i in range(n_steps + 1)]
+        # y = [[y_batch[i] for y_batch in y_N_BxTxDy] for i in range(n_steps + 1)]
+        # for y_hat_i in y_hat:
+        #     for ele in y_hat_i:
+        #         if ele.shape[0] != 1 or ele.shape[-1] != 11:
+        #             print(ele.shape)
+        y_hat = [np.concatenate(y_hat_i, axis=1)[0] for y_hat_i in y_hat_N_BxTxDy]
+        y = [np.concatenate(y_i, axis=1)[0] for y_i in y_N_BxTxDy]
         n_tp, Dy = y[0].shape
 
         def R_square(y_hat_i, y_i):
