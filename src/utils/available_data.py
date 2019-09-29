@@ -86,6 +86,15 @@ clv_noinput_count_Dx_8_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_8_
 clv_noinput_count_Dx_9_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_9_scale_1.p"
 clv_noinput_count_Dx_10_scale_1_data_dir = "data/clv/data_noinput/clv_count_Dx_10_scale_1.p"
 
+############### experiments of sparsity / different observation percentages ############
+clv_count_Dx_6_obs02_data_dir = "data/clv/diff_percentage/clv_count_Dx_6_obsp_02.p"
+clv_count_Dx_6_obs04_data_dir = "data/clv/diff_percentage/clv_count_Dx_6_obsp_04.p"
+clv_count_Dx_6_obs06_data_dir = "data/clv/diff_percentage/clv_count_Dx_6_obsp_06.p"
+
+clv_count_Dx_10_obs02_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_02.p"
+clv_count_Dx_10_obs04_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_04.p"
+clv_count_Dx_10_obs06_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_06.p"
+
 
 PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
                             percentage_split_3=percentage_split_3_dir,
@@ -157,7 +166,13 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_noinput_count_Dx_7_scale_1=clv_noinput_count_Dx_7_scale_1_data_dir,
                        clv_noinput_count_Dx_8_scale_1=clv_noinput_count_Dx_8_scale_1_data_dir,
                        clv_noinput_count_Dx_9_scale_1=clv_noinput_count_Dx_9_scale_1_data_dir,
-                       clv_noinput_count_Dx_10_scale_1=clv_noinput_count_Dx_10_scale_1_data_dir
+                       clv_noinput_count_Dx_10_scale_1=clv_noinput_count_Dx_10_scale_1_data_dir,
+                       clv_count_Dx_6_obs_02=clv_count_Dx_6_obs02_data_dir,
+                       clv_count_Dx_6_obs_04=clv_count_Dx_6_obs04_data_dir,
+                       clv_count_Dx_6_obs_06=clv_count_Dx_6_obs06_data_dir,
+                       clv_count_Dx_10_obs_02=clv_count_Dx_10_obs02_data_dir,
+                       clv_count_Dx_10_obs_04=clv_count_Dx_10_obs04_data_dir,
+                       clv_count_Dx_10_obs_06=clv_count_Dx_10_obs06_data_dir,
                        )
 
 
