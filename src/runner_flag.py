@@ -24,14 +24,14 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 10                # dimension of hidden states
-Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
+Dx = 6                # dimension of hidden states
+Dy = 7                  # dimension of observations. for microbio data, Dy = 11
+Dv = 10                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epoch = 800  # 500*100 #100*200
+epochs = [3,4]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -40,7 +40,7 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/available_data.py
-data_type = "count"
+data_type = "clv_count_Dx_6_obs_02"
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -153,7 +153,7 @@ min_lr = lr / 100
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 20 # 100
+print_freq = 2 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -176,6 +176,8 @@ save_tensorboard = False
 
 # whether to save model
 save_model = False
+
+epochs = ",".join([str(epoch) for epoch in epochs])
 
 q0_layers = ",".join([str(x) for x in q0_layers])
 q1_layers = ",".join([str(x) for x in q1_layers])
@@ -205,7 +207,7 @@ flags.DEFINE_integer("Dev", Dev, "input embedding size")
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")
 flags.DEFINE_float("lr", lr, "learning rate")
-flags.DEFINE_integer("epoch", epoch, "number of epoch")
+flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 

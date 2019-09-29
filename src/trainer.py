@@ -53,7 +53,7 @@ class trainer:
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
         self.lr = self.FLAGS.lr
-        self.epoch = self.FLAGS.epoch
+        #self.epoch = self.FLAGS.epoch
 
         # early stopping
         self.early_stop_patience = self.FLAGS.early_stop_patience
@@ -66,9 +66,8 @@ class trainer:
         self.min_lr = self.FLAGS.min_lr
         self.lr_reduce_count = 0
 
-    def init_data_saving(self, RLT_DIR):
+    def set_data_saving(self):
         self.save_res = True
-        self.RLT_DIR = RLT_DIR
         self.save_trajectory = self.FLAGS.save_trajectory
         self.save_y_hat_train = self.FLAGS.save_y_hat_train
         self.saving_train_num = self.FLAGS.saving_train_num
@@ -89,40 +88,38 @@ class trainer:
         self.R_square_logp_trains = []
         self.R_square_logp_tests = []
 
-        # epoch data (trajectory, y_hat and quiver lattice)
-        epoch_data_DIR = self.RLT_DIR.split("/")
-        epoch_data_DIR.insert(epoch_data_DIR.index("rslts") + 1, "epoch_data")
-        self.epoch_data_DIR = "/".join(epoch_data_DIR)
-
         # tensorboard and model saver
         self.save_tensorboard = self.FLAGS.save_tensorboard
         self.save_model = self.FLAGS.save_model
-        if self.save_tensorboard:
-            self.writer = tf.summary.FileWriter(self.RLT_DIR)
+
         if self.save_model:
             self.saver = tf.train.Saver(max_to_keep=1)
+
+    def set_saving_dir(self, checkpoint_dir):
+        self.checkpoint_dir = checkpoint_dir
+
+        # epoch data (trajectory, y_hat and quiver lattice)
+        epoch_data_DIR = self.checkpoint_dir.split("/")
+        epoch_data_DIR.insert(epoch_data_DIR.index("rslts") + 1, "epoch_data")
+        self.epoch_data_DIR = "/".join(epoch_data_DIR)
+
+        if self.save_tensorboard:
+            self.writer = tf.summary.FileWriter(self.checkpoint_dir)
 
     def init_quiver_plotting(self):
         if self.Dx == 2 or self.Dx == 3:
             self.draw_quiver_during_training = True
 
-    def train(self,
-              obs_train, obs_test,
-              hidden_train, hidden_test,
-              input_train, input_test,
-              mask_train, mask_test,
-              time_interval_train, time_interval_test,
-              extra_inputs_train, extra_inputs_test,
-              print_freq):
-
-        self.obs_train,    self.obs_test    = obs_train,    obs_test
+    def init_train(self, obs_train, obs_test, hidden_train, hidden_test, input_train, input_test,
+                   mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
+        self.obs_train, self.obs_test = obs_train, obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
-        self.log_ZSMC, log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
+        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
                                                    self.time_interval, self.extra_inputs)
 
         self.train_feed_dict = {self.obs: obs_train[0:self.saving_train_num],
@@ -143,36 +140,41 @@ class trainer:
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
-        Xs = log["Xs"]
-        y_hat_N_BxTxDy, y_N_BxTxDy = self.SMC.n_step_MSE(self.MSE_steps, Xs,
+        self.Xs = self.log["Xs"]
+        self.y_hat_N_BxTxDy, self.y_N_BxTxDy = self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
                                                          self.hidden, self.obs, self.input_embedding,
                                                          self.mask, self.extra_inputs)
 
         with tf.variable_scope("train"):
-            lr = tf.placeholder(tf.float32, name="lr")
-            optimizer = tf.train.AdamOptimizer(lr)
-            train_op = optimizer.minimize(-self.log_ZSMC)
+            self.lr = tf.placeholder(tf.float32, name="lr")
+            optimizer = tf.train.AdamOptimizer(self.lr)
+            self.train_op = optimizer.minimize(-self.log_ZSMC)
 
         init = tf.global_variables_initializer()
         self.sess = tf.Session()
 
         print("initializing variables...")
         self.sess.run(init)
+        self.total_epoch_count = 0
 
-        # self.sess = tf_debug.LocalCLIDebugWrapperSession(self.sess)
-        # def my_filter_callable(datum, tensor):
-        #     return len(tensor.shape) == 0 and tensor == 0.0
-        # self.sess.add_tensor_filter("has_inf_or_nan", tf_debug.has_inf_or_nan)
+    def train(self,
+              obs_train,
+              hidden_train,
+              input_train,
+              mask_train,
+              time_interval_train,
+              extra_inputs_train,
+              print_freq,
+              epoch, lr):
 
-        # unused tensorboard stuff
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
 
-        for i in range(self.epoch):
+        for i in range(epoch):
             start = time.time()
 
             if i == 0:
-                self.evaluate_and_save_metrics(i, y_hat_N_BxTxDy, y_N_BxTxDy)
+                self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy)
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -180,7 +182,7 @@ class trainer:
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
-                self.sess.run(train_op,
+                self.sess.run(self.train_op,
                               feed_dict={self.obs:           obs_train[j:j + self.batch_size],
                                          self.hidden:        hidden_train[j:j + self.batch_size],
                                          self.input:         input_train[j:j + self.batch_size],
@@ -188,18 +190,18 @@ class trainer:
                                          self.mask:          mask_train[j:j+self.batch_size],
                                          self.time_interval: time_interval_train[j:j+self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
-                                         lr:                 self.lr})
+                                         self.lr:            lr})
 
-            if (i + 1) % print_freq == 0:
+            if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
-                    self.evaluate_and_save_metrics(i, y_hat_N_BxTxDy, y_N_BxTxDy)
+                    self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
 
                 if self.save_res:
                     if self.save_trajectory or self.draw_quiver_during_training:
-                        Xs_val = self.evaluate(Xs, self.test_feed_dict, average=False)
+                        Xs_val = self.evaluate(self.Xs, self.test_feed_dict, average=False)
 
                     if self.save_trajectory:
                         trajectory_dict = {"Xs": Xs_val}
@@ -207,13 +209,13 @@ class trainer:
                             pickle.dump(trajectory_dict, f)
 
                     if self.save_y_hat_train:
-                        y_hat_val_train = self.evaluate([y_hat_N_BxTxDy], self.train_feed_dict, average=False)[0]
+                        y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], self.train_feed_dict, average=False)[0]
                         y_hat_train_dict = {"y_hat_train": y_hat_val_train}
                         with open(self.epoch_data_DIR + "y_hat_train_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_train_dict, f)
 
                     if self.save_y_hat_test:
-                        y_hat_val_test = self.evaluate([y_hat_N_BxTxDy], self.test_feed_dict, average=False)[0]
+                        y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], self.test_feed_dict, average=False)[0]
                         y_hat_test_dict = {"y_hat_test": y_hat_val_test}
                         with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_test_dict, f)
@@ -224,8 +226,9 @@ class trainer:
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
 
+            self.total_epoch_count += 1
             end = time.time()
-            print("epoch {:<14} took {:.3f} seconds".format(i + 1, end - start))
+            print("epoch {:<14} took {:.3f} seconds".format(self.total_epoch_count, end - start))
 
         print("finished training...")
 
@@ -237,9 +240,9 @@ class trainer:
                    "R_square_percentage_tests":  self.R_square_percentage_tests,
                    "R_square_logp_trains":       self.R_square_logp_trains,
                    "R_square_logp_tests":        self.R_square_logp_tests}
-        log["y_hat_original"] = y_hat_N_BxTxDy
+        self.log["y_hat_original"] = self.y_hat_N_BxTxDy
 
-        return metrics, log
+        return metrics, self.log
 
     def close_session(self):
         self.sess.close()
@@ -333,11 +336,11 @@ class trainer:
                 print("valid cost not improving. reduce learning rate to {}".format(self.lr))
 
         if self.save_model:
-            if not os.path.exists(self.RLT_DIR + "model/"):
-                os.makedirs(self.RLT_DIR + "model/")
+            if not os.path.exists(self.checkpoint_dir + "model/"):
+                os.makedirs(self.checkpoint_dir + "model/")
             if self.bestCost == len(self.log_ZSMC_tests) - 1:
                 print("Test log_ZSMC improves to {}, save model".format(self.log_ZSMC_tests[-1]))
-                self.saver.save(self.sess, self.RLT_DIR + "model/model_epoch", global_step=iter_num + 1)
+                self.saver.save(self.sess, self.checkpoint_dir + "model/model_epoch", global_step=iter_num + 1)
 
     def evaluate(self, fetches, feed_dict_w_batches={}, average=False, keepdims=False):
         """
@@ -455,9 +458,9 @@ class trainer:
         plt.ylabel("x_dim 2")
 
         # sns.despine()
-        if not os.path.exists(self.RLT_DIR + "quiver/"):
-            os.makedirs(self.RLT_DIR + "quiver/")
-        plt.savefig(self.RLT_DIR + "quiver/epoch_{}".format(epoch))
+        if not os.path.exists(self.checkpoint_dir + "quiver/"):
+            os.makedirs(self.checkpoint_dir + "quiver/")
+        plt.savefig(self.checkpoint_dir + "quiver/epoch_{}".format(epoch))
         plt.close()
 
     def define2Dlattice(self, x1range=(-30.0, 30.0), x2range=(-30.0, 30.)):
@@ -481,9 +484,9 @@ class trainer:
             ax.plot(X_traj[:, 0], X_traj[:, 1], X_traj[:, 2])
             ax.scatter(X_traj[0, 0], X_traj[0, 1], X_traj[0, 2])
 
-        if not os.path.exists(self.RLT_DIR + "quiver/"):
-            os.makedirs(self.RLT_DIR + "quiver/")
+        if not os.path.exists(self.checkpoint_dir + "quiver/"):
+            os.makedirs(self.checkpoint_dir + "quiver/")
         for angle in range(45, 360, 45):
             ax.view_init(30, angle)
-            plt.savefig(self.RLT_DIR + "quiver/epoch_{}_angle_{}".format(epoch, angle))
+            plt.savefig(self.checkpoint_dir + "quiver/epoch_{}_angle_{}".format(epoch, angle))
         plt.close()

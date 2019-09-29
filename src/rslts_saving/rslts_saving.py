@@ -96,8 +96,8 @@ def plot_learning_results(RLT_DIR, Xs_val, hidden_train, saving_num=20):
             plt.close()
 
 
-def plot_log_ZSMC(RLT_DIR, log_ZSMC_trains, log_ZSMC_tests, print_freq):
-    epoch = np.arange(len(log_ZSMC_trains)) * print_freq
+def plot_log_ZSMC(RLT_DIR, log_ZSMC_trains, log_ZSMC_tests, start_idx, print_freq):
+    epoch = start_idx + np.arange(len(log_ZSMC_trains)) * print_freq
     plt.figure()
     plt.plot(epoch, log_ZSMC_trains)
     plt.plot(epoch, log_ZSMC_tests)
@@ -122,7 +122,7 @@ def plot_MSEs(RLT_DIR, MSE_trains, MSE_tests, print_freq):
         plt.close()
 
 
-def plot_R_square(RLT_DIR, R_square_trains, R_square_tests, print_freq):
+def plot_R_square(RLT_DIR, R_square_trains, R_square_tests, start_idx, print_freq):
     if not os.path.exists(RLT_DIR + "R_square"):
         os.makedirs(RLT_DIR + "R_square")
     # Plot and save losses
@@ -134,7 +134,7 @@ def plot_R_square(RLT_DIR, R_square_trains, R_square_tests, print_freq):
         plt.xlabel("K")
         plt.legend(["Train $R^2_k$", "Test $R^2_k$"], loc='best')
         sns.despine()
-        plt.savefig(RLT_DIR + "R_square/epoch_{}".format(i * print_freq))
+        plt.savefig(RLT_DIR + "R_square/epoch_{}".format(start_idx + i * print_freq))
         plt.close()
 
 
@@ -255,11 +255,12 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
         plt.close()
 
 
-def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, obs, mask, saving_num=20, to_normalize=True):
+def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, original_obs, mask, saving_num=20, to_normalize=True):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
     if saving_num == 0:
         return
+    obs = [np.array(obs_i) for obs_i in original_obs]
     if to_normalize:
         for i, obs_i in enumerate(obs):
             obs[i] = obs_i / np.sum(obs_i, axis=-1, keepdims=True)

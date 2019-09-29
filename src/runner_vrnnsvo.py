@@ -128,7 +128,7 @@ def main(_):
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)
-    print("RLT_DIR:", RLT_DIR)
+    print("checkpoint_dir:", RLT_DIR)
 
     # ============================================= training part ============================================ #
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)

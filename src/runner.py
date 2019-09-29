@@ -43,6 +43,8 @@ def main(_):
     else:
         raise ValueError("Unsupported emission!")
 
+    FLAGS.epochs = [int(epoch) for epoch in FLAGS.epochs.split(",")]
+
     training_sample_idx = [int(x) for x in FLAGS.training_sample_idx.split(",")]
     test_sample_idx = [int(x) for x in FLAGS.test_sample_idx.split(",")]
     if training_sample_idx == [-1]:
@@ -173,95 +175,114 @@ def main(_):
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
                          "lr":            FLAGS.lr,
-                         "epoch":         FLAGS.epoch,
+                         "epochs":         FLAGS.epochs,
                          "seed":          FLAGS.seed,
                          "rslt_dir_name": FLAGS.rslt_dir_name}
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)
-    print("RLT_DIR:", RLT_DIR)
+    print("checkpoint_dir:", RLT_DIR)
 
     # ============================================= training part ============================================ #
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
-    mytrainer.init_data_saving(RLT_DIR)
+    mytrainer.set_data_saving()
+    mytrainer.init_train(obs_train, obs_test, hidden_train, hidden_test, input_train, input_test,
+                         mask_train, mask_test, time_interval_train, time_interval_test,
+                         extra_inputs_train, extra_inputs_test)
 
-    history, log = mytrainer.train(obs_train, obs_test,
-                                   hidden_train, hidden_test,
-                                   input_train, input_test,
-                                   mask_train, mask_test,
-                                   time_interval_train, time_interval_test,
-                                   extra_inputs_train, extra_inputs_test,
-                                   print_freq)
+    for checkpoint_idx, epoch in enumerate(FLAGS.epochs):
+        print("\n\nStart training {}...".format(checkpoint_idx))
 
-    # ======================================== final data saving part ======================================== #
-    with open(RLT_DIR + "history.json", "w") as f:
-        json.dump(history, f, indent=4, cls=NumpyEncoder)
+        checkpoint_dir = RLT_DIR + "checkpoint_{}/".format(checkpoint_idx)
+        print("Creating checkpoint_{} directory...".format(checkpoint_idx))
+        os.makedirs(checkpoint_dir)
 
-    Xs, y_hat = log["Xs"], log["y_hat_original"]
-    Xs_val = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
+        mytrainer.set_saving_dir(checkpoint_dir)
 
-    y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
-    y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
-    print("finish evaluating training results")
+        history, log = mytrainer.train(obs_train,
+                                       hidden_train,
+                                       input_train,
+                                       mask_train,
+                                       time_interval_train,
+                                       extra_inputs_train,
+                                       print_freq, epoch, FLAGS.lr)
 
-    if FLAGS.emission == "mvn":
-        # transform log additive ratio back to observation
+        # ======================================== data saving part ======================================== #
 
-        percentage_hat_val_train = [[[] for _ in range(FLAGS.n_train)] for _ in range(FLAGS.MSE_steps+1)]
-        for i in range(len(y_hat_val_train)):
-            # y hat val = (batch_size, n_days, Dy)
-            for j in range(len(y_hat_val_train[i])):
-                n_days = y_hat_val_train[i][j].shape[0]  # (n_days, Dy)
+        with open(checkpoint_dir + "history.json", "w") as f:
+            json.dump(history, f, indent=4, cls=NumpyEncoder)
 
-                percentage = np.concatenate((y_hat_val_train[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
-                percentage = \
-                    np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
-                percentage_hat_val_train[i][j] = percentage
+        Xs, y_hat = log["Xs"], log["y_hat_original"]
+        Xs_val = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
 
-        percentage_hat_val_test = [[ [] for _ in range(FLAGS.n_test) ] for _ in range(FLAGS.MSE_steps+1)]
-        for i in range(len(y_hat_val_test)):
-            # y hat val = (batch_size, n_days, Dy)
-            for j in range(len(y_hat_val_test[i])):
-                n_days = y_hat_val_test[i][j].shape[0] # (n_days, Dy)
+        y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
+        y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
+        print("Finish evaluating training results...")
 
-                percentage = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
-                percentage = \
-                    np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+        if FLAGS.emission == "mvn":
+            # transform log additive ratio back to observation
 
-                percentage_hat_val_test[i][j] = percentage
+            percentage_hat_val_train = [[[] for _ in range(FLAGS.n_train)] for _ in range(FLAGS.MSE_steps+1)]
+            for i in range(len(y_hat_val_train)):
+                # y hat val = (batch_size, n_days, Dy)
+                for j in range(len(y_hat_val_train[i])):
+                    n_days = y_hat_val_train[i][j].shape[0]  # (n_days, Dy)
 
-        obs_train, obs_test, y_hat_val_train, y_hat_val_test = \
-            percentage_train, percentage_test, percentage_hat_val_train, percentage_hat_val_test
+                    percentage = np.concatenate((y_hat_val_train[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
+                    percentage = \
+                        np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+                    percentage_hat_val_train[i][j] = percentage
 
-    plot_y_hat(RLT_DIR + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
-               saving_num=FLAGS.saving_train_num)
-    plot_y_hat(RLT_DIR + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
+            percentage_hat_val_test = [[ [] for _ in range(FLAGS.n_test) ] for _ in range(FLAGS.MSE_steps+1)]
+            for i in range(len(y_hat_val_test)):
+                # y hat val = (batch_size, n_days, Dy)
+                for j in range(len(y_hat_val_test[i])):
+                    n_days = y_hat_val_test[i][j].shape[0] # (n_days, Dy)
 
-    plot_y_hat_bar_plot(RLT_DIR+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
-                        saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
-    plot_y_hat_bar_plot(RLT_DIR+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
-                        saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
+                    percentage = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
+                    percentage = \
+                        np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
 
-    if Dx == 2:
-        plot_fhn_results(RLT_DIR, Xs_val)
-    if Dx == 3:
-        plot_lorenz_results(RLT_DIR, Xs_val)
+                    percentage_hat_val_test[i][j] = percentage
 
-    testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
-                         "obs_test": obs_test[0:FLAGS.saving_test_num],
-                         "input_test": input_test[0:FLAGS.saving_test_num]}
-    
-    learned_model_dict = {"Xs_val": Xs_val,
-                          "y_hat_val_test": y_hat_val_test}
-    data_dict = {"testing_data_dict": testing_data_dict,
-                 "learned_model_dict": learned_model_dict}
-    
-    with open(RLT_DIR + "data.p", "wb") as f:
-        pickle.dump(data_dict, f)
+            obs_train, obs_test, y_hat_val_train, y_hat_val_test = \
+                percentage_train, percentage_test, percentage_hat_val_train, percentage_hat_val_test
 
-    #plot_MSEs(RLT_DIR, history["MSE_trains"], history["MSE_tests"], print_freq)
-    plot_R_square(RLT_DIR, history["R_square_trains"], history["R_square_tests"], print_freq)
-    plot_log_ZSMC(RLT_DIR, history["log_ZSMC_trains"], history["log_ZSMC_tests"], print_freq)
+        plot_y_hat(checkpoint_dir + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
+                   saving_num=FLAGS.saving_train_num)
 
-    print("finish plotting!")
+        plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
+
+        plot_y_hat_bar_plot(checkpoint_dir+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
+                            saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
+
+        plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
+                            saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
+
+        if Dx == 2:
+            plot_fhn_results(checkpoint_dir, Xs_val)
+        if Dx == 3:
+            plot_lorenz_results(checkpoint_dir, Xs_val)
+
+        testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
+                             "obs_test": obs_test[0:FLAGS.saving_test_num],
+                             "input_test": input_test[0:FLAGS.saving_test_num]}
+
+        learned_model_dict = {"Xs_val": Xs_val,
+                              "y_hat_val_test": y_hat_val_test}
+        data_dict = {"testing_data_dict": testing_data_dict,
+                     "learned_model_dict": learned_model_dict}
+
+        with open(checkpoint_dir + "data.p", "wb") as f:
+            pickle.dump(data_dict, f)
+
+        print(len(history["R_square_trains"]))
+        #plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
+        plot_start_idx = int(epoch/print_freq) + 1
+        plot_R_square(checkpoint_dir, history["R_square_trains"][-plot_start_idx:],
+                      history["R_square_tests"][-plot_start_idx:], plot_start_idx, print_freq)
+        plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][-plot_start_idx:],
+                      history["log_ZSMC_tests"][-plot_start_idx:], plot_start_idx, print_freq)
+
+        print("finish plotting!")
 
