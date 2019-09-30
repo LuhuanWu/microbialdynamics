@@ -190,6 +190,7 @@ def main(_):
                          mask_train, mask_test, time_interval_train, time_interval_test,
                          extra_inputs_train, extra_inputs_test)
 
+    plot_start_idx = 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):
         print("\n\nStart training {}...".format(checkpoint_idx))
 
@@ -278,11 +279,12 @@ def main(_):
 
         print(len(history["R_square_trains"]))
         #plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
-        plot_start_idx = int(epoch/print_freq) + 1
-        plot_R_square(checkpoint_dir, history["R_square_trains"][-plot_start_idx:],
-                      history["R_square_tests"][-plot_start_idx:], plot_start_idx, print_freq)
-        plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][-plot_start_idx:],
-                      history["log_ZSMC_tests"][-plot_start_idx:], plot_start_idx, print_freq)
+
+        plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
+                      history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
+        plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][plot_start_idx:],
+                      history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
+        plot_start_idx += int(epoch / print_freq) + 1
 
         print("finish plotting!")
 
