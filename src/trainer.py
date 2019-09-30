@@ -146,8 +146,8 @@ class trainer:
                                                          self.mask, self.extra_inputs)
 
         with tf.variable_scope("train"):
-            self.lr = tf.placeholder(tf.float32, name="lr")
-            optimizer = tf.train.AdamOptimizer(self.lr)
+            self.lr_holder = tf.placeholder(tf.float32, name="lr")
+            optimizer = tf.train.AdamOptimizer(self.lr_holder)
             self.train_op = optimizer.minimize(-self.log_ZSMC)
 
         init = tf.global_variables_initializer()
@@ -165,7 +165,7 @@ class trainer:
               time_interval_train,
               extra_inputs_train,
               print_freq,
-              epoch, lr):
+              epoch):
 
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
@@ -190,7 +190,7 @@ class trainer:
                                          self.mask:          mask_train[j:j+self.batch_size],
                                          self.time_interval: time_interval_train[j:j+self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
-                                         self.lr:            lr})
+                                         self.lr_holder:     self.lr})
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:

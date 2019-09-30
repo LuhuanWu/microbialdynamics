@@ -205,7 +205,7 @@ def main(_):
                                        mask_train,
                                        time_interval_train,
                                        extra_inputs_train,
-                                       print_freq, epoch, FLAGS.lr)
+                                       print_freq, epoch)
 
         # ======================================== data saving part ======================================== #
 
