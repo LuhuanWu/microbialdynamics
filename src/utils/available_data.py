@@ -95,6 +95,11 @@ clv_count_Dx_10_obs02_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_
 clv_count_Dx_10_obs04_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_04.p"
 clv_count_Dx_10_obs06_data_dir = "data/clv/diff_percentage/clv_count_Dx_10_obsp_06.p"
 
+############# experiments of sparsity / different observation percentages, with same account of total observations ####
+clv_count_Dx_10_obs02s_data_dir = "data/clv/diff_percentage_s/clv_count_Dx_10_obsp_02.p"
+clv_count_Dx_10_obs04s_data_dir = "data/clv/diff_percentage_s/clv_count_Dx_10_obsp_04.p"
+clv_count_Dx_10_obs06s_data_dir = "data/clv/diff_percentage_s/clv_count_Dx_10_obsp_06.p"
+
 
 PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
                             percentage_split_3=percentage_split_3_dir,
@@ -173,6 +178,9 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx_10_obs_02=clv_count_Dx_10_obs02_data_dir,
                        clv_count_Dx_10_obs_04=clv_count_Dx_10_obs04_data_dir,
                        clv_count_Dx_10_obs_06=clv_count_Dx_10_obs06_data_dir,
+                       clv_count_Dx_10_obs_02s=clv_count_Dx_10_obs02s_data_dir,
+                       clv_count_Dx_10_obs_04s=clv_count_Dx_10_obs04s_data_dir,
+                       clv_count_Dx_10_obs_06s=clv_count_Dx_10_obs06s_data_dir,
                        )
 
 

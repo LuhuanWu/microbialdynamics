@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 6                # dimension of hidden states
-Dy = 7                  # dimension of observations. for microbio data, Dy = 11
+Dx = 10                # dimension of hidden states
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 10                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
@@ -40,7 +40,7 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/available_data.py
-data_type = "clv_count_Dx_6_obs_02"
+data_type = "clv_count_Dx_10_obs_02s"
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -106,7 +106,7 @@ two_step_emission = True
 two_step_emission_type = "inv_lar"  # choose from MLP and inv_lar
 
 # f_transformation
-f_transformation = "clv"  # choose from MLP, linear, clv
+f_transformation = "clv_original"  # choose from MLP, linear, clv, clv_original
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -161,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_difflength"
+rslt_dir_name = "test_clv_simulation"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -276,7 +276,7 @@ flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichl
 flags.DEFINE_boolean("two_step_emission", two_step_emission, "whether add a Gaussian layer in the middle of emission")
 flags.DEFINE_string("two_step_emission_type", two_step_emission_type, "choose from inv_lar and MLP")
 
-flags.DEFINE_string("f_transformation", f_transformation, "type of f_transformation, choose from MLP, linear and clv")
+flags.DEFINE_string("f_transformation", f_transformation, "type of f_transformation, choose from MLP, linear, clv and clv_original")
 
 flags.DEFINE_boolean("use_bootstrap", use_bootstrap, "whether q1 and f share the same network, "
                                                      "(ATTENTION: even if use_2_q == True, "

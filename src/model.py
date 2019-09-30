@@ -6,6 +6,7 @@ from src.transformation.MLP import MLP_transformation
 from src.transformation.inverse_lar import inver_lar_transformation
 from src.transformation.linear import tf_linear_transformation
 from src.transformation.clv import clv_transformation
+from src.transformation.clv_original import clv_original_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
@@ -115,6 +116,15 @@ class SSM(object):
             W1 = tf.Variable(tf.zeros((self.Dev, self.Dx)))
             W2 = tf.Variable(tf.zeros((self.Dx+1, 1)))
             self.f_tran = clv_transformation(params=(A, g, Wg, W1, W2))
+
+        elif self.f_transformation == "clv_original":
+            A = tf.Variable(tf.zeros((self.Dx + 1, self.Dx)))
+            g = tf.Variable(tf.zeros((self.Dx,)))
+            Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+            self.f_tran = clv_original_transformation(params=(A, g, Wg))
+
+        else:
+            raise ValueError("Invalid value for f_transformation. Must choose from MLP, linear, clv and clv_original.")
 
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
                                           output_cov=self.output_cov,
