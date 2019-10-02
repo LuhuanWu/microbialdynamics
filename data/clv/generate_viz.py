@@ -14,9 +14,9 @@ from src.utils.available_data import DATA_DIR_DICT
 
 
 @click.command()
-@click.option('--data_type', default=None)
+@click.option('--data_type', default="clv_count_Dx_10_obs_10s_no_noise")
 @click.option('--viz_dir', default='visualizations', help='directory of visualization plots')
-@click.option('--plot_idx', default='1,2,3', help="idx of the samples to plot")
+@click.option('--plot_idx', default=','.join(map(str, np.arange(10))), help="idx of the samples to plot")
 def generate_visualizations(data_type, viz_dir, plot_idx):
     if data_type is None:
         print("Must provide data_type.")
