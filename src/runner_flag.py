@@ -336,7 +336,7 @@ flags.DEFINE_boolean("save_model", save_model, "whether to save model")
 
 # for debug purpose
 flags.DEFINE_boolean("print_f", True, "whether to print f or not")
-flags.DEFINE_integer("pring_f_frequency", 2, "frequency of printing f")
+flags.DEFINE_integer("print_f_frequency", 2, "frequency of printing f")
 
 FLAGS = flags.FLAGS
 
