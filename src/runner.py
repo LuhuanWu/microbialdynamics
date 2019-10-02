@@ -280,8 +280,8 @@ def main(_):
         print(len(history["R_square_trains"]))
         #plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
 
-        plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
-                      history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
+        #plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
+         #             history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][plot_start_idx:],
                       history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_start_idx += int(epoch / print_freq) + 1
