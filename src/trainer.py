@@ -226,6 +226,11 @@ class trainer:
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
 
+                if self.FLAGS.print_f and (self.total_epoch_count + 1) % print_freq == 0:
+                    if self.FLAGS.f_transformation == "MLP":
+                        print("f mlp parameters:")
+                        print(self.sess.run(self.model.f_tran.get_variables()))
+
             self.total_epoch_count += 1
             end = time.time()
             print("epoch {:<14} took {:.3f} seconds".format(self.total_epoch_count, end - start))

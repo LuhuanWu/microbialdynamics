@@ -31,7 +31,7 @@ Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [3]  # 500*100 #100*200
+epochs = [5]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -333,6 +333,10 @@ flags.DEFINE_integer("saving_test_num", saving_test_num, "number of testing data
 
 flags.DEFINE_boolean("save_tensorboard", save_tensorboard, "whether to save tensorboard")
 flags.DEFINE_boolean("save_model", save_model, "whether to save model")
+
+# for debug purpose
+flags.DEFINE_boolean("print_f", True, "whether to print f or not")
+flags.DEFINE_integer("pring_f_frequency", 2, "frequency of printing f")
 
 FLAGS = flags.FLAGS
 
