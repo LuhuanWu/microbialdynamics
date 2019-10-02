@@ -31,7 +31,7 @@ Dev = 5                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [3,4]  # 500*100 #100*200
+epochs = [5]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -40,7 +40,7 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/available_data.py
-data_type = "clv_count_Dx_10_obs_02s"
+data_type = "clv_count_Dx_10_obs_06s"
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -106,7 +106,7 @@ two_step_emission = True
 two_step_emission_type = "inv_lar"  # choose from MLP and inv_lar
 
 # f_transformation
-f_transformation = "clv_original"  # choose from MLP, linear, clv, clv_original
+f_transformation = "MLP"  # choose from MLP, linear, clv, clv_original
 
 # whether q1 (evolution term in proposal) and f share the same network
 # (ATTENTION: even if use_2_q == True, f and q1 can still use different networks)
@@ -161,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_clv_simulation"
+rslt_dir_name = "test_mlp"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -333,6 +333,10 @@ flags.DEFINE_integer("saving_test_num", saving_test_num, "number of testing data
 
 flags.DEFINE_boolean("save_tensorboard", save_tensorboard, "whether to save tensorboard")
 flags.DEFINE_boolean("save_model", save_model, "whether to save model")
+
+# for debug purpose
+flags.DEFINE_boolean("print_f", True, "whether to print f or not")
+flags.DEFINE_integer("print_f_frequency", 2, "frequency of printing f")
 
 FLAGS = flags.FLAGS
 
