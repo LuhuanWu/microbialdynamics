@@ -22,7 +22,7 @@ from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
 
 from src.utils.data_generator import generate_dataset
-from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_DICT, COUNT_DATA_DICT
+from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_DICT, COUNT_DATA_DICT, INTERPOLATION_DATA_DICT
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
 
@@ -60,85 +60,64 @@ def main(_):
 
     # ============================================= dataset part ============================================= #
     # generate data from simulation
-    if FLAGS.generate_training_data:
-        raise ValueError("Cannot generate data set from simulation, please provide a dataset file")
-    # load data from file
+    repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    # repo = git.Repo('.', search_parent_directories=True)
+    # repo_dir = repo.working_tree_dir  # microbialdynamics
+
+    data_dir = DATA_DIR_DICT[FLAGS.data_type]
+    data_dir = os.path.join(repo_dir, data_dir)
+    if FLAGS.interpolation_data_type == "placeholder":
+        interpolation_data = None
     else:
-        repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        # repo = git.Repo('.', search_parent_directories=True)
-        # repo_dir = repo.working_tree_dir  # microbialdynamics
+        interpolation_data_dir = INTERPOLATION_DATA_DICT[FLAGS.interpolation_data_type]
+        interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
+        with open(interpolation_data_dir, "rb") as f:
+            interpolation_data = pickle.load(f)
 
-        data_dir = DATA_DIR_DICT[FLAGS.data_type]
-        data_dir = os.path.join(repo_dir, data_dir)
+    if FLAGS.data_type == "toy":
+        print("Use toy data")
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
+        print("Finish loading the toy data.")
 
-        if FLAGS.data_type == "toy":
-            print("Use toy data")
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
-            print("Finish loading the toy data.")
+        train_num, test_num = len(obs_train), len(obs_test)
+        T_train, T_test = obs_train[0].shape[0], obs_test[0].shape[0]
 
-            train_num = len(obs_train)
-            T_train = obs_train[0].shape[0]
-            test_num = len(obs_test)
-            T_test = obs_test[0].shape[0]
-            _mask_train = np.ones((train_num, T_train), dtype=bool)
-            _mask_test = np.ones((test_num, T_test), dtype=bool)
+        _mask_train, _mask_test = np.ones((train_num, T_train), dtype=bool), np.ones((test_num, T_test), dtype=bool)
+        time_interval_train, time_interval_test = np.zeros_like(_mask_train), np.zeros_like(_mask_test)
+        extra_inputs_train, extra_inputs_test = np.zeros((train_num, T_train)), np.zeros((test_num, T_test))
 
-            time_interval_train = np.zeros_like(_mask_train)
-            time_interval_test = np.zeros_like(_mask_test)
+    elif FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+        extra_inputs_train, extra_inputs_test = \
+            load_data(data_dir, Dx, FLAGS.isPython2,
+                      training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
+        FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
 
-            extra_inputs_train = np.zeros((train_num, T_train))
-            extra_inputs_test = np.zeros((test_num, T_test))
+        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+        _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
+            interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                             extra_inputs_train, extra_inputs_test, FLAGS.use_gp, interpolation_data)
 
-        elif FLAGS.data_type in PERCENTAGE_DATA_DICT:
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            extra_inputs_train, extra_inputs_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2,
-                          training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
-            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
+        if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.emission == "mvn":
+            # transform to log additive ratio
+            percentage_train = []
+            for i in range(len(obs_train)):
+                percentage_train.append(obs_train[i])
+                obs_train[i] = np.log(obs_train[i][:,:-1]) - np.log(obs_train[i][:, -1:])
 
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
-                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                                 extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
+            percentage_test = []
+            for i in range(len(obs_test)):
+                percentage_test.append(obs_test[i])
+                obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
+    else:
+        raise ValueError("Data type must be one of available data types.")
 
-            if FLAGS.emission == "mvn":
-                # transform to log additive ratio
-                percentage_train = []
-                for i in range(len(obs_train)):
-                    percentage_train.append(obs_train[i])
-                    obs_train[i] = np.log(obs_train[i][:,:-1]) - np.log(obs_train[i][:, -1:])
-
-                percentage_test = []
-                for i in range(len(obs_test)):
-                    percentage_test.append(obs_test[i])
-                    obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
-
-        elif FLAGS.data_type in COUNT_DATA_DICT:
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,\
-            extra_inputs_train, extra_inputs_test = \
-                load_data(data_dir, Dx, FLAGS.isPython2,
-                          training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
-            FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
-
-            hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
-                interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                                 extra_inputs_train, extra_inputs_test, FLAGS.use_gp)
-
-        else:
-            raise ValueError("Data type must be one of available data types.")
-
-        if FLAGS.use_mask:
-            mask_train, mask_test = _mask_train, _mask_test
-        else:
-            # set all the elements of mask to be True
-            mask_train = []
-            for m in _mask_train:
-                mask_train.append(np.ones_like(m, dtype=bool))
-
-            mask_test = []
-            for m in _mask_test:
-                mask_test.append(np.ones_like(m, dtype=bool))
+    if FLAGS.use_mask:
+        mask_train, mask_test = _mask_train, _mask_test
+    else:
+        # set all the elements of mask to be True
+        mask_train = [np.ones_like(m, dtype=bool) for m in _mask_train]
+        mask_test = [np.ones_like(m, dtype=bool) for m in _mask_test]
 
     # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
@@ -234,7 +213,7 @@ def main(_):
                         np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
                     percentage_hat_val_train[i][j] = percentage
 
-            percentage_hat_val_test = [[ [] for _ in range(FLAGS.n_test) ] for _ in range(FLAGS.MSE_steps+1)]
+            percentage_hat_val_test = [[[] for _ in range(FLAGS.saving_test_num)] for _ in range(FLAGS.MSE_steps+1)]
             for i in range(len(y_hat_val_test)):
                 # y hat val = (batch_size, n_days, Dy)
                 for j in range(len(y_hat_val_test[i])):
@@ -251,12 +230,9 @@ def main(_):
 
         plot_y_hat(checkpoint_dir + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                    saving_num=FLAGS.saving_train_num)
-
         plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
-
         plot_y_hat_bar_plot(checkpoint_dir+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
                             saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
-
         plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
@@ -277,14 +253,18 @@ def main(_):
         with open(checkpoint_dir + "data.p", "wb") as f:
             pickle.dump(data_dict, f)
 
-        print(len(history["R_square_trains"]))
-        #plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
-
-        #plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
-         #             history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
+        # plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
+        #
+        # plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
+        #              history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][plot_start_idx:],
                       history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_start_idx += int(epoch / print_freq) + 1
+
+        y_hat_unmasked = mytrainer.evaluate(mytrainer.y_hat_unmasked_N_BxTxDy, mytrainer.train_all_feed_dict)
+        y_hat_train_0_step = y_hat_unmasked[0]
+        with open(os.path.join(checkpoint_dir, "y_hat_train.p"), "wb") as f:
+            pickle.dump(y_hat_train_0_step, f)
 
         print("finish plotting!")
 

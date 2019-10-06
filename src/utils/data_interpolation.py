@@ -4,7 +4,7 @@ from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
 
 
 def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                     extra_inputs_train, extra_inputs_test, use_gp):
+                     extra_inputs_train, extra_inputs_test, use_gp, interpolation_data=None):
     interpolated_hidden_train = []
     interpolated_hidden_test = []
     interpolated_obs_train = []
@@ -18,9 +18,16 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
     interpolated_extra_inputs_train = []
     interpolated_extra_inputs_test = []
 
-    for hidden, obs, input, extra_inputs in zip(hidden_train, obs_train, input_train, extra_inputs_train):
+    if interpolation_data is not None:
+        # print(len(interpolation_data), len(obs_train))
+        assert len(interpolation_data) == len(obs_train)
+    else:
+        interpolation_data = [None] * len(obs_train)
+
+    for hidden, obs, input, extra_inputs, interpolation in \
+            zip(hidden_train, obs_train, input_train, extra_inputs_train, interpolation_data):
         hidden, obs, input, mask, time_interval, extra_inputs = \
-            interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp)
+            interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, interpolation)
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
         interpolated_input_train.append(input)
@@ -44,7 +51,8 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
            interpolated_extra_inputs_train, interpolated_extra_inputs_test
 
 
-def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count=1, pseudo_percentage=1e-6):
+def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp,
+                          interpolation=None, pseudo_count=1, pseudo_percentage=1e-6):
     """
 
     :param hidden: (n_obs, Dx)
@@ -64,6 +72,9 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count
     mask = np.ones((time, ), dtype=bool)
     time_interval = np.zeros((time, ))
 
+    if interpolation is not None:
+        interpolation = np.round(interpolation).astype(int) + pseudo_count
+
     i = 0
     for t in np.arange(days[0], days[-1] + 1):
         idx = t - days[0]
@@ -81,7 +92,6 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count
     Dy = obs.shape[1] - 1
 
     if use_gp:
-
         X = np.atleast_2d(days).T
         y = obs[:, 1:]
 
@@ -92,18 +102,6 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count
 
         X_pred = np.atleast_2d(np.arange(days[0], days[-1] + 1)).T
         interpolated_obs, sigma = gp.predict(X_pred, return_std=True)
-
-        # plt.figure()
-        # plt.plot(X_pred, interpolated_obs, 'b-', label='Prediction')
-        # plt.fill(np.concatenate([X_pred, X_pred[::-1]]),
-        #          np.concatenate([interpolated_obs - 1.9600 * sigma,
-        #                          (interpolated_obs + 1.9600 * sigma)[::-1]]),
-        #          alpha=.5, fc='b', ec='None', label='95% confidence interval')
-        # plt.xlabel('$x$')
-        # plt.ylabel('$y$')
-        # plt.legend(loc='upper left')
-        # plt.show()
-
     else:
         interpolated_obs = np.zeros((time, Dy))
         last_valid_value = np.ones(Dy) / Dy
@@ -120,6 +118,10 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count
                 i += 1
             else:
                 interpolated_obs[t - days[0]] = last_valid_value
+        if interpolation is not None:
+            assert interpolation.shape == (time, Dy)
+            for i, (m, obs, iobs) in enumerate(zip(mask, interpolated_obs, interpolation)):
+                interpolated_obs[i] = obs if m else iobs
 
     # input
     Dv = input.shape[1] - 1
@@ -142,6 +144,9 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, use_gp, pseudo_count
                 i += 1
             else:
                 interpolated_extra_inputs[t - days[0]] = last_valid_value
+    if interpolation is not None:
+        for i, (m, ei, iobs) in enumerate(zip(mask, interpolated_extra_inputs, interpolation)):
+            interpolated_extra_inputs[i] = ei if m else np.sum(iobs)
 
     return hidden, interpolated_obs, interpolated_input, mask, time_interval, interpolated_extra_inputs
 

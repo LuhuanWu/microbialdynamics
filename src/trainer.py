@@ -130,6 +130,14 @@ class trainer:
                                 self.time_interval: time_interval_train[0:self.saving_train_num],
                                 self.extra_inputs: extra_inputs_train[0: self.saving_train_num]}
 
+        self.train_all_feed_dict = {self.obs: obs_train,
+                                    self.hidden: hidden_train,
+                                    self.input: input_train,
+                                    self.time: [obs.shape[0] for obs in obs_train],
+                                    self.mask: mask_train,
+                                    self.time_interval: time_interval_train,
+                                    self.extra_inputs: extra_inputs_train}
+
         self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
                                self.hidden: hidden_test[0:self.saving_test_num],
                                self.input: input_test[0:self.saving_test_num],
@@ -141,9 +149,9 @@ class trainer:
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         self.Xs = self.log["Xs"]
-        self.y_hat_N_BxTxDy, self.y_N_BxTxDy = self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
-                                                         self.hidden, self.obs, self.input_embedding,
-                                                         self.mask, self.extra_inputs)
+        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.y_hat_unmasked_N_BxTxDy = \
+            self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
+                                self.hidden, self.obs, self.input_embedding, self.mask, self.extra_inputs)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")

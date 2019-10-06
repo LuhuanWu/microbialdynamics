@@ -104,6 +104,8 @@ clv_count_Dx_10_obs02s_no_noise_data_dir = "data/clv/compare_noise/clv_count_Dx_
 clv_count_Dx_10_obs06s_no_noise_data_dir = "data/clv/compare_noise/clv_count_Dx_10_obsp_06_no_noise.p"
 clv_count_Dx_10_obs10s_no_noise_data_dir = "data/clv/compare_noise/clv_count_Dx_10_obsp_10_no_noise.p"
 
+count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
+
 
 PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
                             percentage_split_3=percentage_split_3_dir,
@@ -190,6 +192,8 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx_10_obs_10s_no_noise=clv_count_Dx_10_obs10s_no_noise_data_dir,
                        )
 
+
+INTERPOLATION_DATA_DICT = dict(count_clv=count_clv_interpolation_data_dir)
 
 DATA_DIR_DICT = {**PERCENTAGE_DATA_DICT, **COUNT_DATA_DICT}
 DATA_DIR_DICT["toy"] = toy_data_dir

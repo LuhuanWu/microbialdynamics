@@ -26,12 +26,12 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 10                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
+Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [5]  # 500*100 #100*200
+epochs = [5, 5]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -40,7 +40,8 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/available_data.py
-data_type = "clv_count_Dx_10_obs_06s"
+data_type = "count"
+interpolation_data_type = "placeholder" # placeholder
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -140,10 +141,10 @@ BSim_use_single_RNN = False
 # ----------------------------- Training ----------------------------- #
 
 # stop training early if validation set does not improve
-early_stop_patience = 8000
+early_stop_patience = 400
 
 # reduce learning rate when testing loss doesn't improve for some time
-lr_reduce_patience = 100
+lr_reduce_patience = 50
 
 # the factor to reduce lr, new_lr = old_lr * lr_reduce_factor
 lr_reduce_factor = 1 / np.sqrt(2)
@@ -217,6 +218,8 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
+flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The prediction to interpolate missing obs.")
+
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
 
