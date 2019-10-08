@@ -224,20 +224,24 @@ def plot_y_hat(RLT_DIR, ys_hat_val, obs, mask, saving_num=20):
             plt.close()
 
 
-def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar_plots"):
+def plot_obs_bar_plot(batch_obs_original, batch_mask=None, to_normalize=True, rslt_dir="obs_bar_plots"):
+
     if to_normalize:
-        for i, obs in enumerate(batch_obs):
-            batch_obs[i] = obs / np.sum(obs, axis=-1, keepdims=True)
+        batch_obs = []
+        for i, obs in enumerate(batch_obs_original):
+            batch_obs.append(obs / np.sum(obs, axis=-1, keepdims=True))
+    else:
+        batch_obs = batch_obs_original
 
     Dy = batch_obs[0].shape[-1]
 
     for i, obs in enumerate(batch_obs):
         time = obs.shape[0]
-        if mask is None:
+        if batch_mask is None:
             masked_obs = obs
         else:
             masked_obs = np.zeros_like(obs)
-            masked_obs[mask] = obs[mask]
+            masked_obs[batch_mask[i]] = obs[batch_mask[i]]
 
         plt.figure(figsize=(15,5))
         plt.title("obs idx {} ground truth".format(i))
@@ -250,7 +254,7 @@ def plot_obs_bar_plot(batch_obs, mask=None, to_normalize=True, rslt_dir="obs_bar
         plt.xticks(np.arange(time))
         sns.despine()
         if not os.path.exists(rslt_dir):
-            os.mkdir(rslt_dir)
+            os.makedirs(rslt_dir)
         plt.savefig(rslt_dir + "/obs_idx_{} truth".format(i))
         plt.close()
 

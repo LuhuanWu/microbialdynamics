@@ -96,7 +96,8 @@ def main(_):
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
         _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
             interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                             extra_inputs_train, extra_inputs_test, FLAGS.use_gp, interpolation_data)
+                             extra_inputs_train, extra_inputs_test,
+                             interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data)
 
         if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.emission == "mvn":
             # transform to log additive ratio

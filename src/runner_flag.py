@@ -41,7 +41,8 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_data_type = "placeholder" # placeholder
+interpolation_type = None  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
+interpolation_data_type = "placeholder" # choose from "placeholder" and "cound_clv"
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -49,8 +50,6 @@ training_sample_idx = [-1]
 test_sample_idx = [-1]
 
 isPython2 = False
-
-use_gp = False  # whether use GP for last valid value for data interpolation
 
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
@@ -162,7 +161,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_mlp"
+rslt_dir_name = "test_interpolate"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -218,14 +217,14 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: generate data set from simulation; "
                                                                    "False: read data set from the file")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
+flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
+                                                              "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
 flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The prediction to interpolate missing obs.")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
 
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
-
-flags.DEFINE_boolean("use_gp", use_gp, "Whether to use gaussian processes or last valid value for data interpolation")
 
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")

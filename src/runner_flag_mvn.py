@@ -49,8 +49,6 @@ test_sample_idx = [6,7] #[17,18,19,20]
 
 isPython2 = False
 
-use_gp = False  # whether use GP for last valid value for data interpolation
-
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
 n_train = 2 * batch_size
@@ -219,8 +217,6 @@ flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples 
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
 
 flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
-
-flags.DEFINE_boolean("use_gp", use_gp, "Whether to use gaussian processes or last valid value for data interpolation")
 
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
