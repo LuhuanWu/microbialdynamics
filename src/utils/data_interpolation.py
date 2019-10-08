@@ -76,8 +76,8 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
     time_interval = np.zeros((time, ))
 
     if interpolation_type is not None:
-        assert interpolation_type in ["linear_lar", "gp_lar", "gp", "clv"], \
-            "interpolation type must be one of linear_lar, gp_lar, gp and clv, " \
+        assert interpolation_type in ["linear_lar", "gp_lar", "gp", "count_clv"], \
+            "interpolation type must be one of linear_lar, gp_lar, gp and count_clv, " \
             "but receives input as {}".format(interpolation_type)
 
     i = 0
@@ -150,7 +150,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
         assert interpolated_obs.shape == (time, Dy)
         interpolated_obs[days - days[0]] = obs[:, 1:]
 
-    elif interpolation_type == "clv":
+    elif interpolation_type == "count_clv":
         assert interpolation is not None
         interpolation = np.round(interpolation).astype(int) + pseudo_count
         assert interpolation.shape == (time, Dy)
@@ -298,7 +298,7 @@ def test_linear_interpolation():
         "interpolated_lars = {} \n the correct lars = {}".format(interpolated_lars, correct_interpolated_lars)
 
 
-def test_interpolate_data(interpolation_type, interpolation_data_type="placeholder", plot_interpolation=False,
+def test_interpolate_data(interpolation_type, plot_interpolation=False,
                           plot_dir=None, plot_ground_truth=False):
     from src.utils.data_loader import load_data
     from src.utils.available_data import DATA_DIR_DICT
@@ -319,16 +319,16 @@ def test_interpolate_data(interpolation_type, interpolation_data_type="placehold
         load_data(data_dir, Dx, False,
                   training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
 
-    if interpolation_data_type == 'placeholder':
-        interpolation_data = None
-    else:
+    if interpolation_type == 'count_clv':
         from src.utils.available_data import INTERPOLATION_DATA_DICT
         import pickle
 
-        interpolation_data_dir = INTERPOLATION_DATA_DICT[interpolation_data_type]
+        interpolation_data_dir = INTERPOLATION_DATA_DICT['count_clv']
         interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
         with open(interpolation_data_dir, "rb") as f:
             interpolation_data = pickle.load(f)
+    else:
+        interpolation_data = None
 
     hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
     _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
@@ -352,31 +352,23 @@ def test_interpolate_data(interpolation_type, interpolation_data_type="placehold
 if __name__ == "__main__":
     # test_linear_interpolation()
     print("hey")
-    """
-    test_interpolate_data(interpolation_type="linear_lar", interpolation_data_type="placeholder",
-                          plot=True, plot_dir='test_interpolation/linear_lar')
 
-    test_interpolate_data(interpolation_type="gp_lar", interpolation_data="placeholder",
-                          plot=True, plot_dir='test_interpolation/gp_lar')
-    """
+    test_interpolate_data(interpolation_type="linear_lar", plot_interpolation=False,
+                    plot_dir='test_interpolation/linear_lar')
 
-    """
-    test_interpolate_data(interpolation_type="gp", interpolation_data="placeholder",
-                          plot=True, plot_dir="test_interpolation/gp")
-    """
+    test_interpolate_data(interpolation_type="gp_lar", plot_interpolation=False, plot_dir='test_interpolation/gp_lar')
 
-    """
 
-    test_interpolate_data(interpolation_type="clv", interpolation_data_type="count_clv",
-                          plot=True, plot_dir="test_interpolation/clv")
-    """
 
-    test_interpolate_data(interpolation_type=None, interpolation_data_type="placeholder", plot_interpolation=False,
-                          plot_dir="test_interpolation/ground_truth", plot_ground_truth=True)
-    """
-    test_interpolate_data(interpolation_type=None, interpolation_data="placeholder", plot=True,
-                          plot_dir="test_interpolation/vanilla_interpolate")
-    """
+    # test_interpolate_data(interpolation_type="gp", plot_interpolation=False, plot_dir="test_interpolation/gp")
+
+
+    test_interpolate_data(interpolation_type="count_clv",
+                          plot_interpolation=True, plot_dir="test_interpolation/clv")
+
+
+    test_interpolate_data(interpolation_type=None, plot_interpolation=False,
+                          plot_dir="test_interpolation/ground_truth", plot_ground_truth=False)
 
 
 
