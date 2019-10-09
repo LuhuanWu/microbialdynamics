@@ -41,7 +41,7 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_type = None  # choose from 'linear_lar', 'gp_lar', 'count_clv' and None
+interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
