@@ -201,11 +201,13 @@ class SVO:
                 g_input = X_t
             if self.two_step_emission:
                 g_input, _h_t_log_prob = self.h.sample_and_log_prob(g_input)
-                _h_t_log_prob_0 = tf.zeros_like(_h_t_log_prob)  # dummy values for missing observations
-                h_t_log_prob = tf.where(mask[0][0], _h_t_log_prob, _h_t_log_prob_0, name="h_t_log_prob")
+                #_h_t_log_prob_0 = tf.zeros_like(_h_t_log_prob)  # dummy values for missing observations
+                #h_t_log_prob = tf.where(mask[0][0], _h_t_log_prob, _h_t_log_prob_0, name="h_t_log_prob")
+                h_t_log_prob = _h_t_log_prob
             _g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
-            _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
-            g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
+            #_g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
+            #g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
+            g_t_log_prob = _g_t_log_prob
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
             if self.two_step_emission:
