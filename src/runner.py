@@ -116,12 +116,15 @@ def main(_):
     else:
         raise ValueError("Data type must be one of available data types.")
 
+    """
     if FLAGS.use_mask:
         mask_train, mask_test = _mask_train, _mask_test
     else:
         # set all the elements of mask to be True
         mask_train = [np.ones_like(m, dtype=bool) for m in _mask_train]
         mask_test = [np.ones_like(m, dtype=bool) for m in _mask_test]
+    """
+    mask_train, mask_test = _mask_train, _mask_test
 
     # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])

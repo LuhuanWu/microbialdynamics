@@ -95,7 +95,7 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
-use_mask = True
+use_mask = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 # whether emission uses Dirichlet distribution
 emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
