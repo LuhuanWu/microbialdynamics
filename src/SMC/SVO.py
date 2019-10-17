@@ -515,7 +515,9 @@ class SVO:
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
 
                 f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dev)
+                f_k_feed = tf.transpose(f_k_feed, [1, 0, 2])
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
+                x_BxTmkxDz = tf.transpose(x_BxTmkxDz, [1, 0, 2])
 
             if self.log_dynamics or self.lar_dynamics:
                 g_input = tf.exp(x_BxTmkxDz)

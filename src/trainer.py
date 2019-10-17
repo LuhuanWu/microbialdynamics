@@ -124,7 +124,7 @@ class trainer:
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
         self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
-                                                   self.time_interval, self.extra_inputs)
+                                                        self.time_interval, self.extra_inputs)
 
         self.train_feed_dict = {self.obs: obs_train[0:self.saving_train_num],
                                 self.hidden: hidden_train[0:self.saving_train_num],

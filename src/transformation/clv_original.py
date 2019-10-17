@@ -23,7 +23,11 @@ class clv_original_transformation(transformation):
         # W1 (Dev, Dx)
         # W2 (Dx+1, 1)
 
-        assert len(Input.shape) == 3
+        shape = Input.shape.as_list()
+        if len(shape) > 3:
+            batch_size, DxpDev = shape[-2], shape[-1]
+            shape[-1] = Dx
+            Input = tf.reshape(Input, (-1, batch_size, DxpDev))
         assert Dx > 0
 
         x = Input[..., 0:Dx]  # (n_particles, batch_size, Dx)
@@ -42,4 +46,6 @@ class clv_original_transformation(transformation):
         else:
             output = x + g + batch_matmul(p, A)
 
+        if len(shape) > 3:
+            output = tf.reshape(output, shape)
         return output
