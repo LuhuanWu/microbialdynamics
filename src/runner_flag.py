@@ -31,7 +31,7 @@ Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [5, 5]  # 500*100 #100*200
+epochs = [50]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -41,7 +41,7 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
+interpolation_type = 'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -95,7 +95,7 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
-use_mask = True
+use_mask = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 # whether emission uses Dirichlet distribution
 emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
@@ -149,6 +149,10 @@ lr_reduce_factor = 1 / np.sqrt(2)
 
 # minimum lr
 min_lr = lr / 100
+
+# some interpolation and learning schemes
+update_interp_while_train = True
+update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
@@ -311,6 +315,11 @@ flags.DEFINE_integer("lr_reduce_patience", lr_reduce_patience,
 flags.DEFINE_float("lr_reduce_factor", lr_reduce_factor,
                    "the factor to reduce learning rate, new_lr = old_lr * lr_reduce_factor")
 flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
+
+flags.DEFINE_boolean("update_interp_while_train", update_interp_while_train,
+                     "whether to update the interpolation data while training")
+flags.DEFINE_integer("update_interp_interval", update_interp_interval, "the interval (number of epochs) of updating "
+                                                                       "the interpolation")
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 

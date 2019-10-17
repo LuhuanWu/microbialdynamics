@@ -71,6 +71,7 @@ def main(_):
         interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
         with open(interpolation_data_dir, "rb") as f:
             interpolation_data = pickle.load(f)
+        # TODO: make sure that interpolation matches the shape
     elif FLAGS.interpolation_type == 'none':
         FLAGS.interpolation_type = None
         interpolation_data = None
@@ -116,12 +117,15 @@ def main(_):
     else:
         raise ValueError("Data type must be one of available data types.")
 
+    """
     if FLAGS.use_mask:
         mask_train, mask_test = _mask_train, _mask_test
     else:
         # set all the elements of mask to be True
         mask_train = [np.ones_like(m, dtype=bool) for m in _mask_train]
         mask_test = [np.ones_like(m, dtype=bool) for m in _mask_test]
+    """
+    mask_train, mask_test = _mask_train, _mask_test
 
     # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
