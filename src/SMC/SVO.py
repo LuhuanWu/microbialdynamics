@@ -84,13 +84,10 @@ class SVO:
         else:
             obs_4_proposal = obs
         if self.log_dynamics:
-            log_obs = tf.log(obs_4_proposal)
-            self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(log_obs, time_interval)
+            obs_4_proposal = tf.log(obs_4_proposal)
         elif self.lar_dynamics:
-            lar_obs = lar_transform(obs_4_proposal)
-            self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(lar_obs, time_interval)
-        else:
-            self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
+            obs_4_proposal = self.lar_transform(obs_4_proposal)
+        self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
         q0, q1, f = self.q0, self.q1, self.f
 
         # -------------------------------------- t = 0 -------------------------------------- #
@@ -533,13 +530,13 @@ class SVO:
         with tf.variable_scope(self.name):
             return self.f.mean(X, Dx=self.Dx)
 
+    @staticmethod
+    def lar_transform(percentages):
+        """
 
-def lar_transform(percentages):
-    """
-
-    :param percentages: (..., dy),
-    :return: lars: (..., dy - 1)
-    """
-    lars = tf.log(percentages[..., :-1]) - tf.log(percentages[..., -1:])
-    return lars
+        :param percentages: (..., dy),
+        :return: lars: (..., dy - 1)
+        """
+        lars = tf.log(percentages[..., :-1]) - tf.log(percentages[..., -1:])
+        return lars
 
