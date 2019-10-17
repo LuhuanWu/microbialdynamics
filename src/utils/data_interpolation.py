@@ -349,6 +349,28 @@ def test_interpolate_data(interpolation_type, plot_interpolation=False,
         plot_obs_bar_plot(obs_train, batch_mask=_mask_train, rslt_dir=plot_dir + "/train")
 
 
+def trainer_interpolation_helper(data, y_hat_vals, masks):
+    """
+
+    :param data: a list, each is an ndarray of shape (time, Dy)
+    :param y_hat_vals: a list, each is an ndarry of shape (time, Dy)
+    :param masks: a list, each is an ndarray of shape (time,)
+    :return: updated_data: a list, each is an ndarray of shape (time, ), updated_extra_inputs: a list, each is an ndarray of shape (time, )
+    """
+
+    print("starting inteprolation")
+    def interpolate(y, y_hat_val, mask):
+        pseudo_count = 1
+        updated_y = np.round(y_hat_val[0]).astype(int) + pseudo_count
+        updated_y[mask] = y[mask]
+        return updated_y
+
+    updated_data = list(map(interpolate, data, y_hat_vals, masks))
+    updated_extra_inputs = [np.sum(updated_y, axis=-1) for updated_y in updated_data]
+
+    return updated_data, updated_extra_inputs
+
+
 if __name__ == "__main__":
     # test_linear_interpolation()
     print("hey")

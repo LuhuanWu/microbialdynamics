@@ -71,6 +71,7 @@ def main(_):
         interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
         with open(interpolation_data_dir, "rb") as f:
             interpolation_data = pickle.load(f)
+        # TODO: make sure that interpolation matches the shape
     elif FLAGS.interpolation_type == 'none':
         FLAGS.interpolation_type = None
         interpolation_data = None

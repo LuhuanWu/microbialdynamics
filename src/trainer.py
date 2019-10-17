@@ -12,6 +12,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 from src.rslts_saving.rslts_saving import plot_R_square_epoch
+from src.utils.data_interpolation import trainer_interpolation_helper
 
 from tensorflow.python import debug as tf_debug
 
@@ -30,6 +31,10 @@ class trainer:
         self.Dy = self.FLAGS.Dy
         self.Dv = self.FLAGS.Dv
         self.n_particles = self.FLAGS.n_particles
+
+        self.update_interp_while_train = self.FLAGS.update_interp_while_train
+        self.update_interp_interval = self.FLAGS.update_interp_interval
+        #self.interp_data = None
 
         self.MSE_steps = self.FLAGS.MSE_steps
 
@@ -53,7 +58,6 @@ class trainer:
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
         self.lr = self.FLAGS.lr
-        #self.epoch = self.FLAGS.epoch
 
         # early stopping
         self.early_stop_patience = self.FLAGS.early_stop_patience
@@ -179,6 +183,7 @@ class trainer:
             self.writer.add_graph(self.sess.graph)
 
         for i in range(epoch):
+
             start = time.time()
 
             if i == 0:
@@ -239,7 +244,21 @@ class trainer:
                         print("f mlp parameters:")
                         print(self.sess.run(self.model.f_tran.get_variables()))
 
+            if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
+                interp_feed_dict =  {self.obs: obs_train,
+                                    self.hidden: hidden_train,
+                                    self.input: input_train,
+                                    self.time: [obs.shape[0] for obs in obs_train],
+                                    self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in mask_train],
+                                    self.time_interval: time_interval_train,
+                                    self.extra_inputs: extra_inputs_train}
+                y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_feed_dict, average=False)[0]
+
+                obs_train, extra_inputs_train = trainer_interpolation_helper(data=obs_train,
+                                                         y_hat_vals=y_hat_val_train[0], masks=mask_train)
+
             self.total_epoch_count += 1
+
             end = time.time()
             print("epoch {:<14} took {:.3f} seconds".format(self.total_epoch_count, end - start))
 
