@@ -124,6 +124,9 @@ class trainer:
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
+        # set up unmasked data
+        self.set_interp_val()
+
         # define objective
         self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time,
                                                         self.mask, self.time_interval, self.extra_inputs)
@@ -131,7 +134,7 @@ class trainer:
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         self.Xs = self.log["Xs"]
-        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.y_hat_unmasked_N_BxTxDy = \
+        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
                                 self.hidden, self.obs, self.input_embedding, self.mask, self.extra_inputs)
         # set up feed_dict
@@ -148,6 +151,17 @@ class trainer:
         print("initializing variables...")
         self.sess.run(init)
         self.total_epoch_count = 0
+
+    def set_interp_val(self):
+        """
+        :return: a list of length MSE_steps, each is a list of length training_size or test_size
+        """
+        self.unmasked_y_train = []
+        self.unmasked_y_test = []
+
+        for k in range(self.MSE_steps + 1):
+            self.unmasked_y_train.append([obs[k:][None,] for obs in self.obs_train] )
+            self.unmasked_y_test.append([obs[k:][None,] for obs in self.obs_test])
 
     def set_feed_dict(self):
         # data up to saving_num
@@ -192,7 +206,9 @@ class trainer:
             start = time.time()
 
             if i == 0:
-                self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy)
+                self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
+                                               self.unmasked_y_train, self.unmasked_y_test,
+                                               self.unmasked_y_hat_N_BxTxDy)
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -213,7 +229,9 @@ class trainer:
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
-                    self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy)
+                    self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
+                                                   self.unmasked_y_train, self.unmasked_y_test,
+                                                   self.unmasked_y_hat_N_BxTxDy)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
@@ -276,6 +294,8 @@ class trainer:
                 self.obs_test, self.extra_inputs_test = trainer_interpolation_helper(data=self.obs_test,
                                                                                      y_hat_vals=y_hat_val_test[0],
                                                                                      masks=self.mask_test)
+                # update unmasked data and k-step data
+                self.set_interp_val()
                 # update the feed dict using new interpolated data
                 self.set_feed_dict()
 
@@ -301,7 +321,8 @@ class trainer:
     def close_session(self):
         self.sess.close()
 
-    def evaluate_and_save_metrics(self, iter_num, y_hat_N_BxTxDy, y_N_BxTxDy):
+    def evaluate_and_save_metrics(self, iter_num, y_hat_N_BxTxDy, y_N_BxTxDy,
+                                  unmasked_y_train=None, unmaksed_y_test=None, unmasked_y_hat_N_BxTxDy=None):
 
         log_ZSMC_train, y_hat_train, y_train = \
             self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy], feed_dict_w_batches=self.train_all_feed_dict)
@@ -323,6 +344,24 @@ class trainer:
         print("Train, Valid k-step Rsq (original space):\n", R_square_original_train, "\n", R_square_original_test)
         print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
         print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
+
+        if unmasked_y_hat_N_BxTxDy is not None:
+            unmasked_y_hat_train = self.evaluate(unmasked_y_hat_N_BxTxDy,
+                                                 feed_dict_w_batches=self.train_all_feed_dict)
+            unmasked_y_hat_test = self.evaluate(unmasked_y_hat_N_BxTxDy,
+                                                feed_dict_w_batches=self.test_all_feed_dict)
+
+            unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
+                self.evaluate_R_square(unmasked_y_hat_train, unmasked_y_train)
+            unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
+                self.evaluate_R_square(unmasked_y_hat_test, unmaksed_y_test)
+            print()
+            print("Train, unmaksed Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
+                  unmasked_R_square_original_test)
+            print("Train, unmasked Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
+                  unmasked_R_square_percentage_test)
+            print("Train, unmaksed Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
+                  unmasked_R_square_logp_test)
 
         if not math.isfinite(log_ZSMC_train):
             print("Nan in log_ZSMC, stop training")
@@ -449,12 +488,6 @@ class trainer:
 
     def evaluate_R_square(self, y_hat_N_BxTxDy, y_N_BxTxDy):
         n_steps = len(y_hat_N_BxTxDy) - 1
-        # y_hat = [[y_hat_batch[i] for y_hat_batch in y_hat_N_BxTxDy] for i in range(n_steps + 1)]
-        # y = [[y_batch[i] for y_batch in y_N_BxTxDy] for i in range(n_steps + 1)]
-        # for y_hat_i in y_hat:
-        #     for ele in y_hat_i:
-        #         if ele.shape[0] != 1 or ele.shape[-1] != 11:
-        #             print(ele.shape)
         y_hat = [np.concatenate(y_hat_i, axis=1)[0] for y_hat_i in y_hat_N_BxTxDy]
         y = [np.concatenate(y_i, axis=1)[0] for y_i in y_N_BxTxDy]
         n_tp, Dy = y[0].shape

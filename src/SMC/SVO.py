@@ -497,7 +497,7 @@ class SVO:
 
             # get y_hat
             y_hat_N_BxTxDy = []
-            y_hat_unmasked_N_BxTxDy = []
+            unmasked_y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
                 if self.log_dynamics or self.lar_dynamics:
@@ -506,10 +506,10 @@ class SVO:
                     g_input = x_BxTmkxDz
                 if self.two_step_emission:
                     g_input = self.h.mean(g_input)
-                y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
+                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
-                y_hat_unmasked_N_BxTxDy.append(y_hat_BxTmkxDy)
-                y_hat_BxTmkxDy = tf.boolean_mask(y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
+                unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy[tf.newaxis,])
+                y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
                 x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
@@ -525,19 +525,21 @@ class SVO:
                 g_input = x_BxTmkxDz
             if self.two_step_emission:
                 g_input = self.h.mean(g_input)
-            y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
-            y_hat_unmasked_N_BxTxDy.append(y_hat_BxTmkxDy)
-            y_hat_BxTmNxDy = tf.boolean_mask(y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
+            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
+            unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy[tf.newaxis,])
+            y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 
             # get y_true
             y_N_BxTxDy = []
+            #y_unmaksed_BxTxDy = []
             for k in range(n_steps + 1):
                 y_BxTmkxDy = obs[:, k:, :]
                 y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_N_BxTxDy.append(y_BxTmkxDy)
+                #y_unmaksed_BxTxDy.append(obs[:,k:,:])
 
-        return y_hat_N_BxTxDy, y_N_BxTxDy, y_hat_unmasked_N_BxTxDy
+        return y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy
 
     def get_nextX(self, X):
         # only used for drawing 2D quiver plot
