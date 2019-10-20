@@ -116,6 +116,7 @@ class trainer:
 
     def init_train(self, obs_train, obs_test, hidden_train, hidden_test, input_train, input_test,
                    mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
+        # set data
         self.obs_train, self.obs_test = obs_train, obs_test
         self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
@@ -123,40 +124,9 @@ class trainer:
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
-        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time, self.mask,
-                                                        self.time_interval, self.extra_inputs)
-
-        self.train_feed_dict = {self.obs: obs_train[0:self.saving_train_num],
-                                self.hidden: hidden_train[0:self.saving_train_num],
-                                self.input: input_train[0: self.saving_train_num],
-                                self.time: [obs.shape[0] for obs in obs_train[0: self.saving_train_num]],
-                                self.mask: mask_train[0: self.saving_train_num],
-                                self.time_interval: time_interval_train[0:self.saving_train_num],
-                                self.extra_inputs: extra_inputs_train[0: self.saving_train_num]}
-
-        self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
-                               self.hidden: hidden_test[0:self.saving_test_num],
-                               self.input: input_test[0:self.saving_test_num],
-                               self.time: [obs.shape[0] for obs in obs_test[0: self.saving_test_num]],
-                               self.mask: mask_test[0:self.saving_test_num],
-                               self.time_interval: time_interval_test[0:self.saving_test_num],
-                               self.extra_inputs: extra_inputs_test[0:self.saving_test_num]}
-
-        self.train_all_feed_dict = {self.obs: obs_train,
-                                    self.hidden: hidden_train,
-                                    self.input: input_train,
-                                    self.time: [obs.shape[0] for obs in obs_train],
-                                    self.mask: mask_train,
-                                    self.time_interval: time_interval_train,
-                                    self.extra_inputs: extra_inputs_train}
-
-        self.test_all_feed_dict = {self.obs: obs_test,
-                                   self.hidden: hidden_test,
-                                   self.input: input_test,
-                                   self.time: [obs.shape[0] for obs in obs_test],
-                                   self.mask: mask_test,
-                                   self.time_interval: time_interval_test,
-                                   self.extra_inputs: extra_inputs_test}
+        # define objective
+        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time,
+                                                        self.mask, self.time_interval, self.extra_inputs)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -164,6 +134,8 @@ class trainer:
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.y_hat_unmasked_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
                                 self.hidden, self.obs, self.input_embedding, self.mask, self.extra_inputs)
+        # set up feed_dict
+        self.set_feed_dict()
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
@@ -177,16 +149,41 @@ class trainer:
         self.sess.run(init)
         self.total_epoch_count = 0
 
-    def train(self,
-              obs_train,
-              hidden_train,
-              input_train,
-              mask_train,
-              time_interval_train,
-              extra_inputs_train,
-              print_freq,
-              epoch):
+    def set_feed_dict(self):
+        # data up to saving_num
+        self.train_feed_dict = {self.obs: self.obs_train[0:self.saving_train_num],
+                                self.hidden: self.hidden_train[0:self.saving_train_num],
+                                self.input: self.input_train[0: self.saving_train_num],
+                                self.time: [obs.shape[0] for obs in self.obs_train[0: self.saving_train_num]],
+                                self.mask: self.mask_train[0: self.saving_train_num],
+                                self.time_interval: self.time_interval_train[0:self.saving_train_num],
+                                self.extra_inputs: self.extra_inputs_train[0: self.saving_train_num]}
 
+        self.test_feed_dict = {self.obs: self.obs_test[0:self.saving_test_num],
+                               self.hidden: self.hidden_test[0:self.saving_test_num],
+                               self.input: self.input_test[0:self.saving_test_num],
+                               self.time: [obs.shape[0] for obs in self.obs_test[0: self.saving_test_num]],
+                               self.mask: self.mask_test[0:self.saving_test_num],
+                               self.time_interval: self.time_interval_test[0:self.saving_test_num],
+                               self.extra_inputs: self.extra_inputs_test[0:self.saving_test_num]}
+        # all data
+        self.train_all_feed_dict = {self.obs: self.obs_train,
+                                    self.hidden: self.hidden_train,
+                                    self.input: self.input_train,
+                                    self.time: [obs.shape[0] for obs in self.obs_train],
+                                    self.mask: self.mask_train,
+                                    self.time_interval: self.time_interval_train,
+                                    self.extra_inputs: self.extra_inputs_train}
+
+        self.test_all_feed_dict = {self.obs: self.obs_test,
+                                   self.hidden: self.hidden_test,
+                                   self.input: self.input_test,
+                                   self.time: [obs.shape[0] for obs in self.obs_test],
+                                   self.mask: self.mask_test,
+                                   self.time_interval: self.time_interval_test,
+                                   self.extra_inputs: self.extra_inputs_test}
+
+    def train(self, print_freq, epoch):
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
 
@@ -199,7 +196,8 @@ class trainer:
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
-                shuffle(obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train)
+                shuffle(self.obs_train, self.hidden_train, self.input_train, self.mask_train,
+                        self.time_interval_train, self.extra_inputs_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
@@ -253,17 +251,33 @@ class trainer:
                         print(self.sess.run(self.model.f_tran.get_variables()))
 
             if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
-                interp_feed_dict =  {self.obs: obs_train,
-                                    self.hidden: hidden_train,
-                                    self.input: input_train,
-                                    self.time: [obs.shape[0] for obs in obs_train],
-                                    self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in mask_train],
-                                    self.time_interval: time_interval_train,
-                                    self.extra_inputs: extra_inputs_train}
-                y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_feed_dict, average=False)[0]
+                interp_train_feed_dict =  {self.obs: self.obs_train,
+                                    self.hidden: self.hidden_train,
+                                    self.input: self.input_train,
+                                    self.time: [obs.shape[0] for obs in self.obs_train],
+                                    self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
+                                    self.time_interval: self.time_interval_train,
+                                    self.extra_inputs: self.extra_inputs_train}
+                # without maksng interpolation data, and make predictions
+                y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_train_feed_dict, average=False)[0]
 
-                obs_train, extra_inputs_train = trainer_interpolation_helper(data=obs_train,
-                                                         y_hat_vals=y_hat_val_train[0], masks=mask_train)
+                self.obs_train, self.extra_inputs_train = trainer_interpolation_helper(data=self.obs_train,
+                                                         y_hat_vals=y_hat_val_train[0], masks=self.mask_train)
+
+                interp_test_feed_dict = {self.obs: self.obs_test,
+                                          self.hidden: self.hidden_test,
+                                          self.input: self.input_test,
+                                          self.time: [obs.shape[0] for obs in self.obs_test],
+                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],
+                                          self.time_interval: self.time_interval_test,
+                                          self.extra_inputs: self.extra_inputs_test}
+                y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], interp_test_feed_dict, average=False)[0]
+
+                self.obs_test, self.extra_inputs_test = trainer_interpolation_helper(data=self.obs_test,
+                                                                                     y_hat_vals=y_hat_val_test[0],
+                                                                                     masks=self.mask_test)
+                # update the feed dict using new interpolated data
+                self.set_feed_dict()
 
             self.total_epoch_count += 1
 
@@ -288,25 +302,12 @@ class trainer:
         self.sess.close()
 
     def evaluate_and_save_metrics(self, iter_num, y_hat_N_BxTxDy, y_N_BxTxDy):
+
         log_ZSMC_train, y_hat_train, y_train = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy],
-                          {self.obs:           self.obs_train,
-                           self.hidden:        self.hidden_train,
-                           self.input:         self.input_train,
-                           self.time:          [obs.shape[0] for obs in self.obs_train],
-                           self.mask:          self.mask_train,
-                           self.time_interval: self.time_interval_train,
-                           self.extra_inputs:  self.extra_inputs_train})
+            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy], feed_dict_w_batches=self.train_all_feed_dict)
 
         log_ZSMC_test, y_hat_test, y_test = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy],
-                          {self.obs:            self.obs_test,
-                           self.hidden:         self.hidden_test,
-                           self.input:          self.input_test,
-                           self.time:           [obs.shape[0] for obs in self.obs_test],
-                           self.mask:           self.mask_test,
-                           self.time_interval:  self.time_interval_test,
-                           self.extra_inputs:   self.extra_inputs_test})
+            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy], feed_dict_w_batches=self.test_all_feed_dict)
 
         log_ZSMC_train, log_ZSMC_test = np.mean(log_ZSMC_train), np.mean(log_ZSMC_test)
 

@@ -187,13 +187,7 @@ def main(_):
 
         mytrainer.set_saving_dir(checkpoint_dir)
 
-        history, log = mytrainer.train(obs_train,
-                                       hidden_train,
-                                       input_train,
-                                       mask_train,
-                                       time_interval_train,
-                                       extra_inputs_train,
-                                       print_freq, epoch)
+        history, log = mytrainer.train(print_freq, epoch)
 
         # ======================================== data saving part ======================================== #
 
