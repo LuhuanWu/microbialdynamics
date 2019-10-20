@@ -41,12 +41,12 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_type = 'none' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
+interpolation_type = 'count_clv' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [0,1 ]#[-1]
+training_sample_idx = [-1]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [1,2]#[-1]
+test_sample_idx = [-1]
 
 isPython2 = False
 

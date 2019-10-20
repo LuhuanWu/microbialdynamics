@@ -246,13 +246,13 @@ class trainer:
                             pickle.dump(trajectory_dict, f)
 
                     if self.save_y_hat_train:
-                        y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], self.train_feed_dict, average=False)[0]
+                        y_hat_val_train = self.evaluate(self.y_hat_N_BxTxDy, self.train_feed_dict, average=False)[0]
                         y_hat_train_dict = {"y_hat_train": y_hat_val_train}
                         with open(self.epoch_data_DIR + "y_hat_train_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_train_dict, f)
 
                     if self.save_y_hat_test:
-                        y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], self.test_feed_dict, average=False)[0]
+                        y_hat_val_test = self.evaluate(self.y_hat_N_BxTxDy, self.test_feed_dict, average=False)[0]
                         y_hat_test_dict = {"y_hat_test": y_hat_val_test}
                         with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_test_dict, f)
