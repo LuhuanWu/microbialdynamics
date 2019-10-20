@@ -269,10 +269,11 @@ def main(_):
                       history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_start_idx += int(epoch / print_freq) + 1
 
-        y_hat_unmasked = mytrainer.evaluate(mytrainer.y_hat_unmasked_N_BxTxDy, mytrainer.train_all_feed_dict)
-        y_hat_train_0_step = y_hat_unmasked[0]
-        with open(os.path.join(checkpoint_dir, "y_hat_train.p"), "wb") as f:
-            pickle.dump(y_hat_train_0_step, f)
+        y_hat_unmasked_train = mytrainer.evaluate(mytrainer.y_hat_unmasked_N_BxTxDy, mytrainer.train_all_feed_dict)
+        y_hat_unmasked_test = mytrainer.evaluate(mytrainer.y_hat_unmasked_N_BxTxDy, mytrainer.test_all_feed_dict)
+        y_hat_train_0_step, y_hat_test_0_step = y_hat_unmasked_train[0], y_hat_unmasked_test[0]
+        with open(os.path.join(checkpoint_dir, "y_hat.p"), "wb") as f:
+            pickle.dump({"train": y_hat_train_0_step, "test": y_hat_test_0_step}, f)
 
         print("finish plotting!")
 

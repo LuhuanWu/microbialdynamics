@@ -134,6 +134,14 @@ class trainer:
                                 self.time_interval: time_interval_train[0:self.saving_train_num],
                                 self.extra_inputs: extra_inputs_train[0: self.saving_train_num]}
 
+        self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
+                               self.hidden: hidden_test[0:self.saving_test_num],
+                               self.input: input_test[0:self.saving_test_num],
+                               self.time: [obs.shape[0] for obs in obs_test[0: self.saving_test_num]],
+                               self.mask: mask_test[0:self.saving_test_num],
+                               self.time_interval: time_interval_test[0:self.saving_test_num],
+                               self.extra_inputs: extra_inputs_test[0:self.saving_test_num]}
+
         self.train_all_feed_dict = {self.obs: obs_train,
                                     self.hidden: hidden_train,
                                     self.input: input_train,
@@ -142,13 +150,13 @@ class trainer:
                                     self.time_interval: time_interval_train,
                                     self.extra_inputs: extra_inputs_train}
 
-        self.test_feed_dict = {self.obs: obs_test[0:self.saving_test_num],
-                               self.hidden: hidden_test[0:self.saving_test_num],
-                               self.input: input_test[0:self.saving_test_num],
-                               self.time: [obs.shape[0] for obs in obs_test[0: self.saving_test_num]],
-                               self.mask: mask_test[0:self.saving_test_num],
-                               self.time_interval: time_interval_test[0:self.saving_test_num],
-                               self.extra_inputs: extra_inputs_test[0:self.saving_test_num]}
+        self.test_all_feed_dict = {self.obs: obs_test,
+                                   self.hidden: hidden_test,
+                                   self.input: input_test,
+                                   self.time: [obs.shape[0] for obs in obs_test],
+                                   self.mask: mask_test,
+                                   self.time_interval: time_interval_test,
+                                   self.extra_inputs: extra_inputs_test}
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
