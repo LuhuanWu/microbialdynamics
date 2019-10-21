@@ -81,8 +81,8 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
     time_interval = np.zeros((time, ))
 
     if interpolation_type is not None:
-        assert interpolation_type in ["linear_lar", "gp_lar", "gp", "count_clv"], \
-            "interpolation type must be one of linear_lar, gp_lar, gp and count_clv, " \
+        assert interpolation_type in ["linear_lar", "gp_lar", "gp", "clv"], \
+            "interpolation type must be one of linear_lar, gp_lar, gp and clv, " \
             "but receives input as {}".format(interpolation_type)
 
     i = 0
@@ -155,7 +155,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
         assert interpolated_obs.shape == (time, Dy)
         interpolated_obs[days - days[0]] = obs[:, 1:]
 
-    elif interpolation_type == "count_clv":
+    elif interpolation_type == "clv":
         assert interpolation is not None
         interpolation = np.round(interpolation).astype(int) + pseudo_count
         assert interpolation.shape == (time, Dy)

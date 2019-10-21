@@ -66,8 +66,8 @@ def main(_):
 
     data_dir = DATA_DIR_DICT[FLAGS.data_type]
     data_dir = os.path.join(repo_dir, data_dir)
-    if FLAGS.interpolation_type == "count_clv":
-        interpolation_data_dir = INTERPOLATION_DATA_DICT["count_clv"]
+    if FLAGS.interpolation_type == "clv":
+        interpolation_data_dir = INTERPOLATION_DATA_DICT[FLAGS.interpolation_data_type]
         interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
         with open(interpolation_data_dir, "rb") as f:
             interpolation_data = pickle.load(f)

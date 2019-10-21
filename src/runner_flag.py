@@ -26,7 +26,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
+Dv = 10                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 batch_size = 1          # batch size
@@ -41,7 +41,9 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_type = 'count_clv' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
+interpolation_type = 'clv' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
+# choose from 'count_clv', 'simulation_Dx_10_obs_02s_clv', 'simulation_Dx_10_obs_06s_clv'
+interpolation_data_type = 'count_clv'
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -223,6 +225,7 @@ flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: ge
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
+flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The file for data interpolation")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
