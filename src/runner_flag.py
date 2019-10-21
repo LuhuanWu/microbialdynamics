@@ -96,6 +96,7 @@ use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
 use_mask = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
+use_mask_interpolation = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 # whether emission uses Dirichlet distribution
 emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
@@ -276,6 +277,8 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
+flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether to use mask interpolation for missing observations")
+
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
 flags.DEFINE_boolean("two_step_emission", two_step_emission, "whether add a Gaussian layer in the middle of emission")
 flags.DEFINE_string("two_step_emission_type", two_step_emission_type, "choose from inv_lar and MLP")

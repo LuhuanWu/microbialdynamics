@@ -162,7 +162,7 @@ def main(_):
     # create dir to save results
     Experiment_params = {"np":            FLAGS.n_particles,
                          "lr":            FLAGS.lr,
-                         "epochs":         FLAGS.epochs,
+                         "epochs":        FLAGS.epochs,
                          "seed":          FLAGS.seed,
                          "rslt_dir_name": FLAGS.rslt_dir_name}
 
