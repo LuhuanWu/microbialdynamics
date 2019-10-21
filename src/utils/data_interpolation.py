@@ -21,12 +21,15 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
 
     if interpolation_data is not None:
         # print(len(interpolation_data), len(obs_train))
-        assert len(interpolation_data) == len(obs_train)
+        interpolation_data_train = interpolation_data["train"]
+        interpolation_data_test = interpolation_data["test"]
+        assert len(interpolation_data_train) == len(obs_train)
+        assert len(interpolation_data_test) == len(obs_test)
     else:
         interpolation_data = [None] * len(obs_train)
 
     for hidden, obs, input, extra_inputs, interpolation in \
-            zip(hidden_train, obs_train, input_train, extra_inputs_train, interpolation_data):
+            zip(hidden_train, obs_train, input_train, extra_inputs_train, interpolation_data_train):
         hidden, obs, input, mask, time_interval, extra_inputs = \
             interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
                                   interpolation=interpolation)
@@ -37,9 +40,11 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         time_interval_train.append(time_interval)
         interpolated_extra_inputs_train.append(extra_inputs)
 
-    for hidden, obs, input, extra_inputs in zip(hidden_test, obs_test, input_test, extra_inputs_test):
+    for hidden, obs, input, extra_inputs, interpolation in \
+            zip(hidden_test, obs_test, input_test, extra_inputs_test, interpolation_data_test):
         hidden, obs, input, mask, time_interval, extra_inputs = \
-            interpolate_datapoint(hidden, obs, input, extra_inputs)
+            interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
+                                  interpolation=interpolation)
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
