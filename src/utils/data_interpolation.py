@@ -26,7 +26,8 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         assert len(interpolation_data_train) == len(obs_train)
         assert len(interpolation_data_test) == len(obs_test)
     else:
-        interpolation_data = [None] * len(obs_train)
+        interpolation_data_train = [None] * len(obs_train)
+        interpolation_data_test = [None] * len(obs_test)
 
     for hidden, obs, input, extra_inputs, interpolation in \
             zip(hidden_train, obs_train, input_train, extra_inputs_train, interpolation_data_train):

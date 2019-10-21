@@ -41,7 +41,7 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count"
-interpolation_type = 'clv' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
+interpolation_type = 'clv'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 # choose from 'count_clv', 'simulation_Dx_10_obs_02s_clv', 'simulation_Dx_10_obs_06s_clv'
 interpolation_data_type = 'count_clv'
 
