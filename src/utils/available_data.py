@@ -107,7 +107,12 @@ clv_count_Dx_10_obs10s_no_noise_data_dir = "data/clv/compare_noise/clv_count_Dx_
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
 simulation_Dx_10_obs_02s_clv_data_dir = "data/interpolation/simulation_Dx_10_obs_02s_clv.p"
 simulation_Dx_10_obs_06s_clv_data_dir = "data/interpolation/simulation_Dx_10_obs_06s_clv.p"
+simulation_Dx_10_obs_02_small_clv_data_dir = "data/interpolation/simulation_Dx_10_obs_02_small_clv.p"
+simulation_Dx_10_obs_06_small_clv_data_dir = "data/interpolation/simulation_Dx_10_obs_06_small_clv.p"
 
+clv_count_Dx_10_obs02_small_data_dir = "data/clv/small/clv_count_Dx_10_obsp_02.p"
+clv_count_Dx_10_obs06_small_data_dir = "data/clv/small/clv_count_Dx_10_obsp_06.p"
+clv_count_Dx_10_obs10_small_data_dir = "data/clv/small/clv_count_Dx_10_obsp_10.p"
 
 PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
                             percentage_split_3=percentage_split_3_dir,
@@ -192,12 +197,17 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx_10_obs_02s_no_noise=clv_count_Dx_10_obs02s_no_noise_data_dir,
                        clv_count_Dx_10_obs_06s_no_noise=clv_count_Dx_10_obs06s_no_noise_data_dir,
                        clv_count_Dx_10_obs_10s_no_noise=clv_count_Dx_10_obs10s_no_noise_data_dir,
+                       clv_count_Dx_10_obs_02_small=clv_count_Dx_10_obs02_small_data_dir,
+                       clv_count_Dx_10_obs_06_small=clv_count_Dx_10_obs06_small_data_dir,
+                       clv_count_Dx_10_obs_10_small=clv_count_Dx_10_obs10_small_data_dir
                        )
 
 
 INTERPOLATION_DATA_DICT = dict(count_clv=count_clv_interpolation_data_dir,
                                simulation_Dx_10_obs_02s_clv=simulation_Dx_10_obs_02s_clv_data_dir,
-                               simulation_Dx_10_obs_06s_clv=simulation_Dx_10_obs_06s_clv_data_dir)
+                               simulation_Dx_10_obs_06s_clv=simulation_Dx_10_obs_06s_clv_data_dir,
+                               simulation_Dx_10_obs_02_small_clv=simulation_Dx_10_obs_02_small_clv_data_dir,
+                               simulation_Dx_10_obs_06_small_clv=simulation_Dx_10_obs_06_small_clv_data_dir)
 
 DATA_DIR_DICT = {**PERCENTAGE_DATA_DICT, **COUNT_DATA_DICT}
 DATA_DIR_DICT["toy"] = toy_data_dir
