@@ -153,7 +153,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
     elif interpolation_type == "count_clv":
         assert interpolation is not None
         interpolation = np.round(interpolation).astype(int) + pseudo_count
-        assert interpolation.shape == (time, Dy)
+        assert interpolation.shape == (time, Dy), "should be {}, but is [}".format((time, Dy), interpolation.shape)
         interpolated_obs = interpolation
         interpolated_obs[days - days[0]] = obs[:, 1:]
 

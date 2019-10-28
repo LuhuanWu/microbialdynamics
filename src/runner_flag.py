@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 10                # dimension of hidden states
-Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dx = 2                # dimension of hidden states
+Dy = 3                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
@@ -40,8 +40,8 @@ seed = 0
 generate_training_data = False
 
 # see options: utils/available_data.py
-data_type = "count"
-interpolation_type = 'count_clv' #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
+data_type = "count_k2"
+interpolation_type = 'none'  #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -164,7 +164,7 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_interpolate"
+rslt_dir_name = "test_k2"
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5

@@ -4,9 +4,9 @@ import os
 import pickle
 
 
-use_split = True
+use_split = False
 split_threshold = 3
-k = 10
+k = 2
 
 file1 = "taur-events-0925.csv"
 file2 = "taur-otu-table-15tpts-0925.csv"
@@ -117,8 +117,8 @@ data["Vtest"] = Input[n_train:]
 data["counts_train"] = counts[:n_train]
 data["counts_test"] = counts[n_train:]
 
-count_fname = "count_microbio{}.p".format("_split_{}".format(split_threshold) if use_split else "")
-percentage_fname = "microbio{}.p".format("_split_{}".format(split_threshold) if use_split else "")
+count_fname = "count_microbio{}_k{}.p".format("_split_{}".format(split_threshold) if use_split else "", k)
+percentage_fname = "microbio{}_{}.p".format("_split_{}".format(split_threshold) if use_split else "", k)
 with open(count_fname, "wb") as f:
     pickle.dump(data, f)
 data["Ytrain"] = percentage_obs[:n_train]

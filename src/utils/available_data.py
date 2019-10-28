@@ -4,6 +4,11 @@ toy_data_dir = "data/fhn_with_inputs_dirichlet"
 percentage_data_dir = "data/microbio.p"
 count_data_dir = "data/count_microbio.p"
 
+#k6
+count_data_k2_dir = "data/count_microbio_k2.p"
+count_data_k6_dir = "data/count_microbio_k6.p"
+count_data_k8_dir = "data/count_microbio_k8.p"
+
 percentage_split_3_dir = "data/microbio_split_3.p"
 percentage_split_5_dir = "data/microbio_split_5.p"
 count_split_3_dir = "data/count_microbio_split_3.p"
@@ -145,6 +150,9 @@ PERCENTAGE_DATA_DICT = dict(percentage=percentage_data_dir,
 
 
 COUNT_DATA_DICT = dict(count=count_data_dir,
+                       count_k2=count_data_k2_dir,
+                       count_k6=count_data_k6_dir,
+                       count_k8=count_data_k8_dir,
                        count_split_3=count_split_3_dir,
                        count_split_5=count_split_5_dir,
                        count_small=count_small_dir,
