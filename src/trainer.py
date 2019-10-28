@@ -34,6 +34,9 @@ class trainer:
 
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
+        self.use_mask = self.FLAGS.use_mask
+        self.use_mask_interpolation = self.FLAGS.use_mask_interpolation
+        self.epochs = self.FLAGS.epochs
         #self.interp_data = None
 
         self.MSE_steps = self.FLAGS.MSE_steps
@@ -52,6 +55,7 @@ class trainer:
         self.input = self.model.input
         self.time = self.model.time
         self.mask = self.model.mask
+        self.mask_weight = self.model.mask_weight
         self.time_interval = self.model.time_interval
         self.extra_inputs = self.model.extra_inputs
 
@@ -129,7 +133,8 @@ class trainer:
 
         # define objective
         self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time,
-                                                        self.mask, self.time_interval, self.extra_inputs)
+                                                        self.mask, self.time_interval, self.extra_inputs,
+                                                        self.mask_weight)
 
         # n_step_MSE now takes Xs as input rather than self.hidden
         # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
@@ -202,7 +207,17 @@ class trainer:
             self.writer.add_graph(self.sess.graph)
 
         for i in range(epoch):
-
+            if self.use_mask:
+                mask_weight = 0
+            else:
+                if self.use_mask_interpolation:
+                    mask_weight = 1 - self.total_epoch_count / np.sum(self.epochs)
+                else:
+                    mask_weight = 1
+            self.train_feed_dict[self.mask_weight] = [mask_weight] * self.saving_train_num
+            self.test_feed_dict[self.mask_weight] = [mask_weight] * self.saving_test_num
+            self.train_all_feed_dict[self.mask_weight] = [mask_weight] * len(self.obs_train)
+            self.test_all_feed_dict[self.mask_weight] = [mask_weight] * len(self.obs_test)
             start = time.time()
 
             if i == 0:
@@ -223,6 +238,7 @@ class trainer:
                                          self.input:         input_train[j:j + self.batch_size],
                                          self.time:          obs_train[j].shape[0],
                                          self.mask:          mask_train[j:j+self.batch_size],
+                                         self.mask_weight:   mask_weight,
                                          self.time_interval: time_interval_train[j:j+self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
                                          self.lr_holder:     self.lr})
@@ -269,31 +285,32 @@ class trainer:
                         print(self.sess.run(self.model.f_tran.get_variables()))
 
             if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
-                interp_train_feed_dict =  {self.obs: self.obs_train,
-                                    self.hidden: self.hidden_train,
-                                    self.input: self.input_train,
-                                    self.time: [obs.shape[0] for obs in self.obs_train],
-                                    self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
-                                    self.time_interval: self.time_interval_train,
-                                    self.extra_inputs: self.extra_inputs_train}
+                interp_train_feed_dict = {self.obs: self.obs_train,
+                                          self.hidden: self.hidden_train,
+                                          self.input: self.input_train,
+                                          self.time: [obs.shape[0] for obs in self.obs_train],
+                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
+                                          self.mask_weight: [mask_weight] * len(self.obs_train),
+                                          self.time_interval: self.time_interval_train,
+                                          self.extra_inputs: self.extra_inputs_train}
                 # without maksng interpolation data, and make predictions
                 y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_train_feed_dict, average=False)[0]
 
-                self.obs_train, self.extra_inputs_train = trainer_interpolation_helper(data=self.obs_train,
-                                                         y_hat_vals=y_hat_val_train[0], masks=self.mask_train)
+                self.obs_train, self.extra_inputs_train = \
+                    trainer_interpolation_helper(data=self.obs_train, y_hat_vals=y_hat_val_train[0], masks=self.mask_train)
 
                 interp_test_feed_dict = {self.obs: self.obs_test,
-                                          self.hidden: self.hidden_test,
-                                          self.input: self.input_test,
-                                          self.time: [obs.shape[0] for obs in self.obs_test],
-                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],
-                                          self.time_interval: self.time_interval_test,
-                                          self.extra_inputs: self.extra_inputs_test}
+                                         self.hidden: self.hidden_test,
+                                         self.input: self.input_test,
+                                         self.time: [obs.shape[0] for obs in self.obs_test],
+                                         self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],
+                                         self.mask_weight: [mask_weight] * len(self.obs_test),
+                                         self.time_interval: self.time_interval_test,
+                                         self.extra_inputs: self.extra_inputs_test}
                 y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], interp_test_feed_dict, average=False)[0]
 
-                self.obs_test, self.extra_inputs_test = trainer_interpolation_helper(data=self.obs_test,
-                                                                                     y_hat_vals=y_hat_val_test[0],
-                                                                                     masks=self.mask_test)
+                self.obs_test, self.extra_inputs_test = \
+                    trainer_interpolation_helper(data=self.obs_test, y_hat_vals=y_hat_val_test[0], masks=self.mask_test)
                 # update unmasked data and k-step data
                 self.set_interp_val()
                 # update the feed dict using new interpolated data

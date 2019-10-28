@@ -41,7 +41,9 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count_k2"
-interpolation_type = 'none'  #'count_clv'  # choose from 'linear_lar', 'gp_lar', 'count_clv' and 'none'
+interpolation_type = 'clv'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
+# choose from 'count_clv', 'simulation_Dx_10_obs_02s_clv', 'simulation_Dx_10_obs_06s_clv'
+interpolation_data_type = 'count_clv'
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -96,6 +98,7 @@ use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
 use_mask = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
+use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 # whether emission uses Dirichlet distribution
 emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
@@ -222,6 +225,7 @@ flags.DEFINE_boolean("generate_training_data", generate_training_data, "True: ge
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
+flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The file for data interpolation")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
@@ -276,6 +280,8 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
+flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether to use mask interpolation for missing observations")
+
 flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
 flags.DEFINE_boolean("two_step_emission", two_step_emission, "whether add a Gaussian layer in the middle of emission")
 flags.DEFINE_string("two_step_emission_type", two_step_emission_type, "choose from inv_lar and MLP")

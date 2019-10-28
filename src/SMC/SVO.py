@@ -39,9 +39,7 @@ class SVO:
 
         self.name = name
 
-        self.use_mask = FLAGS.use_mask
-
-    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval, extra_inputs):
+    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval, extra_inputs, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
@@ -65,7 +63,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs)
+            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs, mask_weight)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
@@ -76,7 +74,7 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, hidden, obs, input, mask, time_interval, extra_inputs, q_cov=1.0):
+    def SMC(self, hidden, obs, input, mask, time_interval, extra_inputs, mask_weight, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
@@ -124,20 +122,12 @@ class SVO:
         else:
             g_input = X_0
         if self.two_step_emission:
-            g_input, _h_0_log_prob = self.h.sample_and_log_prob(g_input)
-            if self.use_mask:
-                _h_0_log_prob_0 = tf.zeros_like(_h_0_log_prob)  # dummy values for missing observations
-                h_0_log_prob = tf.where(mask[0][0], _h_0_log_prob, _h_0_log_prob_0, name="h_{}_log_prob".format(0))
-            else:
-                h_0_log_prob = _h_0_log_prob
-        _g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
-        _g_0_log_prob_0 = tf.zeros_like(_g_0_log_prob)  # dummy values for missing observations
-        if self.use_mask:
-            g_0_log_prob = tf.where(mask[0][0], _g_0_log_prob, _g_0_log_prob_0, name="g_{}_log_prob".format(0))
-        else:
-            g_0_log_prob = _g_0_log_prob
+            g_input, h_0_log_prob = self.h.sample_and_log_prob(g_input)
+            h_0_log_prob = tf.where(mask[0][0], h_0_log_prob, h_0_log_prob * mask_weight, name="h_0_log_prob")
+        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+        g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
-        log_alpha_0 = tf.add(f_0_log_prob, g_0_log_prob - q_0_log_prob, name="log_alpha_{}".format(0))
+        log_alpha_0 = tf.add(f_0_log_prob, g_0_log_prob - q_0_log_prob, name="log_alpha_0")
         if self.two_step_emission:
             log_alpha_0 += h_0_log_prob - tf.stop_gradient(h_0_log_prob)
 
@@ -203,18 +193,10 @@ class SVO:
             else:
                 g_input = X_t
             if self.two_step_emission:
-                g_input, _h_t_log_prob = self.h.sample_and_log_prob(g_input)
-                if self.use_mask:
-                    _h_t_log_prob_0 = tf.zeros_like(_h_t_log_prob)  # dummy values for missing observations
-                    h_t_log_prob = tf.where(mask[0][0], _h_t_log_prob, _h_t_log_prob_0, name="h_t_log_prob")
-                else:
-                    h_t_log_prob = _h_t_log_prob
-            _g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
-            if self.use_mask:
-                _g_t_log_prob_0 = tf.zeros_like(_g_t_log_prob)
-                g_t_log_prob = tf.where(mask[0][t], _g_t_log_prob, _g_t_log_prob_0, name="g_t_log_prob")
-            else:
-                g_t_log_prob = _g_t_log_prob
+                g_input, h_t_log_prob = self.h.sample_and_log_prob(g_input)
+                h_t_log_prob = tf.where(mask[0][0], h_t_log_prob, h_t_log_prob * mask_weight, name="h_t_log_prob")
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
+            g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
             if self.two_step_emission:
