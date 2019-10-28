@@ -41,7 +41,7 @@ generate_training_data = False
 
 # see options: utils/available_data.py
 data_type = "count_k2"
-interpolation_type = 'clv'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
+interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 # choose from 'count_clv', 'simulation_Dx_10_obs_02s_clv', 'simulation_Dx_10_obs_06s_clv'
 interpolation_data_type = 'count_clv'
 
@@ -97,7 +97,7 @@ X0_use_separate_RNN = True
 use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
-use_mask = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
+use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 # whether emission uses Dirichlet distribution
@@ -154,7 +154,7 @@ lr_reduce_factor = 1 / np.sqrt(2)
 min_lr = lr / 100
 
 # some interpolation and learning schemes
-update_interp_while_train = True
+update_interp_while_train = False
 update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
