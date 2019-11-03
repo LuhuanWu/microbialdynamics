@@ -31,7 +31,7 @@ class tf_dirichlet(distribution):
 
     def get_dirichlet(self, Input, **kwargs):
         with tf.variable_scope(self.name):
-            alphas, _ = self.transformation.transform(Input, **kwargs)
+            alphas = self.transformation.transform(Input, **kwargs)
             alphas = tf.nn.softplus(alphas) + 1e-6
             dirichlet = tfd.Dirichlet(alphas,
                                       validate_args=True,

@@ -1,28 +1,32 @@
-import numpy as np
 import tensorflow as tf
 
 from src.transformation.base import transformation
 
-
 class clv_transformation(transformation):
+    def __init__(self, Dx, Dev):
+        self.Dx = Dx
+        self.Dev = Dev
 
-    def transform(self, Input, Dx=-1):
+        self.A = tf.Variable(tf.zeros((self.Dx + 1, self.Dx)))
+        self.g = tf.Variable(tf.zeros((self.Dx,)))
+        self.Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+
+    def transform(self, Input, **kwargs):
         """
-
         :param Input: (n_particles, batch_size, Dx + Dev)
         :param Dx: dimension of hidden space
         :return: output: (n_particles, batch_size, Dx)
         """
-        # x_t + g_t + v_t * Wg + p_t * (A+ A(v_t)) where A(v_t) = W2 * (v_t * W1)
+        # x_t + g_t + v_t * Wg + p_t * A
 
-        A, g, Wg, W1, W2 = self.params
-        # A (Dx + 1, Dx)
-        # g (Dx, )
-        # Wg (Dev, Dx)
-        # W1 (Dev, Dx)
-        # W2 (Dx+1, 1)
+        A, g, Wg = self.A, self.g, self.Wg
+        Dx = self.Dx
 
-        assert len(Input.shape) == 3
+        shape = Input.shape.as_list()
+        if len(shape) > 3:
+            batch_size, DxpDev = shape[-2], shape[-1]
+            shape[-1] = Dx
+            Input = tf.reshape(Input, (-1, batch_size, DxpDev))
         assert Dx > 0
 
         x = Input[..., 0:Dx]  # (n_particles, batch_size, Dx)
@@ -37,15 +41,12 @@ class clv_transformation(transformation):
             # Wg shape (Dev, Dx)
             Wgv = batch_matmul(v, Wg)  # (n_particles, batch_size, Dx)
 
-            # (1, Dev) * (Dev, Dx) --> (1, Dx)
-            Aofv = tf.matmul(v, W1)
-            # (Dx + 1, 1) * (1, Dx) --> (Dx+1, Dx)
-            Aofv = tf.matmul(W2, Aofv)
-
-            output = x + g + Wgv + batch_matmul(p, A + Aofv)
+            output = x + g + Wgv + batch_matmul(p, A)
         else:
             output = x + g + batch_matmul(p, A)
 
+        if len(shape) > 3:
+            output = tf.reshape(output, shape)
         return output
 
 
@@ -56,25 +57,15 @@ def batch_matmul(Input, A):
     :param Input: (..., m)
     :return: (..., n)
     """
-    # some adhoc way to cope with this: assume batch_size = 1
+
     Input_shape = Input.shape.as_list()  # (..., m)
+    output_shape = tf.unstack(tf.shape(Input))
+    output_shape[-1] = tf.shape(A)[-1]  # output_shape = (..., n)
+    output_shape = tf.stack(output_shape)
 
-    output_shape = list(Input_shape)
-    output_shape[-1] = A.shape.as_list()[-1]  # output_shape = (..., n)
-
-    num_None = 0
-    for i in range(len(output_shape)):
-        if output_shape[i] is None:
-            output_shape[i] = -1
-            num_None += 1
-    if num_None > 1:
-        raise ValueError("Shape error! Can have most one None in shape.")
-
-    # (-1, m) * (m, n) --> (-1, n)
     Input_reshaped = tf.reshape(Input, [-1, Input_shape[-1]])
     output_reshaped = tf.matmul(Input_reshaped, A)
 
     output = tf.reshape(output_reshaped, output_shape)
 
     return output
-

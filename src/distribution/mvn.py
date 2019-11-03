@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
 
-from src.transformation.flow import NF
 from src.distribution.base import distribution
 
 
@@ -28,51 +27,13 @@ class tf_mvn(distribution):
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
 
-
     def get_mvn(self, Input, **kwargs):
-        if isinstance(self.transformation, NF):
-            dist = self.get_mvn_from_flow(Input)
-        else:
-            dist = self.get_mvn_from_transformation(Input, **kwargs)
-        return dist
-
-    def get_mvn_from_flow(self, Input):
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            assert Input.shape.as_list()[-1] == self.transformation.event_size
-            sigma = self.get_sigma(Input)
-            dist = tfd.MultivariateNormalDiag(Input, sigma,
-                                              validate_args=True,
-                                              allow_nan_stats=False)
-            dist = self.transformation.transform(dist)
-            return dist
-
-    def get_mvn_from_transformation(self, Input, **kwargs):
-        with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            sigma = None
-
             mu = self.transformation.transform(Input, **kwargs)
-            if isinstance(mu, tuple):
-                assert len(mu) == 2, "output of {} should contain 2 elements".format(self.transformation.name)
-                mu, sigma = mu
-
             sigma_con = self.get_sigma(mu)
-
-            if sigma is None:
-                mvn = tfd.MultivariateNormalDiag(mu, sigma_con,
-                                                 validate_args=True,
-                                                 allow_nan_stats=False)
-            else:
-                if len(sigma.shape.as_list()) == len(mu.shape.as_list()):
-                    sigma = sigma_con + 0.1 * sigma
-                    mvn = tfd.MultivariateNormalDiag(mu, sigma,
-                                                     validate_args=True,
-                                                     allow_nan_stats=False)
-                else:
-                    sigma = tf.diag(sigma_con) + 0.1 * sigma
-                    mvn = tfd.MultivariateNormalFullCovariance(mu, sigma,
-                                                               validate_args=True,
-                                                               allow_nan_stats=False)
-
+            mvn = tfd.MultivariateNormalDiag(mu, sigma_con,
+                                             validate_args=True,
+                                             allow_nan_stats=False)
             return mvn
 
     def get_sigma(self, mu):
@@ -108,14 +69,4 @@ class tf_mvn(distribution):
     def mean(self, Input, name=None, **kwargs):
         mvn = self.get_mvn(Input, **kwargs)
         with tf.variable_scope(name or self.name):
-            if isinstance(self.transformation, NF):
-                # for flow, choose the point with max prob
-                sample = mvn.sample(self.transformation.sample_num)
-                log_prob = mvn.log_prob(sample)
-                ML_idx = tf.argmax(log_prob, axis=0, output_type=tf.int32)
-                batch_shape = mvn.batch_shape
-                meshgrid_axis = [tf.range(batch_axis_size) for batch_axis_size in batch_shape]
-                gather_idx = tf.stack([ML_idx] + tf.meshgrid(*meshgrid_axis, indexing="ij"), axis=-1)
-                return tf.gather_nd(sample, gather_idx)
-            else:
-                return mvn.mean()
+            return mvn.mean()

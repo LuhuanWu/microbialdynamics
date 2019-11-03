@@ -279,11 +279,6 @@ class trainer:
                         elif self.Dx == 3:
                             self.draw_3D_quiver_plot(Xs_val, i + 1)
 
-                if self.FLAGS.print_f and (self.total_epoch_count + 1) % print_freq == 0:
-                    if self.FLAGS.transformation == "MLP":
-                        print("f mlp parameters:")
-                        print(self.sess.run(self.model.f_tran.get_variables()))
-
             if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
                 interp_train_feed_dict = {self.obs: self.obs_train,
                                           self.hidden: self.hidden_train,
@@ -519,7 +514,7 @@ class trainer:
         R_square_percentage = np.zeros(n_steps + 1)
         R_square_logp = np.zeros(n_steps + 1)
         for i, (y_hat_i, y_i) in enumerate(zip(y_hat, y)):
-            if self.SMC.emission == "mvn":
+            if self.model.g_dist_type == "mvn":
                 p_hat_i = np.concatenate([y_hat_i, np.zeros((n_tp, 1))], axis=-1)
                 p_i = np.concatenate([y_i, np.zeros((n_tp, time, 1))], axis=-1)
                 from scipy.special import logsumexp

@@ -34,11 +34,11 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    if FLAGS.emission == "dirichlet" or FLAGS.emission == "mvn":
+    if FLAGS.g_dist_type == "dirichlet" or FLAGS.g_dist_type == "mvn":
         y_hat_bar_plot_to_normalize = False
-        if FLAGS.emission == "mvn":
+        if FLAGS.g_dist_type == "mvn":
             assert FLAGS.data_type in PERCENTAGE_DATA_DICT, "mvn emission is only compatible to percentage data."
-    elif FLAGS.emission == "poisson" or FLAGS.emission == "multinomial":
+    elif FLAGS.g_dist_type == "poisson" or FLAGS.g_dist_type == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
         raise ValueError("Unsupported emission!")
@@ -100,7 +100,7 @@ def main(_):
                              extra_inputs_train, extra_inputs_test,
                              interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data)
 
-        if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.emission == "mvn":
+        if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.g_dist_type == "mvn":
             # transform to log additive ratio
             percentage_train = []
             for i in range(len(obs_train)):
@@ -185,7 +185,7 @@ def main(_):
         y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
         print("Finish evaluating training results...")
 
-        if FLAGS.emission == "mvn":
+        if FLAGS.g_dist_type == "mvn":
             # transform log additive ratio back to observation
 
             percentage_hat_val_train = [[[] for _ in range(FLAGS.n_train)] for _ in range(FLAGS.MSE_steps+1)]

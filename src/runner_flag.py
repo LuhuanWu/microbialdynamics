@@ -24,21 +24,21 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 3                  # dimension of observations. for microbio data, Dy = 11
+Dx = 10                # dimension of hidden states
+Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
 n_particles = 32        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [3]  # 500*100 #100*200
+epochs = [200]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "count_k2"
+data_type = "count"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
@@ -85,16 +85,14 @@ use_stack_rnn = True
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
-# transformation
-transformation = "MLP"  # choose from MLP, linear, clv, clv_original
-
-# whether emission uses Dirichlet distribution
-emission = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+f_tran_type = "clv"          # choose from MLP, linear, clv
+g_tran_type = "LDA"          # choose from MLP, LDA
+g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
-PSVO = True      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = False      # Smoothing Variational Objective (use proposal based on bRNN)
+PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
+SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
 AESMC = False    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
@@ -233,9 +231,9 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether to use mask interpolation for missing observations")
 
-flags.DEFINE_string("emission", emission, "type of emission, chosen from dirichlet, poisson and mvn")
-
-flags.DEFINE_string("transformation", transformation, "type of transformation, choose from MLP, linear, clv and clv_original")
+flags.DEFINE_string("f_tran_type", f_tran_type, "type of f transformation, choose from MLP, linear, clv and clv_original")
+flags.DEFINE_string("g_tran_type", g_tran_type, "type of g transformation, choose from MLP and LDA")
+flags.DEFINE_string("g_dist_type", g_dist_type, "type of g distribution, chosen from dirichlet, poisson, mvn and multinomial")
 
 # ------------------------- Inference Schemes ------------------------ #
 
@@ -285,10 +283,6 @@ flags.DEFINE_integer("saving_test_num", saving_test_num, "number of testing data
 
 flags.DEFINE_boolean("save_tensorboard", save_tensorboard, "whether to save tensorboard")
 flags.DEFINE_boolean("save_model", save_model, "whether to save model")
-
-# for debug purpose
-flags.DEFINE_boolean("print_f", False, "whether to print f or not")
-flags.DEFINE_integer("print_f_frequency", 2, "frequency of printing f")
 
 FLAGS = flags.FLAGS
 

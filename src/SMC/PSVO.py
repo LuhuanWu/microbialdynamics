@@ -85,7 +85,7 @@ class PSVO(SVO):
         g_log_probs_ta = tf.TensorArray(tf.float32, size=time, name="joint_g_log_probs")
         bw_log_Omegas_ta = tf.TensorArray(tf.float32, size=time, name="bw_log_Omegas_ta")
 
-        if self.model.emission == "poisson" or self.model.emission == "multinomial" or self.model.emission == "mvn" :
+        if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
             # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:

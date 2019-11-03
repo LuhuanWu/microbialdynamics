@@ -38,7 +38,7 @@ class tf_poisson(distribution):
         :return:
         """
         with tf.variable_scope(self.name):
-            lambdas, _ = self.transformation.transform(Input, **kwargs)
+            lambdas = self.transformation.transform(Input, **kwargs)
             lambdas = tf.nn.softplus(lambdas) + 1e-6  # (T, Dy)
             lambdas = lambdas / tf.reduce_sum(lambdas, axis=-1, keepdims=True)
             lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)

@@ -14,13 +14,12 @@ class tf_multinomial(distribution):
 
     def get_multinomial(self, Input, extra_inputs, **kwargs):
         """
-
         :param Input: (T, Dx)
         :param external_inputs:  total counts, (T, )
         :return:
         """
         with tf.variable_scope(self.name):
-            logits, _ = self.transformation.transform(Input, **kwargs)
+            logits = self.transformation.transform(Input, **kwargs)
             multinomial = tfd.Multinomial(total_count=extra_inputs,
                                           logits=logits,
                                           validate_args=True,

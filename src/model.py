@@ -1,18 +1,20 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
-from src.transformation.flow import NF
 from src.transformation.MLP import MLP_transformation
-from src.transformation.inverse_lar import inver_lar_transformation
 from src.transformation.linear import tf_linear_transformation
+from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
-from src.transformation.clv_original import clv_original_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
 from src.distribution.multinomial import tf_multinomial
 
-SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet, poisson=tf_poisson, mvn=tf_mvn, multinomial=tf_multinomial)
+SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet,
+                          poisson=tf_poisson,
+                          mvn=tf_mvn,
+                          multinomial=tf_multinomial,
+                          LDA=LDA_transformation)
 
 
 class SSM(object):
@@ -23,7 +25,7 @@ class SSM(object):
     """
 
     def __init__(self, FLAGS):
-        assert FLAGS.emission in SUPPORTED_EMISSION.keys(), "Emission must be one of " + str(SUPPORTED_EMISSION.keys())
+        assert FLAGS.g_dist_type in SUPPORTED_EMISSION.keys(), "g_dist_type must be one of " + str(SUPPORTED_EMISSION.keys())
 
         self.Dx = FLAGS.Dx
         self.Dy = FLAGS.Dy
@@ -32,7 +34,6 @@ class SSM(object):
 
         self.batch_size = FLAGS.batch_size
 
-        self.transformation = FLAGS.transformation
 
         # Feed-Forward Network (FFN) architectures
         self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",")]
@@ -55,7 +56,9 @@ class SSM(object):
 
         self.use_bootstrap             = True
         self.use_2_q                   = True
-        self.emission                  = FLAGS.emission
+        self.f_tran_type               = FLAGS.f_tran_type
+        self.g_tran_type               = FLAGS.g_tran_type
+        self.g_dist_type               = FLAGS.g_dist_type
 
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
@@ -79,26 +82,21 @@ class SSM(object):
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
 
     def init_trans(self):
-        if self.transformation == "MLP":
+        if self.f_tran_type == "MLP":
             self.f_tran = MLP_transformation(self.f_layers, self.Dx, name="f_tran")
-        elif self.transformation == "linear":
-            A = tf.Variable(tf.eye(self.Dx+self.Dev, self.Dx))
-            b = tf.Variable(tf.zeros((self.Dx, )))
-            self.f_tran = tf_linear_transformation(params=(A, b))
-        elif self.transformation == "clv":
-            A = tf.Variable(tf.zeros((self.Dx+1, self.Dx)))
-            g = tf.Variable(tf.zeros((self.Dx, )))
-            Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
-            W1 = tf.Variable(tf.zeros((self.Dev, self.Dx)))
-            W2 = tf.Variable(tf.zeros((self.Dx+1, 1)))
-            self.f_tran = clv_transformation(params=(A, g, Wg, W1, W2))
-        elif self.transformation == "clv_original":
-            A = tf.Variable(tf.zeros((self.Dx + 1, self.Dx)))
-            g = tf.Variable(tf.zeros((self.Dx,)))
-            Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
-            self.f_tran = clv_original_transformation(params=(A, g, Wg))
+        elif self.f_tran_type == "linear":
+            self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
+        elif self.f_tran_type == "clv":
+            self.f_tran = clv_transformation(self.Dx, self.Dev)
         else:
-            raise ValueError("Invalid value for transformation. Must choose from MLP, linear, clv and clv_original.")
+            raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
+
+        if self.g_tran_type == "MLP":
+            self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
+        elif self.g_tran_type == "LDA":
+            self.g_tran = LDA_transformation(self.Dx, self.Dy, is_f_clv=self.f_tran_type == "clv")
+        else:
+            raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
         self.q0_tran = MLP_transformation(self.q0_layers, self.Dx, name="q0_tran")
 
@@ -109,7 +107,6 @@ class SSM(object):
 
         if self.PSVO:
             self.BSim_q_init_tran = MLP_transformation(self.q0_layers, self.Dx, name="BSim_q_init_tran")
-
             self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_inv_tran")
             self.BSim_q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="BSim_q2_tran")
 
@@ -118,7 +115,6 @@ class SSM(object):
         else:
             self.q1_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_tran")
 
-        self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
 
     def init_dist(self):
         self.q0_dist = tf_mvn(self.q0_tran,
@@ -161,12 +157,12 @@ class SSM(object):
                                  sigma_min=self.f_sigma_min,
                                  name="f_dist")
 
-        if self.emission == "mvn":
+        if self.g_dist_type == "mvn":
             self.g_dist = tf_mvn(self.g_tran, name="g_dist",
                                  sigma_init=self.g_sigma_init,
                                  sigma_min=self.g_sigma_min)
         else:
-            self.g_dist = SUPPORTED_EMISSION[self.emission](self.g_tran, name="g_dist")
+            self.g_dist = SUPPORTED_EMISSION[self.g_dist_type](self.g_tran, name="g_dist")
 
     def init_RNNs(self):
         if self.SVO or self.PSVO:

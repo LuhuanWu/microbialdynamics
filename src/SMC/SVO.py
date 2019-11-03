@@ -17,8 +17,6 @@ class SVO:
 
         self.n_particles = FLAGS.n_particles
 
-        self.emission = FLAGS.emission
-
         # bidirectional RNN as full sequence observations encoder
         self.use_stack_rnn = FLAGS.use_stack_rnn
 
@@ -68,7 +66,7 @@ class SVO:
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
-        if self.model.emission == "poisson" or self.model.emission == "multinomial" or self.model.emission == "mvn" :
+        if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
             # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
@@ -81,10 +79,10 @@ class SVO:
 
         # proposal
         X_0, q_0_log_prob, f_0_log_prob = self.sample_from_2_dist(q0,
-                                                                self.q2,
-                                                                q_f_0_feed,
-                                                                self.preprocessed_obs[0],
-                                                                sample_size=n_particles)
+                                                                  self.q2,
+                                                                  q_f_0_feed,
+                                                                  self.preprocessed_obs[0],
+                                                                  sample_size=n_particles)
 
         # emission log probability and log weights
         g_0_log_prob = self.g.log_prob(X_0, obs[:, 0], extra_inputs=extra_inputs[:, 0])
@@ -98,12 +96,12 @@ class SVO:
                                        resample_particles=self.resample_particles)
         if self.resample_particles:
             log_normalized_W_0 = tf.negative(tf.log(tf.constant(n_particles, dtype=tf.float32,
-                                                          shape=(n_particles, batch_size))),
+                                                                shape=(n_particles, batch_size))),
                                               name="log_normalized_W_0")
 
         else:
             log_normalized_W_0 = tf.add(log_W_0, - tf.reduce_logsumexp(log_W_0, axis=0),
-                                         name="log_normalized_W_{}".format(0))
+                                        name="log_normalized_W_{}".format(0))
 
 
         # -------------------------------------- t = 1, ..., T - 1 -------------------------------------- #
@@ -416,9 +414,9 @@ class SVO:
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
-                x_BxTmkxDz = x_BxTmkxDz[:, :-1]  # (batch_size, time - k - 1, Dx)
+                x_BxTmkxDz = x_BxTmkxDz[:, :-1, :]  # (batch_size, time - k - 1, Dx)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)         # (batch_size, time - k - 1, Dx+Dev)
+                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)  # (batch_size, time - k - 1, Dx+Dev)
                 f_k_feed = tf.transpose(f_k_feed, [1, 0, 2])
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
                 x_BxTmkxDz = tf.transpose(x_BxTmkxDz, [1, 0, 2])
