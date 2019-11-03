@@ -27,9 +27,9 @@ class tf_mvn(distribution):
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
 
-    def get_mvn(self, Input, **kwargs):
+    def get_mvn(self, Input):
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
-            mu = self.transformation.transform(Input, **kwargs)
+            mu = self.transformation.transform(Input)
             sigma_con = self.get_sigma(mu)
             mvn = tfd.MultivariateNormalDiag(mu, sigma_con,
                                              validate_args=True,
@@ -49,24 +49,24 @@ class tf_mvn(distribution):
         return sigma_con
 
     def sample_and_log_prob(self, Input, sample_shape=(), name=None, **kwargs):
-        mvn = self.get_mvn(Input, **kwargs)
+        mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             sample = mvn.sample(sample_shape)
             log_prob = mvn.log_prob(sample)
             return sample, log_prob
 
     def sample(self, Input, sample_shape=(), name=None, **kwargs):
-        mvn = self.get_mvn(Input, **kwargs)
+        mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             sample = mvn.sample(sample_shape)
             return sample
 
     def log_prob(self, Input, output, name=None, **kwargs):
-        mvn = self.get_mvn(Input, **kwargs)
+        mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             return mvn.log_prob(output)
 
     def mean(self, Input, name=None, **kwargs):
-        mvn = self.get_mvn(Input, **kwargs)
+        mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             return mvn.mean()

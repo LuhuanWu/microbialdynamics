@@ -47,8 +47,6 @@ training_sample_idx = [-1]
 # choose samples from the test set for test. -1 indicates default test set
 test_sample_idx = [-1]
 
-isPython2 = False
-
 # time, n_train and n_test will be overwritten if loading data from the file
 time = 5
 n_train = 2 * batch_size
@@ -77,6 +75,8 @@ g_sigma_init, g_sigma_min = 5, 1e-8
 y_smoother_Dhs = [16]
 X0_smoother_Dhs = [16]
 
+f_batch_norm = True
+
 # whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn or tf.nn.bidirectional_dynamic_rnn
 # check https://stackoverflow.com/a/50552539 for differences between them
 use_stack_rnn = True
@@ -85,8 +85,8 @@ use_stack_rnn = True
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
-f_tran_type = "clv"          # choose from MLP, linear, clv
-g_tran_type = "LDA"          # choose from MLP, LDA
+f_tran_type = "MLP"          # choose from MLP, linear, clv
+g_tran_type = "MLP"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 # ------------------------- Inference Schemes ------------------------ #
@@ -185,8 +185,6 @@ flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The fil
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
 
-flags.DEFINE_boolean("isPython2", isPython2, "Was the data pickled in python 2?")
-
 flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
 flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
 flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
@@ -225,6 +223,8 @@ flags.DEFINE_string("y_smoother_Dhs", y_smoother_Dhs, "number of units for y_smo
                                                       "int seperated by comma")
 flags.DEFINE_string("X0_smoother_Dhs", X0_smoother_Dhs, "number of units for X0_smoother birdectional RNNs, "
                                                         "int seperated by comma")
+
+flags.DEFINE_boolean("f_batch_norm", f_batch_norm, "whether use batch normalization and residual for transition")
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #

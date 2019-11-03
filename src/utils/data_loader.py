@@ -2,12 +2,9 @@ import pickle
 import numpy as np
 
 
-def load_data(path, Dx, isPython2, training_sample_idx=None, test_sample_idx=None):
+def load_data(path, Dx, training_sample_idx=None, test_sample_idx=None):
     with open(path, "rb") as handle:
-        if isPython2:
-            data = pickle.load(handle, encoding="latin1")
-        else:
-            data = pickle.load(handle)
+        data = pickle.load(handle)
 
     obs_train = data["Ytrain"]
     obs_test = data["Ytest"]

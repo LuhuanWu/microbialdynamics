@@ -30,15 +30,14 @@ class tf_poisson(distribution):
         super(tf_poisson, self).__init__(transformation, name)
 
 
-    def get_poisson(self, Input, extra_inputs=None, **kwargs):
+    def get_poisson(self, Input, extra_inputs=None):
         """
-
         :param Input: (T, Dx)
         :param external_inputs:  total counts, (T, )
         :return:
         """
         with tf.variable_scope(self.name):
-            lambdas = self.transformation.transform(Input, **kwargs)
+            lambdas = self.transformation.transform(Input)
             lambdas = tf.nn.softplus(lambdas) + 1e-6  # (T, Dy)
             lambdas = lambdas / tf.reduce_sum(lambdas, axis=-1, keepdims=True)
             lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)
@@ -47,12 +46,12 @@ class tf_poisson(distribution):
                                   allow_nan_stats=False)
             return poisson
 
-    def log_prob(self, Input, output, extra_inputs=None, name=None, **kwargs):
-        poisson = self.get_poisson(Input, extra_inputs, **kwargs)
+    def log_prob(self, Input, output, extra_inputs=None, name=None):
+        poisson = self.get_poisson(Input, extra_inputs)
         with tf.variable_scope(name or self.name):
             return tf.reduce_sum(poisson.log_prob(output), axis=-1)
 
-    def mean(self, Input, extra_inputs, name=None, **kwargs):
-        poisson = self.get_poisson(Input, extra_inputs, **kwargs)
+    def mean(self, Input, extra_inputs, name=None):
+        poisson = self.get_poisson(Input, extra_inputs)
         with tf.variable_scope(name or self.name):
             return poisson.mean()

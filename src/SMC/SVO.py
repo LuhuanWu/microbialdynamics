@@ -169,8 +169,8 @@ class SVO:
         return Xs, X_ancestors, log_Ws
 
     def sample_from_2_dist(self, dist1, dist2, d1_input, d2_input, inputs=None, sample_size=()):
-        d1_mvn = dist1.get_mvn(d1_input, Dx=self.Dx)
-        d2_mvn = dist2.get_mvn(d2_input, Dx=self.Dx)
+        d1_mvn = dist1.get_mvn(d1_input)
+        d2_mvn = dist2.get_mvn(d2_input)
 
         if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
             d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()

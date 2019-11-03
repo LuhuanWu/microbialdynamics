@@ -10,6 +10,7 @@ class MLP_transformation(transformation):
                  name="MLP_transformation"):
         self.Dhs = Dhs
         self.Dout = Dout
+
         self.batch_norm = batch_norm
 
         self.name = name
@@ -34,7 +35,7 @@ class MLP_transformation(transformation):
             if self.batch_norm:
                 self.batch_norm_layer = BatchNormalization()
 
-    def transform(self, Input, **kwargs):
+    def transform(self, Input):
         with tf.variable_scope(self.name):
             hidden = tf.identity(Input)
             for hidden_layer in self.hidden_layers:
@@ -42,6 +43,6 @@ class MLP_transformation(transformation):
 
             mu = self.mu_layer(hidden)
             if self.batch_norm:
-                mu = self.batch_norm_layer(mu)
+                mu = self.batch_norm_layer(mu) + Input[..., :self.Dout]
 
         return mu

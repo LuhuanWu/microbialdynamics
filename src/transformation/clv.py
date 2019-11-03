@@ -11,7 +11,7 @@ class clv_transformation(transformation):
         self.g = tf.Variable(tf.zeros((self.Dx,)))
         self.Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
 
-    def transform(self, Input, **kwargs):
+    def transform(self, Input):
         """
         :param Input: (n_particles, batch_size, Dx + Dev)
         :param Dx: dimension of hidden space

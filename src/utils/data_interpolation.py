@@ -63,7 +63,6 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
 def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=None,
                           interpolation=None, pseudo_count=1, pseudo_percentage=1e-6):
     """
-
     :param hidden: ndarray of shape (n_obs, Dx)
     :param obs: ndarray of shape (n_obs, Dy + 1), where obs[:, 0] records day information
     :param input: ndarray of shape (n_inputs, Dy + 1], where input[:, 0] records day information
@@ -207,8 +206,9 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
                 interpolated_extra_inputs[i] = ei if m else np.sum(iobs)
 
     # sanity checks
-    assert np.all(np.sum(interpolated_obs, axis=-1) == interpolated_extra_inputs), \
-        "sum of counts does not match total counts!"
+    if np.abs(np.sum(interpolated_obs, axis=-1)[0] - 1) > 1e-5:
+        assert np.all(np.sum(interpolated_obs, axis=-1) == interpolated_extra_inputs), \
+            "sum of counts does not match total counts!"
 
     return hidden, interpolated_obs, interpolated_input, mask, time_interval, interpolated_extra_inputs
 

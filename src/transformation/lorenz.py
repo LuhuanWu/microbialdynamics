@@ -27,7 +27,7 @@ class lorenz_transformation(transformation):
         return X
 
 class tf_lorenz_transformation(transformation):
-    def transform(self, X_prev, **kwargs):
+    def transform(self, X_prev):
         """
         X_prev.shape = [B0, B1, ..., Bn, Dx]
         """

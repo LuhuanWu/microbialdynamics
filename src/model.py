@@ -60,6 +60,7 @@ class SSM(object):
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
 
+        self.f_batch_norm              = FLAGS.f_batch_norm
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
         self.PSVO                      = FLAGS.PSVO
@@ -83,7 +84,7 @@ class SSM(object):
 
     def init_trans(self):
         if self.f_tran_type == "MLP":
-            self.f_tran = MLP_transformation(self.f_layers, self.Dx, name="f_tran")
+            self.f_tran = MLP_transformation(self.f_layers, self.Dx, batch_norm=self.f_batch_norm, name="f_tran")
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
@@ -107,7 +108,8 @@ class SSM(object):
 
         if self.PSVO:
             self.BSim_q_init_tran = MLP_transformation(self.q0_layers, self.Dx, name="BSim_q_init_tran")
-            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_inv_tran")
+            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx,
+                                                  batch_norm=self.f_batch_norm, name="q1_inv_tran")
             self.BSim_q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="BSim_q2_tran")
 
         if self.use_bootstrap:

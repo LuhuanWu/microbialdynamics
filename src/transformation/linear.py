@@ -21,7 +21,7 @@ class tf_linear_transformation(transformation):
         self.A = tf.Variable(tf.eye(self.Dx+self.Dev, self.Dx))
         self.b = tf.Variable(tf.zeros((self.Dx, )))
 
-    def transform(self, Input, **kwargs):
+    def transform(self, Input):
         # Input shape: (n_particles, batch_size, Dx + Dev)
         output = batch_matmul(Input, self.A) + self.b
 

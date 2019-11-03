@@ -9,7 +9,7 @@ class transformation(object):
         self.params = params
 
     @abstractmethod
-    def transform(self, X_prev, **kwargs):
+    def transform(self, X_prev):
         pass
 
 
