@@ -32,7 +32,7 @@ class SSM(object):
 
         self.batch_size = FLAGS.batch_size
 
-        self.f_transformation = FLAGS.f_transformation
+        self.transformation = FLAGS.transformation
 
         # Feed-Forward Network (FFN) architectures
         self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",")]
@@ -53,25 +53,14 @@ class SSM(object):
         self.y_smoother_Dhs  = [int(x) for x in FLAGS.y_smoother_Dhs.split(",")]
         self.X0_smoother_Dhs = [int(x) for x in FLAGS.X0_smoother_Dhs.split(",")]
 
-        self.output_cov                = FLAGS.output_cov
-        self.diag_cov                  = FLAGS.diag_cov
-
-        self.use_bootstrap             = FLAGS.use_bootstrap
-        self.use_2_q                   = FLAGS.use_2_q
+        self.use_bootstrap             = True
+        self.use_2_q                   = True
         self.emission                  = FLAGS.emission
-        self.two_step_emission         = FLAGS.two_step_emission
-        self.two_step_emission_type    = FLAGS.two_step_emission_type
 
-        self.X0_use_separate_RNN       = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
         self.PSVO                      = FLAGS.PSVO
         self.SVO                       = FLAGS.SVO
-        self.BSim_use_single_RNN       = FLAGS.BSim_use_single_RNN
-
-        self.log_dynamics              = FLAGS.log_dynamics
-        self.lar_dynamics              = FLAGS.lar_dynamics
-        self.f_final_scaling           = FLAGS.f_final_scaling
 
         self.init_placeholder()
         self.init_trans()
@@ -90,97 +79,46 @@ class SSM(object):
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
 
     def init_trans(self):
-        if self.f_transformation == "MLP":
-            if self.log_dynamics or self.lar_dynamics:
-                final_activation = "linear"
-                final_scaling = 1
-                # final_activation = "tanh"
-                # final_scaling = self.f_final_scaling
-            else:
-                final_activation = "linear"
-                final_scaling = 1
-            self.f_tran = MLP_transformation(self.f_layers, self.Dx,
-                                             output_cov=self.output_cov,
-                                             diag_cov=self.diag_cov,
-                                             final_activation=final_activation,
-                                             final_scaling=final_scaling,
-                                             name="f_tran")
-        elif self.f_transformation == "linear":
+        if self.transformation == "MLP":
+            self.f_tran = MLP_transformation(self.f_layers, self.Dx, name="f_tran")
+        elif self.transformation == "linear":
             A = tf.Variable(tf.eye(self.Dx+self.Dev, self.Dx))
             b = tf.Variable(tf.zeros((self.Dx, )))
             self.f_tran = tf_linear_transformation(params=(A, b))
-
-        elif self.f_transformation == "clv":
+        elif self.transformation == "clv":
             A = tf.Variable(tf.zeros((self.Dx+1, self.Dx)))
             g = tf.Variable(tf.zeros((self.Dx, )))
             Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
             W1 = tf.Variable(tf.zeros((self.Dev, self.Dx)))
             W2 = tf.Variable(tf.zeros((self.Dx+1, 1)))
             self.f_tran = clv_transformation(params=(A, g, Wg, W1, W2))
-
-        elif self.f_transformation == "clv_original":
+        elif self.transformation == "clv_original":
             A = tf.Variable(tf.zeros((self.Dx + 1, self.Dx)))
             g = tf.Variable(tf.zeros((self.Dx,)))
             Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
             self.f_tran = clv_original_transformation(params=(A, g, Wg))
-
         else:
-            raise ValueError("Invalid value for f_transformation. Must choose from MLP, linear, clv and clv_original.")
+            raise ValueError("Invalid value for transformation. Must choose from MLP, linear, clv and clv_original.")
 
-        self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
-                                          output_cov=self.output_cov,
-                                          diag_cov=self.diag_cov,
-                                          name="q0_tran")
+        self.q0_tran = MLP_transformation(self.q0_layers, self.Dx, name="q0_tran")
 
         if self.use_2_q:
-            self.q2_tran = MLP_transformation(self.q2_layers, self.Dx,
-                                              output_cov=self.output_cov,
-                                              diag_cov=self.diag_cov,
-                                              name="q2_tran")
+            self.q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="q2_tran")
         else:
             self.q2_tran = None
 
         if self.PSVO:
-            self.BSim_q_init_tran = MLP_transformation(self.q0_layers, self.Dx,
-                                                       output_cov=self.output_cov,
-                                                       diag_cov=self.diag_cov,
-                                                       name="BSim_q_init_tran")
+            self.BSim_q_init_tran = MLP_transformation(self.q0_layers, self.Dx, name="BSim_q_init_tran")
 
-            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx,
-                                                  output_cov=self.output_cov,
-                                                  diag_cov=self.diag_cov,
-                                                  name="q1_inv_tran")
-            self.BSim_q2_tran = MLP_transformation(self.q2_layers, self.Dx,
-                                                   output_cov=self.output_cov,
-                                                   diag_cov=self.diag_cov,
-                                                   name="BSim_q2_tran")
+            self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_inv_tran")
+            self.BSim_q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="BSim_q2_tran")
 
         if self.use_bootstrap:
             self.q1_tran = self.f_tran
         else:
-            self.q1_tran = MLP_transformation(self.f_layers, self.Dx,
-                                             output_cov=self.output_cov,
-                                             diag_cov=self.diag_cov,
-                                             name="f_tran")
+            self.q1_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_tran")
 
-        if self.two_step_emission:
-                self.h_tran = MLP_transformation(self.h_layers, self.Dy-1,
-                                                 output_cov=self.output_cov,
-                                                 diag_cov=self.diag_cov,
-                                                 name="h_tran")
-
-        if self.two_step_emission:
-            if self.two_step_emission_type == "inv_lar":
-                self.g_tran = inver_lar_transformation(self.Dy-1)
-                assert self.emission == "multinomial", "Can only use multinomial as emission " \
-                                                       "when two step emission type is inv_lar"
-            else:
-                assert self.two_step_emission_type == "MLP", "must choose two step emission type form inv_lar and MLP"
-        else:
-            self.g_tran = MLP_transformation(self.g_layers, self.Dy,
-                                             output_cov=self.output_cov,
-                                             diag_cov=self.diag_cov,
-                                             name="g_tran")
+        self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
 
     def init_dist(self):
         self.q0_dist = tf_mvn(self.q0_tran,
@@ -223,11 +161,6 @@ class SSM(object):
                                  sigma_min=self.f_sigma_min,
                                  name="f_dist")
 
-        if self.two_step_emission:
-            self.h_dist = tf_mvn(self.h_tran, name="h_dist",
-                                 sigma_init=self.h_sigma_init,
-                                 sigma_min=self.h_sigma_min)
-
         if self.emission == "mvn":
             self.g_dist = tf_mvn(self.g_tran, name="g_dist",
                                  sigma_init=self.g_sigma_init,
@@ -245,27 +178,18 @@ class SSM(object):
                 y_smoother_f = tf.nn.rnn_cell.MultiRNNCell(y_smoother_f)
                 y_smoother_b = tf.nn.rnn_cell.MultiRNNCell(y_smoother_b)
 
-            if self.X0_use_separate_RNN:
-                X0_smoother_f = [tf.contrib.rnn.LSTMBlockCell(Dh, name="X0_smoother_f_{}".format(i))
-                                 for i, Dh in enumerate(self.X0_smoother_Dhs)]
-                X0_smoother_b = [tf.contrib.rnn.LSTMBlockCell(Dh, name="X0_smoother_b_{}".format(i))
-                                 for i, Dh in enumerate(self.X0_smoother_Dhs)]
-                if not self.use_stack_rnn:
-                    X0_smoother_f = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_f)
-                    X0_smoother_b = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_b)
-            else:
-                X0_smoother_f = X0_smoother_b = None
+            X0_smoother_f = [tf.contrib.rnn.LSTMBlockCell(Dh, name="X0_smoother_f_{}".format(i))
+                             for i, Dh in enumerate(self.X0_smoother_Dhs)]
+            X0_smoother_b = [tf.contrib.rnn.LSTMBlockCell(Dh, name="X0_smoother_b_{}".format(i))
+                             for i, Dh in enumerate(self.X0_smoother_Dhs)]
+            if not self.use_stack_rnn:
+                X0_smoother_f = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_f)
+                X0_smoother_b = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_b)
 
             self.bRNN = (y_smoother_f, y_smoother_b, X0_smoother_f, X0_smoother_b)
 
         else:
             self.bRNN = None
-
-        if not (self.use_bootstrap and self.use_2_q):
-            self.X0_transformer = Dense(self.Dx,
-                                        activation="linear",
-                                        kernel_initializer="he_uniform",
-                                        name="X0_transformer")
 
     def init_input_embedding(self):
         self.input_embedding_layer = Dense(self.Dev,

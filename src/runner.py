@@ -52,9 +52,6 @@ def main(_):
     if test_sample_idx == [-1]:
         test_sample_idx = None
 
-    if FLAGS.use_2_q:
-        FLAGS.q_uses_true_X = False
-
     tf.set_random_seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
@@ -86,8 +83,8 @@ def main(_):
         train_num, test_num = len(obs_train), len(obs_test)
         T_train, T_test = obs_train[0].shape[0], obs_test[0].shape[0]
 
-        _mask_train, _mask_test = np.ones((train_num, T_train), dtype=bool), np.ones((test_num, T_test), dtype=bool)
-        time_interval_train, time_interval_test = np.zeros_like(_mask_train), np.zeros_like(_mask_test)
+        mask_train, mask_test = np.ones((train_num, T_train), dtype=bool), np.ones((test_num, T_test), dtype=bool)
+        time_interval_train, time_interval_test = np.zeros_like(mask_train), np.zeros_like(mask_test)
         extra_inputs_train, extra_inputs_test = np.zeros((train_num, T_train)), np.zeros((test_num, T_test))
 
     elif FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
@@ -98,7 +95,7 @@ def main(_):
         FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
 
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        _mask_train, _mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
+        mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
             interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                              extra_inputs_train, extra_inputs_test,
                              interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data)
@@ -116,16 +113,6 @@ def main(_):
                 obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
     else:
         raise ValueError("Data type must be one of available data types.")
-
-    """
-    if FLAGS.use_mask:
-        mask_train, mask_test = _mask_train, _mask_test
-    else:
-        # set all the elements of mask to be True
-        mask_train = [np.ones_like(m, dtype=bool) for m in _mask_train]
-        mask_test = [np.ones_like(m, dtype=bool) for m in _mask_test]
-    """
-    mask_train, mask_test = _mask_train, _mask_test
 
     # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
@@ -154,9 +141,6 @@ def main(_):
         SMC_train = IWAE(SSM_model, FLAGS)
     else:
         raise ValueError("Choose one of objectives among: PSVO, SVO, AESMC, IWAE")
-
-    # at most of of them can be set to True
-    assert FLAGS.log_dynamics + FLAGS.lar_dynamics < 2
 
     # =========================================== data saving part =========================================== #
     # create dir to save results

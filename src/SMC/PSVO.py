@@ -9,10 +9,9 @@ class PSVO(SVO):
     def __init__(self, model, FLAGS, name="log_ZSMC"):
         SVO.__init__(self, model, FLAGS, name="log_ZSMC")
 
-        self.n_particles_for_BSim_proposal = FLAGS.n_particles_for_BSim_proposal
+        self.n_bw_particles = FLAGS.n_bw_particles
 
         self.smooth_obs = False
-        self.BSim_use_single_RNN = FLAGS.BSim_use_single_RNN
 
         self.q1_inv = model.q1_inv_dist
         self.BSim_q_init = model.Bsim_q_init_dist
@@ -78,7 +77,7 @@ class PSVO(SVO):
 
         assert batch_size == 1
 
-        M = self.n_particles_for_BSim_proposal
+        M = self.n_bw_particles
 
         # store in reverse order
         bw_Xs_ta = tf.TensorArray(tf.float32, size=time, name="backward_X_ta")
@@ -91,10 +90,6 @@ class PSVO(SVO):
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
             obs_4_proposal = obs
-        if self.log_dynamics:
-            obs_4_proposal = tf.log(obs_4_proposal)
-        elif self.lar_dynamics:
-            obs_4_proposal = self.lar_transform(obs_4_proposal)
         preprocessed_X0, preprocessed_obs = self.BS_preprocess_obs(obs_4_proposal, time_interval)
 
         # t = T - 1
@@ -202,10 +197,7 @@ class PSVO(SVO):
 
         # self.preprocessed_X0_f is cached in self.SMC()
         mu_0 = self.preprocessed_X0
-        if not (self.model.use_bootstrap and self.model.use_2_q):
-            f_init_log_prob = self.f.log_prob(mu_0, bw_X_0, Dx=self.Dx)  # (M, n_particles, batch_size)
-        else:
-            f_init_log_prob = self.q0.log_prob(mu_0, bw_X_0, Dx=self.Dx)  # (M, n_particles, batch_size)
+        f_init_log_prob = self.q0.log_prob(mu_0, bw_X_0, Dx=self.Dx)  # (M, n_particles, batch_size)
 
         log_W_0 = f_init_log_prob
 
@@ -240,12 +232,6 @@ class PSVO(SVO):
     def BS_preprocess_obs(self, obs, time_interval):
         # if self.smooth_obs, smooth obs with bidirectional RNN
         with tf.variable_scope("smooth_obs"):
-            if self.BSim_use_single_RNN:
-                cells = self.y_smoother_f
-                if isinstance(self.y_smoother_f, list):
-                    cells = tf.nn.rnn_cell.MultiRNNCell(self.y_smoother_f)
-                preprocessed_obs, preprocessed_X0 = tf.nn.static_rnn(cells, tf.unstack(obs, axis=1), dtype=tf.float32)
-            else:
-                preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
+            preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
 
         return preprocessed_X0, preprocessed_obs

@@ -16,26 +16,16 @@ class SVO:
         self.g  = model.g_dist
 
         self.n_particles = FLAGS.n_particles
-        self.q_uses_true_X = FLAGS.q_uses_true_X
 
         self.emission = FLAGS.emission
-        self.two_step_emission = FLAGS.two_step_emission
-        if self.two_step_emission:
-            self.h = model.h_dist
 
         # bidirectional RNN as full sequence observations encoder
-        self.X0_use_separate_RNN = FLAGS.X0_use_separate_RNN
         self.use_stack_rnn = FLAGS.use_stack_rnn
 
         self.model = model
 
-        self.log_dynamics = FLAGS.log_dynamics
-        self.lar_dynamics = FLAGS.lar_dynamics
-
         self.smooth_obs = True
         self.resample_particles = True
-
-        self.f_power = FLAGS.f_power # power for q_1 and f
 
         self.name = name
 
@@ -83,10 +73,6 @@ class SVO:
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
         else:
             obs_4_proposal = obs
-        if self.log_dynamics:
-            obs_4_proposal = tf.log(obs_4_proposal)
-        elif self.lar_dynamics:
-            obs_4_proposal = self.lar_transform(obs_4_proposal)
         self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
         q0, q1, f = self.q0, self.q1, self.f
 
@@ -94,45 +80,20 @@ class SVO:
         q_f_0_feed = self.preprocessed_X0
 
         # proposal
-        if self.q_uses_true_X:
-            X_0, q_0_log_prob = self.sample_from_true_X(hidden[:, 0, :],
-                                                      q_cov,
-                                                      sample_shape=n_particles,
-                                                      name="q_0_sample_and_log_prob")
-            f_0_log_prob = f.log_prob(q_f_0_feed, X_0, name="f_0_log_prob")
-        else:
-            if self.model.use_2_q:
-                X_0, q_0_log_prob, f_0_log_prob = self.sample_from_2_dist(q0,
-                                                                        self.q2,
-                                                                        q_f_0_feed,
-                                                                        self.preprocessed_obs[0],
-                                                                        sample_size=n_particles)
-            else:
-                X_0, q_0_log_prob = q0.sample_and_log_prob(q_f_0_feed,
-                                                         sample_shape=n_particles,
-                                                         name="q_0_sample_and_log_prob")
-
-                # only when use_bootstrap and use_2_q, f_t_log_prob has been calculated
-                assert not self.model.use_bootstrap
-                f_0_log_prob = f.log_prob(q_f_0_feed, X, name="f_0_log_prob", Dx=self.Dx)
+        X_0, q_0_log_prob, f_0_log_prob = self.sample_from_2_dist(q0,
+                                                                self.q2,
+                                                                q_f_0_feed,
+                                                                self.preprocessed_obs[0],
+                                                                sample_size=n_particles)
 
         # emission log probability and log weights
-        if self.log_dynamics or self.lar_dynamics:
-            g_input = tf.exp(X_0)
-        else:
-            g_input = X_0
-        if self.two_step_emission:
-            g_input, h_0_log_prob = self.h.sample_and_log_prob(g_input)
-            h_0_log_prob = tf.where(mask[0][0], h_0_log_prob, h_0_log_prob * mask_weight, name="h_0_log_prob")
-        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+        g_0_log_prob = self.g.log_prob(X_0, obs[:, 0], extra_inputs=extra_inputs[:, 0])
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
         log_alpha_0 = tf.add(f_0_log_prob, g_0_log_prob - q_0_log_prob, name="log_alpha_0")
-        if self.two_step_emission:
-            log_alpha_0 += h_0_log_prob - tf.stop_gradient(h_0_log_prob)
 
         log_W_0 = tf.add(log_alpha_0, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
-                              name="log_W_0")  # (n_particles, batch_size)
+                         name="log_W_0")  # (n_particles, batch_size)
         X_ancestor_0 = self.resample_X(X_0, log_W_0, sample_size=n_particles,
                                        resample_particles=self.resample_particles)
         if self.resample_particles:
@@ -166,42 +127,18 @@ class SVO:
             q_f_t_feed = tf.concat((X_ancestor_tm1, Input), axis=-1)  # (n_particles, batch_size, Dx + Dev)
 
             # proposal
-            if self.q_uses_true_X:
-                X_t, q_t_log_prob = self.sample_from_true_X(hidden[:, t, :],
-                                                            q_cov,
-                                                            sample_shape=(),
-                                                            name="q_t_sample_and_log_prob")
-                f_t_log_prob = f.log_prob(q_f_t_feed, X_t, name="f_t_log_prob")
-            else:
-                if self.model.use_2_q:
-                    X_t, q_t_log_prob, f_t_log_prob = self.sample_from_2_dist(q1,
-                                                                              self.q2,
-                                                                              q_f_t_feed,
-                                                                              preprocessed_obs_ta.read(t),
-                                                                              inputs=Input,
-                                                                              sample_size=())
-                else:
-                    X_t, q_t_log_prob = q1.sample_and_log_prob(q_f_t_feed,
-                                                               sample_shape=(),
-                                                               name="q_t_sample_and_log_prob")
-                    # transition log probability
-                    f_t_log_prob = f.log_prob(q_f_t_feed, X_t, name="f_t_log_prob", Dx=self.Dx)
+            X_t, q_t_log_prob, f_t_log_prob = self.sample_from_2_dist(q1,
+                                                                      self.q2,
+                                                                      q_f_t_feed,
+                                                                      preprocessed_obs_ta.read(t),
+                                                                      inputs=Input,
+                                                                      sample_size=())
 
             # emission log probability and log weights
-            if self.log_dynamics or self.lar_dynamics:
-                g_input = tf.exp(X_t)
-            else:
-                g_input = X_t
-            if self.two_step_emission:
-                g_input, h_t_log_prob = self.h.sample_and_log_prob(g_input)
-                h_t_log_prob = tf.where(mask[0][0], h_t_log_prob, h_t_log_prob * mask_weight, name="h_t_log_prob")
-            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
+            g_t_log_prob = self.g.log_prob(X_t, obs[:, t], extra_inputs=extra_inputs[:, t])
             g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
             log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
-            if self.two_step_emission:
-                log_alpha_t += h_t_log_prob - tf.stop_gradient(h_t_log_prob)
-
             log_W_t = log_alpha_t + log_normalized_W_tm1
 
             X_ancestor_t = self.resample_X(X_t, log_W_t, sample_size=n_particles,
@@ -238,11 +175,6 @@ class SVO:
         d2_mvn = dist2.get_mvn(d2_input, Dx=self.Dx)
 
         if isinstance(d1_mvn, tfd.MultivariateNormalDiag) and isinstance(d2_mvn, tfd.MultivariateNormalDiag):
-            if inputs is not None:
-                for i in range(self.f_power-1):
-                    d1_mvn_mean = d1_mvn.mean()
-                    d1_mvn = dist1.get_mvn(tf.concat((d1_mvn_mean, inputs), axis=-1), Dx=self.Dx)
-
             d1_mvn_mean, d1_mvn_cov = d1_mvn.mean(), d1_mvn.stddev()
             d2_mvn_mean, d2_mvn_cov = d2_mvn.mean(), d2_mvn.stddev()
 
@@ -384,9 +316,6 @@ class SVO:
             else:
                 preprocessed_X0, preprocessed_obs = self.preprocess_obs_w_bRNN(obs, time_interval)
 
-            if not (self.model.use_bootstrap and self.model.use_2_q):
-                preprocessed_X0 = self.model.X0_transformer(preprocessed_X0)
-
         return preprocessed_X0, preprocessed_obs
 
     def preprocess_obs_w_bRNN(self, obs, time_interval):
@@ -407,18 +336,17 @@ class SVO:
         smoothed_obs = tf.concat(outputs, axis=-1)
         preprocessed_obs = tf.transpose(smoothed_obs, perm=[1, 0, 2])
 
-        if self.X0_use_separate_RNN:
-            if self.use_stack_rnn:
-                outputs, state_fw, state_bw = \
-                    tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.X0_smoother_f,
-                                                                   self.X0_smoother_b,
-                                                                   rnn_input,
-                                                                   dtype=tf.float32)
-            else:
-                outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.X0_smoother_f,
-                                                                                self.X0_smoother_b,
-                                                                                rnn_input,
-                                                                                dtype=tf.float32)
+        if self.use_stack_rnn:
+            outputs, state_fw, state_bw = \
+                tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.X0_smoother_f,
+                                                               self.X0_smoother_b,
+                                                               rnn_input,
+                                                               dtype=tf.float32)
+        else:
+            outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.X0_smoother_f,
+                                                                            self.X0_smoother_b,
+                                                                            rnn_input,
+                                                                            dtype=tf.float32)
         if self.use_stack_rnn:
             outputs_fw = outputs_bw = outputs
         else:
@@ -482,13 +410,7 @@ class SVO:
             unmasked_y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
-                if self.log_dynamics or self.lar_dynamics:
-                    g_input = tf.exp(x_BxTmkxDz)
-                else:
-                    g_input = x_BxTmkxDz
-                if self.two_step_emission:
-                    g_input = self.h.mean(g_input)
-                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
+                unmasked_y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
                 unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy[tf.newaxis,])
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
@@ -501,13 +423,7 @@ class SVO:
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
                 x_BxTmkxDz = tf.transpose(x_BxTmkxDz, [1, 0, 2])
 
-            if self.log_dynamics or self.lar_dynamics:
-                g_input = tf.exp(x_BxTmkxDz)
-            else:
-                g_input = x_BxTmkxDz
-            if self.two_step_emission:
-                g_input = self.h.mean(g_input)
-            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
+            unmasked_y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy[tf.newaxis,])
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
