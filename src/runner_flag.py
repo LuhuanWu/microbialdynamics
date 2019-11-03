@@ -32,7 +32,8 @@ n_particles = 32        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
-epochs = [200]  # 500*100 #100*200
+Adam_beta1 = 0.9
+epochs = [2]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -46,11 +47,6 @@ interpolation_data_type = 'count_clv'
 training_sample_idx = [-1]
 # choose samples from the test set for test. -1 indicates default test set
 test_sample_idx = [-1]
-
-# time, n_train and n_test will be overwritten if loading data from the file
-time = 5
-n_train = 2 * batch_size
-n_test = 2 * batch_size
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
@@ -170,6 +166,7 @@ flags.DEFINE_integer("Dev", Dev, "input embedding size")
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")
 flags.DEFINE_float("lr", lr, "learning rate")
+flags.DEFINE_float("Adam_beta1", Adam_beta1, "Adam optimizer beta1")
 flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
@@ -184,10 +181,6 @@ flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The fil
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
-
-flags.DEFINE_integer("time", time, "number of timesteps for simulated data")
-flags.DEFINE_integer("n_train", n_train, "number of trajactories for traning set")
-flags.DEFINE_integer("n_test", n_test, "number of trajactories for testing set")
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Network (FFN) architectures

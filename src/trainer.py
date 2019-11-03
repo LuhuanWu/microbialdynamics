@@ -147,7 +147,7 @@ class trainer:
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
-            optimizer = tf.train.AdamOptimizer(self.lr_holder)
+            optimizer = tf.train.AdamOptimizer(self.lr_holder, beta1=self.FLAGS.Adam_beta1)
             self.train_op = optimizer.minimize(-self.log_ZSMC)
 
         init = tf.global_variables_initializer()

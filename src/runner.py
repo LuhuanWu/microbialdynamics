@@ -91,7 +91,7 @@ def main(_):
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
         extra_inputs_train, extra_inputs_test = \
             load_data(data_dir, Dx, training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
-        FLAGS.n_train, FLAGS.n_test = len(obs_train), len(obs_test)
+        n_train, n_test = len(obs_train), len(obs_test)
 
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
         mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
@@ -118,8 +118,8 @@ def main(_):
     min_time_test = min([obs.shape[0] for obs in obs_test])
     min_time = min(min_time_train, min_time_test)
     FLAGS.MSE_steps = min(FLAGS.MSE_steps, min_time - 2)
-    FLAGS.saving_train_num = min(FLAGS.saving_train_num, FLAGS.n_train)
-    FLAGS.saving_test_num = min(FLAGS.saving_test_num, FLAGS.n_test)
+    FLAGS.saving_train_num = min(FLAGS.saving_train_num, n_train)
+    FLAGS.saving_test_num = min(FLAGS.saving_test_num, n_test)
 
     print("finished preparing dataset")
 
@@ -187,7 +187,7 @@ def main(_):
         if FLAGS.g_dist_type == "mvn":
             # transform log additive ratio back to observation
 
-            percentage_hat_val_train = [[[] for _ in range(FLAGS.n_train)] for _ in range(FLAGS.MSE_steps+1)]
+            percentage_hat_val_train = [[[] for _ in range(n_train)] for _ in range(FLAGS.MSE_steps+1)]
             for i in range(len(y_hat_val_train)):
                 # y hat val = (batch_size, n_days, Dy)
                 for j in range(len(y_hat_val_train[i])):
