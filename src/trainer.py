@@ -222,8 +222,8 @@ class trainer:
 
             if i == 0:
                 self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
-                                               self.unmasked_y_train, self.unmasked_y_test,
-                                               self.unmasked_y_hat_N_BxTxDy)
+                                               self.unmasked_y_hat_N_BxTxDy,
+                                               self.unmasked_y_train, self.unmasked_y_test)
 
             # training
             obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -246,8 +246,8 @@ class trainer:
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
                     self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
-                                                   self.unmasked_y_train, self.unmasked_y_test,
-                                                   self.unmasked_y_hat_N_BxTxDy)
+                                                   self.unmasked_y_hat_N_BxTxDy,
+                                                   self.unmasked_y_train, self.unmasked_y_test)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
@@ -334,13 +334,15 @@ class trainer:
         self.sess.close()
 
     def evaluate_and_save_metrics(self, iter_num, y_hat_N_BxTxDy, y_N_BxTxDy,
-                                  unmasked_y_train=None, unmaksed_y_test=None, unmasked_y_hat_N_BxTxDy=None):
+                                  unmasked_y_hat_N_BxTxDy, unmasked_y_train=None, unmaksed_y_test=None):
 
-        log_ZSMC_train, y_hat_train, y_train = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy], feed_dict_w_batches=self.train_all_feed_dict)
+        log_ZSMC_train, y_hat_train, y_train, unmasked_y_hat_train = \
+            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy],
+                          feed_dict_w_batches=self.train_all_feed_dict)
 
-        log_ZSMC_test, y_hat_test, y_test = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy], feed_dict_w_batches=self.test_all_feed_dict)
+        log_ZSMC_test, y_hat_test, y_test, unmasked_y_hat_test = \
+            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy],
+                          feed_dict_w_batches=self.test_all_feed_dict)
 
         log_ZSMC_train, log_ZSMC_test = np.mean(log_ZSMC_train), np.mean(log_ZSMC_test)
 
@@ -357,12 +359,7 @@ class trainer:
         print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
         print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
 
-        if unmasked_y_hat_N_BxTxDy is not None:
-            unmasked_y_hat_train = self.evaluate(unmasked_y_hat_N_BxTxDy,
-                                                 feed_dict_w_batches=self.train_all_feed_dict)
-            unmasked_y_hat_test = self.evaluate(unmasked_y_hat_N_BxTxDy,
-                                                feed_dict_w_batches=self.test_all_feed_dict)
-
+        if unmasked_y_train is not None and unmaksed_y_test is not None:
             unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
                 self.evaluate_R_square(unmasked_y_hat_train, unmasked_y_train)
             unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
@@ -500,6 +497,9 @@ class trainer:
 
     def evaluate_R_square(self, y_hat_N_BxTxDy, y_N_BxTxDy):
         n_steps = len(y_hat_N_BxTxDy) - 1
+        # for y_hat_i in y_hat_N_BxTxDy:
+        #     for ele in y_hat_i:
+        #         print(ele.shape)
         y_hat = [np.concatenate(y_hat_i, axis=1)[0] for y_hat_i in y_hat_N_BxTxDy]
         y = [np.concatenate(y_i, axis=1)[0] for y_i in y_N_BxTxDy]
         n_tp, Dy = y[0].shape

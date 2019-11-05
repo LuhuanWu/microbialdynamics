@@ -353,33 +353,6 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    @staticmethod
-    def compute_MSE(y_hat_N_BxTxDy, y_N_BxTxDy, mask):
-        MSE_ks = []  # [MSE_0, MSE_1, ..., MSE_N]
-        y_means = []  # [y_mean_0 (shape = Dy), ..., y_mean_N], used to calculate y_var across all batches
-        y_vars = []  # [y_var_0 (shape = Dy), ..., y_var_N], used to calculate y_var across all batches
-        for k, (y_hat_BxTmkxDy, y_BxTmkxDy) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
-            difference = y_hat_BxTmkxDy - y_BxTmkxDy  # (batch_size, time-k, Dy)
-            masked_difference = tf.boolean_mask(difference, mask[:, k:])  # (time-k, Dy)
-            masked_difference = masked_difference[None,]  # (batch_size, time-k, Dy)
-
-            MSE_k = tf.reduce_sum(masked_difference ** 2, name="MSE_{}".format(k))
-            MSE_ks.append(MSE_k)
-
-            masked_y = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])  # (mask_time, Dy)
-            masked_y = masked_y[None,]  # (batch_size, mask_time, Dy)
-            y_mean = tf.reduce_mean(masked_y, axis=[0, 1], name="y_mean_{}".format(k))  # (Dy,)
-            y_means.append(y_mean)
-            y_var = tf.reduce_sum((masked_y - y_mean) ** 2, axis=[0, 1], name="y_var_{}".format(k))  # (Dy,)
-            y_vars.append(y_var)
-
-        MSE_ks = tf.stack(MSE_ks, name="MSE_ks")  # (n_steps + 1)
-        y_means = tf.stack(y_means, name="y_means")  # (n_steps + 1, Dy)
-        y_vars = tf.stack(y_vars, name="y_vars")  # (n_steps + 1, Dy)
-
-        y_hat_N_BxTxDy = list(y_hat_N_BxTxDy)  # deep copy
-        return MSE_ks, y_means, y_vars, y_hat_N_BxTxDy
-
     def n_step_MSE(self, n_steps, X, hidden, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
@@ -410,7 +383,7 @@ class SVO:
             for k in range(n_steps):
                 unmasked_y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
-                unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy[tf.newaxis,])
+                unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
@@ -422,7 +395,7 @@ class SVO:
                 x_BxTmkxDz = tf.transpose(x_BxTmkxDz, [1, 0, 2])
 
             unmasked_y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
-            unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy[tf.newaxis,])
+            unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
 

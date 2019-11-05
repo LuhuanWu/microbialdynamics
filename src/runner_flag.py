@@ -33,7 +33,7 @@ n_bw_particles = 16  # number of subparticles sampled when augmenting the trajec
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
 Adam_beta1 = 0.9
-epochs = [2]  # 500*100 #100*200
+epochs = [200]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -71,7 +71,7 @@ g_sigma_init, g_sigma_min = 5, 1e-8
 y_smoother_Dhs = [16]
 X0_smoother_Dhs = [16]
 
-f_batch_norm = True
+f_use_residual = True
 
 # whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn or tf.nn.bidirectional_dynamic_rnn
 # check https://stackoverflow.com/a/50552539 for differences between them
@@ -82,13 +82,13 @@ use_mask = True  # whether to use mask in log_ZSMC. note that mask will always b
 use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 f_tran_type = "MLP"          # choose from MLP, linear, clv
-g_tran_type = "MLP"          # choose from MLP, LDA
+g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
-PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
+PSVO = True      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
+SVO = False      # Smoothing Variational Objective (use proposal based on bRNN)
 AESMC = False    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
@@ -217,7 +217,7 @@ flags.DEFINE_string("y_smoother_Dhs", y_smoother_Dhs, "number of units for y_smo
 flags.DEFINE_string("X0_smoother_Dhs", X0_smoother_Dhs, "number of units for X0_smoother birdectional RNNs, "
                                                         "int seperated by comma")
 
-flags.DEFINE_boolean("f_batch_norm", f_batch_norm, "whether use batch normalization and residual for transition")
+flags.DEFINE_boolean("f_use_residual", f_use_residual, "whether use batch normalization and residual for transition")
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 # ------------------------ State Space Model ------------------------- #

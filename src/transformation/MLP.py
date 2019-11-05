@@ -6,12 +6,12 @@ from src.transformation.base import transformation
 
 class MLP_transformation(transformation):
     def __init__(self, Dhs, Dout,
-                 batch_norm=False,
+                 use_residual=False,
                  name="MLP_transformation"):
         self.Dhs = Dhs
         self.Dout = Dout
 
-        self.batch_norm = batch_norm
+        self.use_residual = use_residual
 
         self.name = name
         self.init_FFN()
@@ -32,7 +32,7 @@ class MLP_transformation(transformation):
                                   kernel_initializer="he_normal",
                                   name="mu_layer")
 
-            if self.batch_norm:
+            if self.use_residual:
                 self.batch_norm_layer = BatchNormalization()
 
     def transform(self, Input):
@@ -42,7 +42,9 @@ class MLP_transformation(transformation):
                 hidden = hidden_layer(hidden)
 
             mu = self.mu_layer(hidden)
-            if self.batch_norm:
-                mu = self.batch_norm_layer(mu) + Input[..., :self.Dout]
+            if self.use_residual:
+                mu_shape = tf.shape(mu)
+                mu_reshaped = tf.reshape(mu, [-1, self.Dout])
+                mu = tf.reshape(self.batch_norm_layer(mu_reshaped), mu_shape) + Input[..., :self.Dout]
 
         return mu

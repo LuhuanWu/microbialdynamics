@@ -14,8 +14,9 @@ class LDA_transformation(transformation):
         self.beta = tf.nn.softmax(tf.contrib.layers.batch_norm(tf.Variable(xavier_init(Din, Dy))))
 
     def transform(self, x):
-        zeros = tf.zeros_like(x[..., 0:1])
-        x = tf.concat([x, zeros], axis=-1)
+        if self.is_f_clv:
+            zeros = tf.zeros_like(x[..., 0:1])
+            x = tf.concat([x, zeros], axis=-1)
         x = tf.nn.softmax(x, axis=-1)
 
         # print(x.shape.as_list())
