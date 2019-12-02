@@ -2,19 +2,23 @@ import tensorflow as tf
 
 from src.transformation.base import transformation, xavier_init
 from src.transformation.clv import batch_matmul
+from tensorflow.keras.layers import BatchNormalization
 
 
 class LDA_transformation(transformation):
-    def __init__(self, Dx, Dy, is_f_clv=False):
+    def __init__(self, Dx, Dy, is_x_lar=True, training=False):
         self.Dx = Dx
         self.Dy = Dy
-        self.is_f_clv = is_f_clv
+        self.is_x_lar = is_x_lar
+        self.training = training
 
-        Din = Dx + (1 if is_f_clv else 0)
-        self.beta = tf.nn.softmax(tf.contrib.layers.batch_norm(tf.Variable(xavier_init(Din, Dy))))
+        Din = Dx + (1 if is_x_lar else 0)
+        self.beta_lar = tf.Variable(xavier_init(Din, Dy))
+        self.batch_norm = BatchNormalization()
+        self.beta = tf.nn.softmax(self.batch_norm(self.beta_lar, training=training))
 
     def transform(self, x):
-        if self.is_f_clv:
+        if self.is_x_lar:
             zeros = tf.zeros_like(x[..., 0:1])
             x = tf.concat([x, zeros], axis=-1)
         x = tf.nn.softmax(x, axis=-1)

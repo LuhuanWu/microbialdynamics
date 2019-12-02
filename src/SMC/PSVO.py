@@ -103,13 +103,20 @@ class PSVO(SVO):
         Input = tf.tile(tf.expand_dims(input[:, time - 1, :], axis=0), (n_particles, 1, 1))  # (n_particles, batch_size, Dev)
         f_Tm2_feed = tf.concat((Xs[time - 2], Input), axis=-1)
         f_Tm2_log_prob = self.f.log_prob(f_Tm2_feed, bw_X_Tm1_tiled, Dx=self.Dx)  # (M, n_particles, n_particles, batch_size)
-        g_Tm1_log_prob = self.g.log_prob(bw_X_Tm1, obs[:, time - 1], extra_inputs=extra_inputs[:, time - 1])  # (M, n_particles, batch_size)
-        g_Tm1_log_prob = tf.where(mask[0][0], g_Tm1_log_prob, g_Tm1_log_prob * mask_weight)
-
         log_W_Tm2 = log_Ws[time - 2] - tf.reduce_logsumexp(log_Ws[time - 2], axis=0)  # (n_particles, batch_size)
         log_W_Tm1 = tf.reduce_logsumexp(f_Tm2_log_prob + log_W_Tm2, axis=2)
 
-        bw_log_omega_Tm1 = log_W_Tm1 + g_Tm1_log_prob - bw_q_log_prob  # (n_particles, batch_size)
+        if self.emission_use_auxiliary:
+            g_input, qh_Tm1_log_prob = self.qh.sample_and_log_prob(bw_X_Tm1)
+            h_Tm1_log_prob = self.h.log_prob(bw_X_Tm1, g_input)
+        else:
+            g_input = bw_X_Tm1
+            qh_Tm1_log_prob = h_Tm1_log_prob = 0
+        g_Tm1_log_prob = self.g.log_prob(g_input, obs[:, time - 1], extra_inputs=extra_inputs[:, time - 1])  # (M, n_particles, batch_size)
+        g_Tm1_log_prob = tf.where(mask[0][0], g_Tm1_log_prob, g_Tm1_log_prob * mask_weight)
+        g_Tm1_log_prob += h_Tm1_log_prob - qh_Tm1_log_prob
+
+        bw_log_omega_Tm1 = log_W_Tm1 + g_Tm1_log_prob - bw_q_log_prob # (n_particles, batch_size)
         bw_log_omega_Tm1 = bw_log_omega_Tm1 - tf.reduce_logsumexp(bw_log_omega_Tm1, axis=0, keepdims=True)
 
         bw_X_Tm1, bw_log_omega_Tm1, g_Tm1_log_prob, bw_q_log_prob = \
@@ -151,11 +158,18 @@ class PSVO(SVO):
             Input = tf.tile(input[:, t, :][tf.newaxis, :, :], (n_particles, 1, 1))  # (n_particles, batch_size, Dev)
             f_tm1_feed = tf.concat((Xs[t - 1], Input), axis=-1)
             f_tm1_log_prob = self.f.log_prob(f_tm1_feed, bw_X_t_tiled, Dx=self.Dx)  # (M, n_particles, n_particles, batch_size)
-            g_t_log_prob = self.g.log_prob(bw_X_t, obs[:, t], extra_inputs=extra_inputs[:, t])  # (M, n_particles, batch_size)
-            g_t_log_prob = tf.where(mask[0][0], g_t_log_prob, g_t_log_prob * mask_weight)
-
             log_W_tm1 = log_Ws[t - 1] - tf.reduce_logsumexp(log_Ws[t - 1], axis=0)
             log_W_t = tf.reduce_logsumexp(f_tm1_log_prob + log_W_tm1, axis=2)
+
+            if self.emission_use_auxiliary:
+                g_input, qh_t_log_prob = self.qh.sample_and_log_prob(bw_X_t)
+                h_t_log_prob = self.h.log_prob(bw_X_t, g_input)
+            else:
+                g_input = bw_X_t
+                qh_t_log_prob = h_t_log_prob = 0
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])  # (M, n_particles, batch_size)
+            g_t_log_prob = tf.where(mask[0][0], g_t_log_prob, g_t_log_prob * mask_weight)
+            g_t_log_prob += h_t_log_prob - qh_t_log_prob
 
             # p(x_t | x_{t+1:T}, y_{1:T})
             bw_log_omega_t = log_W_t + f_t_log_prob + g_t_log_prob - bw_q_log_prob

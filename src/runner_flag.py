@@ -28,12 +28,12 @@ Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
 Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 10                 # dimension of inputs.
-n_particles = 32        # number of particles
+n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 lr = 1e-3               # learning rate
 Adam_beta1 = 0.9
-epochs = [200]  # 500*100 #100*200
+epochs = [600, 400, 400, 400]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
@@ -51,25 +51,27 @@ test_sample_idx = [-1]
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [16]         # target evolution
-h_layers = [16]         # target emission (middle step)
-g_layers = [16]         # target emission
+q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [32]         # target evolution
+h_layers = [32]         # target emission (middle step)
+g_layers = [32]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1e-8
 q1_sigma_init, q1_sigma_min = 5, 1e-8
 q2_sigma_init, q2_sigma_min = 5, 1e-8
 f_sigma_init, f_sigma_min = 5, 1e-8
-h_sigma_init, h_sigma_min = 5, 1e-8
 g_sigma_init, g_sigma_min = 5, 1e-8
+
+qh_sigma_init, qh_sigma_min = 5, 1e-8
+h_sigma_init, h_sigma_min = 5, 1e-8
 
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [16]
-X0_smoother_Dhs = [16]
+y_smoother_Dhs = [32]
+X0_smoother_Dhs = [32]
 
 f_use_residual = True
 
@@ -84,6 +86,8 @@ use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mas
 f_tran_type = "MLP"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+
+emission_use_auxiliary = False
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -112,12 +116,12 @@ update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 2 # 100
+print_freq = 10 # 100
 
 # whether to save following into epoch folder
-save_trajectory = False
-save_y_hat_train = False
-save_y_hat_test = False
+save_trajectory = True
+save_y_hat_train = True
+save_y_hat_test = True
 
 # dir to save all results
 rslt_dir_name = "test_k2"
@@ -127,8 +131,8 @@ MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 5
-saving_test_num = 5
+saving_train_num = 20
+saving_test_num = 20
 
 # whether to save tensorboard
 save_tensorboard = False
@@ -201,15 +205,19 @@ flags.DEFINE_float("q0_sigma_init", q0_sigma_init, "initial value of q0_sigma")
 flags.DEFINE_float("q1_sigma_init", q1_sigma_init, "initial value of q1_sigma")
 flags.DEFINE_float("q2_sigma_init", q2_sigma_init, "initial value of q2_sigma")
 flags.DEFINE_float("f_sigma_init",  f_sigma_init,  "initial value of f_sigma")
-flags.DEFINE_float("h_sigma_init",  h_sigma_init,  "initial value of h_sigma")
 flags.DEFINE_float("g_sigma_init",  g_sigma_init,  "initial value of g_sigma")
 
 flags.DEFINE_float("q0_sigma_min", q0_sigma_min, "minimal value of q0_sigma")
 flags.DEFINE_float("q1_sigma_min", q1_sigma_min, "minimal value of q1_sigma")
 flags.DEFINE_float("q2_sigma_min", q2_sigma_min, "minimal value of q2_sigma")
 flags.DEFINE_float("f_sigma_min",  f_sigma_min,  "minimal value of f_sigma")
-flags.DEFINE_float("h_sigma_min",  h_sigma_min,  "minimal value of h_sigma")
 flags.DEFINE_float("g_sigma_min",  g_sigma_min,  "minimal value of g_sigma")
+
+flags.DEFINE_float("qh_sigma_init",  qh_sigma_init,  "initial value of qh_sigma")
+flags.DEFINE_float("h_sigma_init",  h_sigma_init,  "initial value of h_sigma")
+
+flags.DEFINE_float("qh_sigma_min",  qh_sigma_min,  "minimal value of qh_sigma")
+flags.DEFINE_float("h_sigma_min",  h_sigma_min,  "minimal value of h_sigma")
 
 # bidirectional RNN
 flags.DEFINE_string("y_smoother_Dhs", y_smoother_Dhs, "number of units for y_smoother birdectional RNNs, "
@@ -227,6 +235,8 @@ flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether 
 flags.DEFINE_string("f_tran_type", f_tran_type, "type of f transformation, choose from MLP, linear, clv and clv_original")
 flags.DEFINE_string("g_tran_type", g_tran_type, "type of g transformation, choose from MLP and LDA")
 flags.DEFINE_string("g_dist_type", g_dist_type, "type of g distribution, chosen from dirichlet, poisson, mvn and multinomial")
+
+flags.DEFINE_boolean("emission_use_auxiliary", emission_use_auxiliary, "whether to use auxiliary variables in emission")
 
 # ------------------------- Inference Schemes ------------------------ #
 

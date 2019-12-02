@@ -15,6 +15,10 @@ class SVO:
         self.f  = model.f_dist
         self.g  = model.g_dist
 
+        self.emission_use_auxiliary = FLAGS.emission_use_auxiliary
+        self.qh = model.qh_dist
+        self.h  = model.h_dist
+
         self.n_particles = FLAGS.n_particles
 
         # bidirectional RNN as full sequence observations encoder
@@ -85,10 +89,16 @@ class SVO:
                                                                   sample_size=n_particles)
 
         # emission log probability and log weights
-        g_0_log_prob = self.g.log_prob(X_0, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+        if self.emission_use_auxiliary:
+            g_input, qh_0_log_prob = self.qh.sample_and_log_prob(X_0)
+            h_0_log_prob = self.h.log_prob(X_0, g_input)
+        else:
+            g_input = X_0
+            qh_0_log_prob = h_0_log_prob = 0
+        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
-        log_alpha_0 = tf.add(f_0_log_prob, g_0_log_prob - q_0_log_prob, name="log_alpha_0")
+        log_alpha_0 = f_0_log_prob + h_0_log_prob + g_0_log_prob - q_0_log_prob - qh_0_log_prob
 
         log_W_0 = tf.add(log_alpha_0, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
                          name="log_W_0")  # (n_particles, batch_size)
@@ -132,11 +142,17 @@ class SVO:
                                                                       inputs=Input,
                                                                       sample_size=())
 
+            if self.emission_use_auxiliary:
+                g_input, qh_t_log_prob = self.qh.sample_and_log_prob(X_t)
+                h_t_log_prob = self.h.log_prob(X_t, g_input)
+            else:
+                g_input = X_t
+                qh_t_log_prob = h_t_log_prob = 0
             # emission log probability and log weights
-            g_t_log_prob = self.g.log_prob(X_t, obs[:, t], extra_inputs=extra_inputs[:, t])
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
             g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
-            log_alpha_t = tf.add(f_t_log_prob, g_t_log_prob - q_t_log_prob, name="log_alpha_t")
+            log_alpha_t = f_t_log_prob + h_t_log_prob + g_t_log_prob - q_t_log_prob - qh_t_log_prob
             log_W_t = log_alpha_t + log_normalized_W_tm1
 
             X_ancestor_t = self.resample_X(X_t, log_W_t, sample_size=n_particles,

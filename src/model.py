@@ -5,6 +5,7 @@ from src.transformation.MLP import MLP_transformation
 from src.transformation.linear import tf_linear_transformation
 from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
+from src.transformation.identity import identity_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
@@ -47,8 +48,10 @@ class SSM(object):
         self.q1_sigma_init, self.q1_sigma_min = FLAGS.q1_sigma_init, FLAGS.q1_sigma_min
         self.q2_sigma_init, self.q2_sigma_min = FLAGS.q2_sigma_init, FLAGS.q2_sigma_min
         self.f_sigma_init,  self.f_sigma_min  = FLAGS.f_sigma_init, FLAGS.f_sigma_min
-        self.h_sigma_init,  self.h_sigma_min  = FLAGS.h_sigma_init, FLAGS.h_sigma_min
         self.g_sigma_init,  self.g_sigma_min  = FLAGS.f_sigma_init, FLAGS.g_sigma_min
+
+        self.qh_sigma_init, self.qh_sigma_min = FLAGS.qh_sigma_init, FLAGS.qh_sigma_min
+        self.h_sigma_init,  self.h_sigma_min  = FLAGS.h_sigma_init, FLAGS.h_sigma_min
 
         # bidirectional RNN architectures
         self.y_smoother_Dhs  = [int(x) for x in FLAGS.y_smoother_Dhs.split(",")]
@@ -81,10 +84,12 @@ class SSM(object):
         self.mask_weight = tf.placeholder(tf.float32, shape=(), name="mask_weight")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
+        self.training = tf.placeholder(tf.bool, shape=(), name="training")
 
     def init_trans(self):
         if self.f_tran_type == "MLP":
-            self.f_tran = MLP_transformation(self.f_layers, self.Dx, use_residual=self.f_use_residual, name="f_tran")
+            self.f_tran = MLP_transformation(self.f_layers, self.Dx,
+                                             use_residual=self.f_use_residual, training=self.training, name="f_tran")
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
@@ -95,7 +100,7 @@ class SSM(object):
         if self.g_tran_type == "MLP":
             self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
         elif self.g_tran_type == "LDA":
-            self.g_tran = LDA_transformation(self.Dx, self.Dy, is_f_clv=self.f_tran_type == "clv")
+            self.g_tran = LDA_transformation(self.Dx, self.Dy, training=self.training)
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
@@ -109,14 +114,19 @@ class SSM(object):
         if self.PSVO:
             self.BSim_q_init_tran = MLP_transformation(self.q0_layers, self.Dx, name="BSim_q_init_tran")
             self.q1_inv_tran = MLP_transformation(self.q1_layers, self.Dx,
-                                                  use_residual=self.f_use_residual, name="q1_inv_tran")
+                                                  use_residual=self.f_use_residual, training=self.training,
+                                                  name="q1_inv_tran")
             self.BSim_q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="BSim_q2_tran")
 
         if self.use_bootstrap:
             self.q1_tran = self.f_tran
         else:
-            self.q1_tran = MLP_transformation(self.q1_layers, self.Dx, name="q1_tran")
+            self.q1_tran = MLP_transformation(self.q1_layers, self.Dx,
+                                              use_residual=self.f_use_residual, training=self.training,
+                                              name="q1_tran")
 
+        self.qh_tran = identity_transformation()
+        self.h_tran = identity_transformation()
 
     def init_dist(self):
         self.q0_dist = tf_mvn(self.q0_tran,
@@ -165,6 +175,13 @@ class SSM(object):
                                  sigma_min=self.g_sigma_min)
         else:
             self.g_dist = SUPPORTED_EMISSION[self.g_dist_type](self.g_tran, name="g_dist")
+
+        self.qh_dist = tf_mvn(self.qh_tran, name="qh_dist",
+                              sigma_init=self.qh_sigma_init,
+                              sigma_min=self.qh_sigma_min)
+        self.h_dist = tf_mvn(self.h_tran, name="h_dist",
+                             sigma_init=self.h_sigma_init,
+                             sigma_min=self.h_sigma_min)
 
     def init_RNNs(self):
         if self.SVO or self.PSVO:

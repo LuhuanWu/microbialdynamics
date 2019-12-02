@@ -7,11 +7,13 @@ from src.transformation.base import transformation
 class MLP_transformation(transformation):
     def __init__(self, Dhs, Dout,
                  use_residual=False,
+                 training=False,
                  name="MLP_transformation"):
         self.Dhs = Dhs
         self.Dout = Dout
 
         self.use_residual = use_residual
+        self.training = training
 
         self.name = name
         self.init_FFN()
@@ -45,6 +47,7 @@ class MLP_transformation(transformation):
             if self.use_residual:
                 mu_shape = tf.shape(mu)
                 mu_reshaped = tf.reshape(mu, [-1, self.Dout])
-                mu = tf.reshape(self.batch_norm_layer(mu_reshaped), mu_shape) + Input[..., :self.Dout]
+                mu = tf.reshape(self.batch_norm_layer(mu_reshaped, training=self.training), mu_shape)
+                mu += Input[..., :self.Dout]
 
         return mu

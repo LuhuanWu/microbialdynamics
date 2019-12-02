@@ -58,6 +58,7 @@ class trainer:
         self.mask_weight = self.model.mask_weight
         self.time_interval = self.model.time_interval
         self.extra_inputs = self.model.extra_inputs
+        self.training = self.model.training
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -176,7 +177,8 @@ class trainer:
                                 self.time: [obs.shape[0] for obs in self.obs_train[0: self.saving_train_num]],
                                 self.mask: self.mask_train[0: self.saving_train_num],
                                 self.time_interval: self.time_interval_train[0:self.saving_train_num],
-                                self.extra_inputs: self.extra_inputs_train[0: self.saving_train_num]}
+                                self.extra_inputs: self.extra_inputs_train[0: self.saving_train_num],
+                                self.training: [False] * self.saving_train_num}
 
         self.test_feed_dict = {self.obs: self.obs_test[0:self.saving_test_num],
                                self.hidden: self.hidden_test[0:self.saving_test_num],
@@ -184,7 +186,8 @@ class trainer:
                                self.time: [obs.shape[0] for obs in self.obs_test[0: self.saving_test_num]],
                                self.mask: self.mask_test[0:self.saving_test_num],
                                self.time_interval: self.time_interval_test[0:self.saving_test_num],
-                               self.extra_inputs: self.extra_inputs_test[0:self.saving_test_num]}
+                               self.extra_inputs: self.extra_inputs_test[0:self.saving_test_num],
+                               self.training: [False] * self.saving_test_num}
         # all data
         self.train_all_feed_dict = {self.obs: self.obs_train,
                                     self.hidden: self.hidden_train,
@@ -192,7 +195,8 @@ class trainer:
                                     self.time: [obs.shape[0] for obs in self.obs_train],
                                     self.mask: self.mask_train,
                                     self.time_interval: self.time_interval_train,
-                                    self.extra_inputs: self.extra_inputs_train}
+                                    self.extra_inputs: self.extra_inputs_train,
+                                    self.training: [False] * len(self.obs_train)}
 
         self.test_all_feed_dict = {self.obs: self.obs_test,
                                    self.hidden: self.hidden_test,
@@ -200,7 +204,8 @@ class trainer:
                                    self.time: [obs.shape[0] for obs in self.obs_test],
                                    self.mask: self.mask_test,
                                    self.time_interval: self.time_interval_test,
-                                   self.extra_inputs: self.extra_inputs_test}
+                                   self.extra_inputs: self.extra_inputs_test,
+                                   self.training: [False] * len(self.obs_test)}
 
     def train(self, print_freq, epoch):
         if self.save_res and self.save_tensorboard:
@@ -241,7 +246,8 @@ class trainer:
                                          self.mask_weight:   mask_weight,
                                          self.time_interval: time_interval_train[j:j+self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
-                                         self.lr_holder:     self.lr})
+                                         self.lr_holder:     self.lr,
+                                         self.training:      True})
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -287,7 +293,8 @@ class trainer:
                                           self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
                                           self.mask_weight: [mask_weight] * len(self.obs_train),
                                           self.time_interval: self.time_interval_train,
-                                          self.extra_inputs: self.extra_inputs_train}
+                                          self.extra_inputs: self.extra_inputs_train,
+                                          self.training: [False] * len(self.obs_train)}
                 # without maksng interpolation data, and make predictions
                 y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_train_feed_dict, average=False)[0]
 
@@ -301,7 +308,8 @@ class trainer:
                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],
                                          self.mask_weight: [mask_weight] * len(self.obs_test),
                                          self.time_interval: self.time_interval_test,
-                                         self.extra_inputs: self.extra_inputs_test}
+                                         self.extra_inputs: self.extra_inputs_test,
+                                         self.training: [False] * len(self.obs_test)}
                 y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], interp_test_feed_dict, average=False)[0]
 
                 self.obs_test, self.extra_inputs_test = \

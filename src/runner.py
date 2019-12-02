@@ -178,7 +178,8 @@ def main(_):
             json.dump(history, f, indent=4, cls=NumpyEncoder)
 
         Xs, y_hat = log["Xs"], log["y_hat_original"]
-        Xs_val = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
+        Xs_val_train = mytrainer.evaluate(Xs, mytrainer.train_feed_dict)
+        Xs_val_test = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
 
         y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
         y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
@@ -222,16 +223,22 @@ def main(_):
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
         if Dx == 2:
-            plot_fhn_results(checkpoint_dir, Xs_val)
+            plot_fhn_results(checkpoint_dir, Xs_val_test)
         if Dx == 3:
-            plot_lorenz_results(checkpoint_dir, Xs_val)
+            plot_lorenz_results(checkpoint_dir, Xs_val_test)
 
         testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
-        learned_model_dict = {"Xs_val": Xs_val,
+        learned_model_dict = {"Xs_val_test": Xs_val_test,
                               "y_hat_val_test": y_hat_val_test}
+        if FLAGS.g_tran_type == "LDA":
+            beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
+            learned_model_dict["topic"] = beta_val
+            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_val_train)
+            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_val_test)
+            plot_topic_bar_plot(checkpoint_dir, beta_val)
         data_dict = {"testing_data_dict": testing_data_dict,
                      "learned_model_dict": learned_model_dict}
 
