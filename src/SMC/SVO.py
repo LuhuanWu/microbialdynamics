@@ -31,12 +31,11 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval, extra_inputs, mask_weight):
+    def get_log_ZSMC(self, obs, input, time, mask, time_interval, extra_inputs, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
             obs.shape = (batch_size, time, Dy)
-            hidden.shape = (batch_size, time, Dz)
             input.shape = (batch_size, time, Dx)
             time.shape = ()
             mask.shape = (batch_size, time) | batch_size=1
@@ -55,7 +54,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs, mask_weight)
+            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
@@ -66,7 +65,7 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, hidden, obs, input, mask, time_interval, extra_inputs, mask_weight, q_cov=1.0):
+    def SMC(self, obs, input, mask, time_interval, extra_inputs, mask_weight, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
@@ -236,15 +235,6 @@ class SVO:
 
         return X, q_t_log_prob, f_t_log_prob
 
-    def sample_from_true_X(self, hidden, q_cov, sample_shape=(), name="q_t_mvn"):
-        mvn = tfd.MultivariateNormalDiag(hidden,
-                                         q_cov * tf.ones(self.Dx, dtype=tf.float32),
-                                         name=name)
-        X = mvn.sample(sample_shape)
-        q_t_log_prob = mvn.log_prob(X)
-
-        return X, q_t_log_prob
-
     def resample_X(self, X, log_W, sample_size=(), resample_particles=True):
         """
         Resample X using categorical with logits = log_W
@@ -369,11 +359,10 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, X, hidden, obs, input, mask, extra_inputs):
+    def n_step_MSE(self, n_steps, X, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
-        :param hidden: (batch_size, time, n_particles, Dx)
         :param obs: (batch_size, time, Dy)
         :param input: (batch_size, time, Dv)
         :param mask: (batch_size, time)

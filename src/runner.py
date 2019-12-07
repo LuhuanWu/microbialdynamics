@@ -156,9 +156,8 @@ def main(_):
     # ============================================= training part ============================================ #
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
     mytrainer.set_data_saving()
-    mytrainer.init_train(obs_train, obs_test, hidden_train, hidden_test, input_train, input_test,
-                         mask_train, mask_test, time_interval_train, time_interval_test,
-                         extra_inputs_train, extra_inputs_test)
+    mytrainer.init_train(obs_train, obs_test, input_train, input_test, mask_train, mask_test,
+                         time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test)
 
     plot_start_idx = 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):

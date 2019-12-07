@@ -77,7 +77,6 @@ class SSM(object):
 
     def init_placeholder(self):
         self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
-        self.hidden = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dx), name="hidden")
         self.input = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dv), name="input")
         self.time = tf.placeholder(tf.int32, shape=(), name="time")
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")

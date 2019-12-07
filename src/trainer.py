@@ -51,7 +51,6 @@ class trainer:
 
     def init_placeholder(self):
         self.obs = self.model.obs
-        self.hidden = self.model.hidden
         self.input = self.model.input
         self.time = self.model.time
         self.mask = self.model.mask
@@ -119,11 +118,10 @@ class trainer:
         if self.Dx == 2 or self.Dx == 3:
             self.draw_quiver_during_training = True
 
-    def init_train(self, obs_train, obs_test, hidden_train, hidden_test, input_train, input_test,
-                   mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
+    def init_train(self, obs_train, obs_test, input_train, input_test, mask_train, mask_test,
+                   time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
         # set data
         self.obs_train, self.obs_test = obs_train, obs_test
-        self.hidden_train, self.hidden_test = hidden_train, hidden_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
@@ -133,16 +131,13 @@ class trainer:
         self.set_interp_val()
 
         # define objective
-        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.hidden, self.input_embedding, self.time,
+        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.input_embedding, self.time,
                                                         self.mask, self.time_interval, self.extra_inputs,
                                                         self.mask_weight)
 
-        # n_step_MSE now takes Xs as input rather than self.hidden
-        # so there is no need to evalute enumerical value of Xs and feed it into self.hidden
         self.Xs = self.log["Xs"]
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
-            self.SMC.n_step_MSE(self.MSE_steps, self.Xs,
-                                self.hidden, self.obs, self.input_embedding, self.mask, self.extra_inputs)
+            self.SMC.n_step_MSE(self.MSE_steps, self.Xs, self.obs, self.input_embedding, self.mask, self.extra_inputs)
         # set up feed_dict
         self.set_feed_dict()
 
@@ -172,7 +167,6 @@ class trainer:
     def set_feed_dict(self):
         # data up to saving_num
         self.train_feed_dict = {self.obs: self.obs_train[0:self.saving_train_num],
-                                self.hidden: self.hidden_train[0:self.saving_train_num],
                                 self.input: self.input_train[0: self.saving_train_num],
                                 self.time: [obs.shape[0] for obs in self.obs_train[0: self.saving_train_num]],
                                 self.mask: self.mask_train[0: self.saving_train_num],
@@ -181,7 +175,6 @@ class trainer:
                                 self.training: [False] * self.saving_train_num}
 
         self.test_feed_dict = {self.obs: self.obs_test[0:self.saving_test_num],
-                               self.hidden: self.hidden_test[0:self.saving_test_num],
                                self.input: self.input_test[0:self.saving_test_num],
                                self.time: [obs.shape[0] for obs in self.obs_test[0: self.saving_test_num]],
                                self.mask: self.mask_test[0:self.saving_test_num],
@@ -190,7 +183,6 @@ class trainer:
                                self.training: [False] * self.saving_test_num}
         # all data
         self.train_all_feed_dict = {self.obs: self.obs_train,
-                                    self.hidden: self.hidden_train,
                                     self.input: self.input_train,
                                     self.time: [obs.shape[0] for obs in self.obs_train],
                                     self.mask: self.mask_train,
@@ -199,7 +191,6 @@ class trainer:
                                     self.training: [False] * len(self.obs_train)}
 
         self.test_all_feed_dict = {self.obs: self.obs_test,
-                                   self.hidden: self.hidden_test,
                                    self.input: self.input_test,
                                    self.time: [obs.shape[0] for obs in self.obs_test],
                                    self.mask: self.mask_test,
@@ -231,15 +222,14 @@ class trainer:
                                                self.unmasked_y_train, self.unmasked_y_test)
 
             # training
-            obs_train, hidden_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
-                shuffle(self.obs_train, self.hidden_train, self.input_train, self.mask_train,
+            obs_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
+                shuffle(self.obs_train, self.input_train, self.mask_train,
                         self.time_interval_train, self.extra_inputs_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
                 self.sess.run(self.train_op,
                               feed_dict={self.obs:           obs_train[j:j + self.batch_size],
-                                         self.hidden:        hidden_train[j:j + self.batch_size],
                                          self.input:         input_train[j:j + self.batch_size],
                                          self.time:          obs_train[j].shape[0],
                                          self.mask:          mask_train[j:j+self.batch_size],
@@ -287,7 +277,6 @@ class trainer:
 
             if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
                 interp_train_feed_dict = {self.obs: self.obs_train,
-                                          self.hidden: self.hidden_train,
                                           self.input: self.input_train,
                                           self.time: [obs.shape[0] for obs in self.obs_train],
                                           self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
@@ -302,7 +291,6 @@ class trainer:
                     trainer_interpolation_helper(data=self.obs_train, y_hat_vals=y_hat_val_train[0], masks=self.mask_train)
 
                 interp_test_feed_dict = {self.obs: self.obs_test,
-                                         self.hidden: self.hidden_test,
                                          self.input: self.input_test,
                                          self.time: [obs.shape[0] for obs in self.obs_test],
                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],

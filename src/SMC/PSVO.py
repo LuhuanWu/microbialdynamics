@@ -17,12 +17,11 @@ class PSVO(SVO):
         self.BSim_q_init = model.Bsim_q_init_dist
         self.BSim_q2 = model.BSim_q2_dist
 
-    def get_log_ZSMC(self, obs, hidden, input, time, mask, time_interval, extra_inputs, mask_weight):
+    def get_log_ZSMC(self, obs, input, time, mask, time_interval, extra_inputs, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders
             obs.shape = (batch_size, ?, Dy)
-            hidden.shape = (batch_size, ?, Dx)
             input.shape = (batch_size, ?, Dv)
             time.shape = ()
             where ? = time
@@ -40,7 +39,7 @@ class PSVO(SVO):
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, _, log_Ws = self.SMC(hidden, obs, input, mask, time_interval, extra_inputs, mask_weight)
+            X_prevs, _, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
             bw_Xs, f_log_probs, g_log_probs, bw_log_Omega = \
                 self.backward_simulation_w_proposal(X_prevs, log_Ws, obs, input,
                                                     mask, time_interval, extra_inputs, mask_weight)
