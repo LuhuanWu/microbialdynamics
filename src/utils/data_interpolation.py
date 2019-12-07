@@ -34,6 +34,7 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         hidden, obs, input, mask, time_interval, extra_inputs = \
             interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
                                   interpolation=interpolation)
+
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
         interpolated_input_train.append(input)
@@ -46,6 +47,7 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         hidden, obs, input, mask, time_interval, extra_inputs = \
             interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
                                   interpolation=interpolation)
+        
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
@@ -167,7 +169,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
         i = 0
         for t in np.arange(days[0], days[-1] + 1):
             if t == days[i]:
-                smoothed_obs = obs[i, 1:]
+                smoothed_obs = obs[i, 1:].copy()
                 if np.abs(np.sum(smoothed_obs) - 1) < 1e-6: # if use percentage data & dirichlet emission
                     smoothed_obs = smoothed_obs * (1 - pseudo_percentage) + pseudo_percentage / Dy
                 else:
@@ -207,8 +209,9 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
 
     # sanity checks
     if np.abs(np.sum(interpolated_obs, axis=-1)[0] - 1) > 1e-5:
-        assert np.all(np.sum(interpolated_obs, axis=-1) == interpolated_extra_inputs), \
-            "sum of counts does not match total counts!"
+        assert np.allclose(np.sum(interpolated_obs, axis=-1), interpolated_extra_inputs), \
+            "sum of counts does not match total counts!, {} != {}".format(np.sum(interpolated_obs, axis=-1),
+                                                                                 interpolated_extra_inputs)
 
     return hidden, interpolated_obs, interpolated_input, mask, time_interval, interpolated_extra_inputs
 
@@ -372,7 +375,7 @@ def trainer_interpolation_helper(data, y_hat_vals, masks):
         return updated_y
 
     updated_data = list(map(interpolate, data, y_hat_vals, masks))
-    updated_extra_inputs = [np.sum(updated_y, axis=-1) for updated_y in updated_data]
+    updated_extra_inputs = [np.sum(updated_y, axis=-1) for updated_y in updated_data]   
 
     return updated_data, updated_extra_inputs
 

@@ -22,6 +22,10 @@ clv_count_Dx10_obs02_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs
 clv_count_Dx10_obs06_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_06_noinput.p"
 clv_count_Dx10_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_10_noinput.p"
 
+# ----------------------------------- lda data -------------------------------------------------------- #
+# noinput
+lda_6groups_8taxons_dir = "data/lda/6groups_8taxons.p"
+
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
 
@@ -41,7 +45,9 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx10_obs02_noinput=clv_count_Dx10_obs02_noinput_dir,
                        clv_count_Dx10_obs06_noinput=clv_count_Dx10_obs06_noinput_dir,
                        clv_count_Dx10_obs10_noinput=clv_count_Dx10_obs10_noinput_dir,
+                       lda_6groups_8taxons=lda_6groups_8taxons_dir
                        )
+
 
 
 INTERPOLATION_DATA_DICT = dict(count_clv=count_clv_interpolation_data_dir,)

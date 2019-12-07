@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 7                # dimension of hidden states
-Dy = 11                  # dimension of observations. for microbio data, Dy = 11
+Dx = 6                # dimension of hidden states
+Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
@@ -39,7 +39,7 @@ seed = 0
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "clv_count_Dx10_obs10_noinput"
+data_type = "lda_6groups_8taxons"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
