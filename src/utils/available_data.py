@@ -18,6 +18,10 @@ clv_count_Dx10_obs02_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_02.p"
 clv_count_Dx10_obs06_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_06.p"
 clv_count_Dx10_obs10_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_10.p"
 
+clv_count_Dx10_obs02_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_02_noinput.p"
+clv_count_Dx10_obs06_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_06_noinput.p"
+clv_count_Dx10_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_10_noinput.p"
+
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
 
@@ -34,6 +38,9 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx10_obs02=clv_count_Dx10_obs02_dir,
                        clv_count_Dx10_obs06=clv_count_Dx10_obs06_dir,
                        clv_count_Dx10_obs10=clv_count_Dx10_obs10_dir,
+                       clv_count_Dx10_obs02_noinput=clv_count_Dx10_obs02_noinput_dir,
+                       clv_count_Dx10_obs06_noinput=clv_count_Dx10_obs06_noinput_dir,
+                       clv_count_Dx10_obs10_noinput=clv_count_Dx10_obs10_noinput_dir,
                        )
 
 

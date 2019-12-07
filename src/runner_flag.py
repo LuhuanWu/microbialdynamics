@@ -26,8 +26,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 10                # dimension of hidden states
 Dy = 11                  # dimension of observations. for microbio data, Dy = 11
-Dv = 16                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 10                 # dimension of inputs.
+Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
@@ -39,7 +39,7 @@ seed = 0
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "count"
+data_type = "clv_count_Dx10_obs10_noinput"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
@@ -87,12 +87,12 @@ f_tran_type = "MLP"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
-emission_use_auxiliary = False
+emission_use_auxiliary = True
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
-PSVO = True      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = False      # Smoothing Variational Objective (use proposal based on bRNN)
+PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
+SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
 AESMC = False    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
