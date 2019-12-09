@@ -22,6 +22,8 @@ clv_count_Dx10_obs02_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs
 clv_count_Dx10_obs06_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_06_noinput.p"
 clv_count_Dx10_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs_10_noinput.p"
 
+clv_count_Dx4_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_20_Dx_4_obs_10_noinput.p"
+
 # ----------------------------------- lda data -------------------------------------------------------- #
 # noinput
 lda_4groups_8taxons_dir = "data/lda/4groups_8taxons.p"
@@ -46,6 +48,7 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx10_obs02_noinput=clv_count_Dx10_obs02_noinput_dir,
                        clv_count_Dx10_obs06_noinput=clv_count_Dx10_obs06_noinput_dir,
                        clv_count_Dx10_obs10_noinput=clv_count_Dx10_obs10_noinput_dir,
+                       clv_count_Dx4_obs10_noinput=clv_count_Dx4_obs10_noinput_dir,
                        lda_4groups_8taxons=lda_4groups_8taxons_dir,
                        lda_4groups_8taxons_full=lda_4groups_8taxons_full_dir
                        )
