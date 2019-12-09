@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.special import logsumexp
 
 import os
 import json
@@ -320,7 +321,6 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, original_obs, mask, saving_num=20, 
 def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
-    from scipy.special import logsumexp
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
@@ -351,7 +351,7 @@ def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
         plt.close()
 
 
-def plot_topic_bar_plot(RLT_DIR, beta):
+def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
     if not os.path.exists(RLT_DIR):
@@ -368,5 +368,58 @@ def plot_topic_bar_plot(RLT_DIR, beta):
         bottom += beta[:, j]
     plt.xticks(np.arange(n_topics))
     sns.despine()
-    plt.savefig(RLT_DIR + "/topic content")
+    if epoch is None:
+        plt.savefig(RLT_DIR + "/topic_content")
+    else:
+        plt.savefig(RLT_DIR + "/topic_content_epoch{}".format(epoch))
     plt.close()
+
+
+def plot_topic_bar_plot_while_training(ax, beta, epoch):
+    # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
+    # each of which is an array (T-k, Dy)
+    
+    ax.clear()
+    n_topics = beta.shape[0]
+    bottom = np.zeros(n_topics)
+    for j in range(beta.shape[1]):
+        ax.bar(np.arange(n_topics), beta[:, j], bottom=bottom, edgecolor='white')
+        bottom += beta[:, j]
+    sns.despine()
+    ax.set_title("topic content in epoch {}".format(epoch))
+
+
+def plot_topic_taxa_matrix_while_training(ax, beta, epoch, cbar_ax):
+    # beta shape is (n_topics, n_taxa)
+    ax.clear()
+    
+    sns.heatmap(beta, ax=ax, vmin=0, vmax=1, cmap="BuGn", square=True, cbar_ax=cbar_ax)
+    ax.set_xlabel('taxon')
+    ax.set_ylabel('topic')
+    ax.set_title("beta in epoch {}".format(epoch))
+
+
+def plot_x_bar_plot_while_training(axs, xs_val):
+    # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
+    # each of which is an array (T-k, Dy)
+
+    xs_val = [np.mean(x_traj, axis=1) for x_traj in xs_val]
+    Dy = xs_val[0].shape[1] + 1
+
+    for i, ax in enumerate(axs):
+        ax.clear()
+        
+        x_traj = xs_val[i]
+        time = x_traj.shape[0]
+        percentage = np.concatenate((x_traj, np.zeros((time, 1))), axis=-1)  # (n_days, Dy+1)
+        percentage = np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+
+        ax.set_title("topic proportion idx {}".format(i))
+        ax.set_xlabel("Time")
+        bottom = np.zeros(time)
+        for j in range(Dy):
+            ax.bar(np.arange(time), percentage[:, j], bottom=bottom, edgecolor='white')
+            bottom += percentage[:, j]
+
+        ax.set_xticks(np.arange(time))
+        sns.despine()

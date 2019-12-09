@@ -24,39 +24,41 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 6                # dimension of hidden states
+Dx = 3                # dimension of hidden states
 Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
-lr = 1e-3               # learning rate
+lr = 1e-2               # learning rate
 Adam_beta1 = 0.9
-epochs = [600, 400, 400, 400]  # 500*100 #100*200
+epochs = [1000,1000,5000,500,500,5000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "lda_6groups_8taxons"
+data_type = "lda_4groups_8taxons_full"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
+pseudo_count = 0
+
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [-1]
+training_sample_idx = [0]
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [-1]
+test_sample_idx = [0]
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
-q0_layers = [32]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_layers = [32]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_layers = [32]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_layers = [32]         # target evolution
-h_layers = [32]         # target emission (middle step)
-g_layers = [32]         # target emission
+q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_layers = [16]         # target evolution
+h_layers = [16]         # target emission (middle step)
+g_layers = [16]         # target emission
 
 # Covariance Terms
 q0_sigma_init, q0_sigma_min = 5, 1e-8
@@ -70,10 +72,10 @@ h_sigma_init, h_sigma_min = 5, 1e-8
 
 # bidirectional RNN, number of units in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
-y_smoother_Dhs = [32]
-X0_smoother_Dhs = [32]
+y_smoother_Dhs = [16]
+X0_smoother_Dhs = [16]
 
-f_use_residual = True
+f_use_residual = False
 
 # whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn or tf.nn.bidirectional_dynamic_rnn
 # check https://stackoverflow.com/a/50552539 for differences between them
@@ -99,7 +101,7 @@ IWAE = False     # Importance Weighted Auto-Encoder
 # ----------------------------- Training ----------------------------- #
 
 # stop training early if validation set does not improve
-early_stop_patience = 400
+early_stop_patience = 2000
 
 # reduce learning rate when testing loss doesn't improve for some time
 lr_reduce_patience = 50
@@ -116,15 +118,15 @@ update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 10 # 100
+print_freq = 100 # 100
 
 # whether to save following into epoch folder
-save_trajectory = True
-save_y_hat_train = True
-save_y_hat_test = True
+save_trajectory = False
+save_y_hat_train = False
+save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "test_k2"
+rslt_dir_name = "lda_data/{}_{}_dx{}".format(data_type, g_tran_type, Dx)
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
@@ -182,6 +184,7 @@ flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, 
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
 flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The file for data interpolation")
+flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the observations")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")

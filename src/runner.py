@@ -16,7 +16,6 @@ from src.SMC.SVO import SVO
 from src.SMC.PSVO import PSVO
 from src.SMC.IWAE import IWAE
 from src.SMC.AESMC import AESMC
-
 from src.rslts_saving.rslts_saving import *
 from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
@@ -97,7 +96,8 @@ def main(_):
         mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
             interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                              extra_inputs_train, extra_inputs_test,
-                             interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data)
+                             interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data,
+                             pseudo_count=FLAGS.pseudo_count)
 
         if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.g_dist_type == "mvn":
             # transform to log additive ratio
@@ -221,11 +221,10 @@ def main(_):
         plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
-        if Dx == 2:
+        if  Dx == 2:
             plot_fhn_results(checkpoint_dir, Xs_val_test)
         if Dx == 3:
             plot_lorenz_results(checkpoint_dir, Xs_val_test)
-
         testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}

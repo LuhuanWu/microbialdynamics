@@ -13,6 +13,8 @@ from mpl_toolkits.mplot3d import Axes3D
 
 from src.rslts_saving.rslts_saving import plot_R_square_epoch
 from src.utils.data_interpolation import trainer_interpolation_helper
+from src.rslts_saving.rslts_saving import plot_topic_bar_plot_while_training, plot_topic_taxa_matrix_while_training, \
+    plot_x_bar_plot_while_training
 
 from tensorflow.python import debug as tf_debug
 
@@ -41,8 +43,19 @@ class trainer:
 
         self.MSE_steps = self.FLAGS.MSE_steps
 
+        # useful for simulating training dynamics
         self.save_res = False
         self.draw_quiver_during_training = False
+        # works only for LDA emission
+        if self.model.g_tran_type == 'LDA':
+            self.plot_training_dynamics = False
+            if self.plot_training_dynamics:
+                import matplotlib
+                matplotlib.use("TkAgg")
+            self.plot_topic_bars = False # plot topic bars if True, else plot topic-taxon matrix (beta matrix)
+            self.plot_epoch = 100
+        else:
+            self.plot_training_dynamics = False
 
         self.init_placeholder()
         self.init_training_param()
@@ -201,6 +214,21 @@ class trainer:
     def train(self, print_freq, epoch):
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
+        if self.plot_training_dynamics:
+            beta_val = self.sess.run(self.model.g_tran.beta, {self.model.training: False})
+            #Plot beta
+            if self.plot_topic_bars:
+                fig_topic = plt.figure(figsize=(10, 5))
+                ax_topic = fig_topic.add_subplot(1, 1, 1)
+                ax_topic.set_xlabel("topic")
+                ax_topic.set_ylabel("taxon")
+                plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch="init")
+            else:
+                fig_beta = plt.figure(figsize=(6,6))
+                ax_beta = fig_beta.add_subplot(1,1,1)
+                cbar_ax = fig_beta.add_axes([.93, .3, .03, .4])
+                plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch='init', cbar_ax=cbar_ax)
+            plt.pause(0.0002)
 
         for i in range(epoch):
             if self.use_mask:
@@ -238,7 +266,25 @@ class trainer:
                                          self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
                                          self.lr_holder:     self.lr,
                                          self.training:      True})
+            
+            if self.plot_training_dynamics and i % self.plot_epoch == 0:
+                Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
+                if i == 0:
+                    save_num = min(8, len(Xs_val_train))
+                    fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
+                    fig_theta.suptitle("epoch {}".format("init"))
 
+                beta_val = self.sess.run(self.model.g_tran.beta, {self.model.training: False})
+                if self.plot_topic_bars:
+                    plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
+                else:
+                    plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
+                plt.pause(0.0002)
+
+                plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
+                fig_theta.suptitle("epoch {}".format(i))
+                plt.pause(0.0002)
+                
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
                     self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
@@ -311,7 +357,6 @@ class trainer:
 
             end = time.time()
             print("epoch {:<14} took {:.3f} seconds".format(self.total_epoch_count, end - start))
-
         print("finished training...")
 
         metrics = {"log_ZSMC_trains":            self.log_ZSMC_trains,

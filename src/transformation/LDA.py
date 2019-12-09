@@ -6,16 +6,22 @@ from tensorflow.keras.layers import BatchNormalization
 
 
 class LDA_transformation(transformation):
-    def __init__(self, Dx, Dy, is_x_lar=True, training=False):
+    def __init__(self, Dx, Dy, is_x_alr=True, training=False, beta_init_method='uniform'):
         self.Dx = Dx
         self.Dy = Dy
-        self.is_x_lar = is_x_lar
+        self.is_x_lar = is_x_alr
         self.training = training
 
-        Din = Dx + (1 if is_x_lar else 0)
-        self.beta_lar = tf.Variable(xavier_init(Din, Dy))
+        Din = Dx + (1 if is_x_alr else 0)
+        if beta_init_method == 'uniform':
+            self.beta_alr = tf.Variable(tf.ones((Din, Dy), dtype=tf.float32))
+        elif beta_init_method == 'xavier':
+            self.beta_alr = tf.Variable(xavier_init(Din, Dy))
+        else:
+            raise ValueError("Unsupported beta_init_method: {}. "
+                             "Please choose from 'uniform', 'xavier'.".format(beta_init_method))
         self.batch_norm = BatchNormalization()
-        self.beta = tf.nn.softmax(self.batch_norm(self.beta_lar, training=training))
+        self.beta = tf.nn.softmax(self.batch_norm(self.beta_alr, training=training))
 
     def transform(self, x):
         if self.is_x_lar:

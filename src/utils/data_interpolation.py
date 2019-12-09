@@ -5,7 +5,8 @@ from scipy.misc import logsumexp
 
 
 def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                     extra_inputs_train, extra_inputs_test, interpolation_type=None, interpolation_data=None):
+                     extra_inputs_train, extra_inputs_test, interpolation_type=None, interpolation_data=None,
+                     pseudo_count=1, pseudo_percentage=1e-6):
     interpolated_hidden_train = []
     interpolated_hidden_test = []
     interpolated_obs_train = []
@@ -33,7 +34,8 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
             zip(hidden_train, obs_train, input_train, extra_inputs_train, interpolation_data_train):
         hidden, obs, input, mask, time_interval, extra_inputs = \
             interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
-                                  interpolation=interpolation)
+                                  interpolation=interpolation,
+                                  pseudo_count=pseudo_count, pseudo_percentage=pseudo_percentage)
 
         interpolated_hidden_train.append(hidden)
         interpolated_obs_train.append(obs)
@@ -46,8 +48,9 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
             zip(hidden_test, obs_test, input_test, extra_inputs_test, interpolation_data_test):
         hidden, obs, input, mask, time_interval, extra_inputs = \
             interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=interpolation_type,
-                                  interpolation=interpolation)
-        
+                                  interpolation=interpolation,
+                                  pseudo_count=pseudo_count, pseudo_percentage=pseudo_percentage)
+
         interpolated_hidden_test.append(hidden)
         interpolated_obs_test.append(obs)
         interpolated_input_test.append(input)
