@@ -85,7 +85,7 @@ use_stack_rnn = True
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
-f_tran_type = "MLP"          # choose from MLP, linear, clv
+f_tran_type = "clv"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
