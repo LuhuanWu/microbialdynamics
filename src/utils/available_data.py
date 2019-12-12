@@ -24,7 +24,22 @@ clv_count_Dx10_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_200_Dx_10_obs
 
 clv_count_Dx4_obs10_noinput_dir = "data/clv/data/clv_count_ntrain_20_Dx_4_obs_10_noinput.p"
 
-# ----------------------------------- lda data -------------------------------------------------------- #
+# ---------------------------------------- clv + gp + lda data ---------------------------------------- #
+clv_gp_Dx_5_Dy_10_ntrain_50_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_50_obp_10_ls_1.p"
+clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_100_obp_10_ls_1.p"
+clv_gp_Dx_5_Dy_10_ntrain_200_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_obp_10_ls_1.p"
+clv_gp_Dx_5_Dy_10_ntrain_500_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_500_obp_10_ls_1.p"
+clv_gp_Dx_5_Dy_10_ntrain_1000_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1000_obp_10_ls_1.p"
+clv_gp_Dx_5_Dy_10_ntrain_1500_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1500_obp_10_ls_1.p"
+
+clv_gp_Dx_5_Dy_10_ntrain_50_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_50_obp_10_ls_2.p"
+clv_gp_Dx_5_Dy_10_ntrain_100_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_100_obp_10_ls_2.p"
+clv_gp_Dx_5_Dy_10_ntrain_200_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_obp_10_ls_2.p"
+clv_gp_Dx_5_Dy_10_ntrain_500_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_500_obp_10_ls_2.p"
+clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1000_obp_10_ls_2.p"
+clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1500_obp_10_ls_2.p"
+
+# ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
 lda_4groups_8taxons_dir = "data/lda/4groups_8taxons.p"
 lda_4groups_8taxons_full_dir = "data/lda/4groups_8taxons_full.p"
@@ -50,9 +65,20 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_count_Dx10_obs10_noinput=clv_count_Dx10_obs10_noinput_dir,
                        clv_count_Dx4_obs10_noinput=clv_count_Dx4_obs10_noinput_dir,
                        lda_4groups_8taxons=lda_4groups_8taxons_dir,
-                       lda_4groups_8taxons_full=lda_4groups_8taxons_full_dir
+                       lda_4groups_8taxons_full=lda_4groups_8taxons_full_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_50_ls_1=clv_gp_Dx_5_Dy_10_ntrain_50_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_100_ls_1=clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_200_ls_1=clv_gp_Dx_5_Dy_10_ntrain_200_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_500_ls_1=clv_gp_Dx_5_Dy_10_ntrain_500_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_1000_ls_1=clv_gp_Dx_5_Dy_10_ntrain_1000_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_1500_ls_1=clv_gp_Dx_5_Dy_10_ntrain_1500_ls_1_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_50_ls_2=clv_gp_Dx_5_Dy_10_ntrain_50_ls_2_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_100_ls_2=clv_gp_Dx_5_Dy_10_ntrain_100_ls_2_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_200_ls_2=clv_gp_Dx_5_Dy_10_ntrain_200_ls_2_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_500_ls_2=clv_gp_Dx_5_Dy_10_ntrain_500_ls_2_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir,
+                       clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir,
                        )
-
 
 
 INTERPOLATION_DATA_DICT = dict(count_clv=count_clv_interpolation_data_dir,)
