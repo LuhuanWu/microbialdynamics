@@ -39,6 +39,10 @@ clv_gp_Dx_5_Dy_10_ntrain_500_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0
 clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1000_obp_10_ls_2.p"
 clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1500_obp_10_ls_2.p"
 
+
+clv_gp_sparse_ntrain_1800_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1800_sparse_033_ls_1.p"
+clv_gp_sparse_ntrain_600_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_033_ls_1.p"
+
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
 lda_4groups_8taxons_dir = "data/lda/4groups_8taxons.p"
@@ -78,6 +82,8 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_Dx_5_Dy_10_ntrain_500_ls_2=clv_gp_Dx_5_Dy_10_ntrain_500_ls_2_dir,
                        clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir,
                        clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir,
+                       clv_gp_sparse_ntrain_1800=clv_gp_sparse_ntrain_1800_dir,
+                       clv_gp_sparse_ntrain_600=clv_gp_sparse_ntrain_600_dir
                        )
 
 

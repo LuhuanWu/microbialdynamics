@@ -1,0 +1,436 @@
+the code is written in:
+	 tensorflow version: 1.12.0
+	 tensorflow_probability version: 0.5.0
+the system uses:
+	 tensorflow version: 1.12.0
+	 tensorflow_probability version: 0.5.0
+finished preparing dataset
+Experiment_params:
+	AESMC: False
+	Adam_beta1: 0.9
+	Dev: 0
+	Dv: 0
+	Dx: 3
+	Dy: 8
+	IWAE: False
+	MSE_steps: 5
+	PSVO: False
+	SVO: True
+	X0_smoother_Dhs: 32
+	batch_size: 1
+	data_type: lda_4groups_8taxons_full
+	early_stop_patience: 2000
+	emission_use_auxiliary: False
+	epochs: [1000, 1000, 2000]
+	f_layers: 32
+	f_sigma_init: 5.0
+	f_sigma_min: 1e-08
+	f_tran_type: MLP
+	f_use_residual: False
+	g_dist_type: multinomial
+	g_layers: 32
+	g_sigma_init: 5.0
+	g_sigma_min: 1e-08
+	g_tran_type: MLP
+	h_layers: 32
+	h_sigma_init: 5.0
+	h_sigma_min: 1e-08
+	interpolation_data_type: count_clv
+	interpolation_type: None
+	lr: 0.005
+	lr_reduce_factor: 0.7071067811865475
+	lr_reduce_patience: 100
+	min_lr: 0.5
+	n_bw_particles: 16
+	n_particles: 16
+	print_freq: 100
+	pseudo_count: 0
+	q0_layers: 32
+	q0_sigma_init: 5.0
+	q0_sigma_min: 1e-08
+	q1_layers: 32
+	q1_sigma_init: 5.0
+	q1_sigma_min: 1e-08
+	q2_layers: 32
+	q2_sigma_init: 5.0
+	q2_sigma_min: 1e-08
+	qh_sigma_init: 5.0
+	qh_sigma_min: 1e-08
+	rslt_dir_name: lda_data/lda_4groups_8taxons_full/dx3/MLP_useresidualFalse_twostepFalse
+	save_model: False
+	save_tensorboard: False
+	save_trajectory: False
+	save_y_hat_test: False
+	save_y_hat_train: False
+	saving_test_num: 1
+	saving_train_num: 12
+	seed: 20
+	test_sample_idx: 0
+	training_sample_idx: -1
+	update_interp_interval: 100
+	update_interp_while_train: False
+	use_mask: True
+	use_mask_interpolation: False
+	use_stack_rnn: True
+	y_smoother_Dhs: 32
+checkpoint_dir: /Users/leah/Columbia/courses/19summer/microbialdynamics/src/rslts/lda_data/lda_4groups_8taxons_full/dx3/MLP_useresidualFalse_twostepFalse/D191209_090049_4139_np_16_lr_0.005_epochs_[1000, 1000, 2000]_seed_20/
+initializing variables...
+
+
+Start training 0...
+Creating checkpoint_0 directory...
+
+iter 1
+Train log_ZSMC: -4891.402, valid log_ZSMC: -4285.583
+Train, Valid k-step Rsq (original space):
+ [-0.28584516 -1.72741604 -1.60170579 -1.86950827 -1.52480721 -1.61048675] 
+ [ -1.52352118  -8.13597679  -9.21100712 -13.24147606 -13.84305
+ -22.32439423]
+Train, Valid k-step Rsq (percent space):
+ [-0.28584516 -1.72741604 -1.60170555 -1.86950803 -1.52480698 -1.61048675] 
+ [ -1.52352142  -8.13597679  -9.21100521 -13.24147606 -13.8430481
+ -22.32439423]
+Train, Valid k-step Rsq (log percent space):
+ [-0.83409584 -2.55777693 -2.67665672 -3.26468611 -3.49388218 -4.62500763] 
+ [ -6.02293491 -14.75280952 -26.15141487 -47.1877594  -48.7495842
+ -59.78279495]
+
+Train, unmaksed Valid k-step Rsq (original space):
+ [-0.2858451  -1.72741609 -1.60170585 -1.86950842 -1.52480717 -1.61048678] 
+ [ -1.5235213   -8.13597746  -9.21100639 -13.24147645 -13.84305029
+ -22.32439256]
+Train, unmasked Valid k-step Rsq (percent space):
+ [-0.28584509 -1.72741607 -1.6017059  -1.86950842 -1.52480714 -1.61048685] 
+ [ -1.52352132  -8.13597767  -9.21100663 -13.24147701 -13.84305046
+ -22.32439309]
+Train, unmaksed Valid k-step Rsq (log percent space):
+ [-0.83409591 -2.55777706 -2.67665669 -3.26468617 -3.49388275 -4.62500833] 
+ [ -6.0229356  -14.75280778 -26.15141612 -47.18776614 -48.74958175
+ -59.78279548]
+epoch 1              took 3.454 seconds
+epoch 2              took 0.196 seconds
+epoch 3              took 0.215 seconds
+epoch 4              took 0.199 seconds
+epoch 5              took 0.171 seconds
+epoch 6              took 0.168 seconds
+epoch 7              took 0.187 seconds
+epoch 8              took 0.181 seconds
+epoch 9              took 0.198 seconds
+epoch 10             took 0.187 seconds
+epoch 11             took 0.171 seconds
+epoch 12             took 0.171 seconds
+epoch 13             took 0.178 seconds
+epoch 14             took 0.193 seconds
+epoch 15             took 0.186 seconds
+epoch 16             took 0.184 seconds
+epoch 17             took 0.182 seconds
+epoch 18             took 0.206 seconds
+epoch 19             took 0.188 seconds
+epoch 20             took 0.197 seconds
+epoch 21             took 0.195 seconds
+epoch 22             took 0.205 seconds
+epoch 23             took 0.177 seconds
+epoch 24             took 0.180 seconds
+epoch 25             took 0.171 seconds
+epoch 26             took 0.165 seconds
+epoch 27             took 0.166 seconds
+epoch 28             took 0.163 seconds
+epoch 29             took 0.172 seconds
+epoch 30             took 0.198 seconds
+epoch 31             took 0.203 seconds
+epoch 32             took 0.189 seconds
+epoch 33             took 0.180 seconds
+epoch 34             took 0.200 seconds
+epoch 35             took 0.177 seconds
+epoch 36             took 0.172 seconds
+epoch 37             took 0.178 seconds
+epoch 38             took 0.182 seconds
+epoch 39             took 0.175 seconds
+epoch 40             took 0.157 seconds
+epoch 41             took 0.157 seconds
+epoch 42             took 0.156 seconds
+epoch 43             took 0.162 seconds
+epoch 44             took 0.170 seconds
+epoch 45             took 0.170 seconds
+epoch 46             took 0.173 seconds
+epoch 47             took 0.198 seconds
+epoch 48             took 0.211 seconds
+epoch 49             took 0.177 seconds
+epoch 50             took 0.176 seconds
+epoch 51             took 0.218 seconds
+epoch 52             took 0.210 seconds
+epoch 53             took 0.204 seconds
+epoch 54             took 0.262 seconds
+epoch 55             took 0.183 seconds
+epoch 56             took 0.205 seconds
+epoch 57             took 0.163 seconds
+epoch 58             took 0.159 seconds
+epoch 59             took 0.159 seconds
+epoch 60             took 0.179 seconds
+epoch 61             took 0.181 seconds
+epoch 62             took 0.176 seconds
+epoch 63             took 0.292 seconds
+epoch 64             took 0.197 seconds
+epoch 65             took 0.451 seconds
+epoch 66             took 0.386 seconds
+epoch 67             took 0.285 seconds
+epoch 68             took 0.297 seconds
+epoch 69             took 0.215 seconds
+epoch 70             took 0.179 seconds
+epoch 71             took 0.197 seconds
+epoch 72             took 0.186 seconds
+epoch 73             took 0.159 seconds
+epoch 74             took 0.166 seconds
+epoch 75             took 0.182 seconds
+epoch 76             took 0.219 seconds
+epoch 77             took 0.197 seconds
+epoch 78             took 0.181 seconds
+epoch 79             took 0.178 seconds
+epoch 80             took 0.266 seconds
+epoch 81             took 0.285 seconds
+epoch 82             took 0.186 seconds
+epoch 83             took 0.159 seconds
+epoch 84             took 0.183 seconds
+epoch 85             took 0.178 seconds
+epoch 86             took 0.331 seconds
+epoch 87             took 0.258 seconds
+epoch 88             took 0.359 seconds
+epoch 89             took 0.311 seconds
+epoch 90             took 0.266 seconds
+epoch 91             took 0.206 seconds
+epoch 92             took 0.290 seconds
+epoch 93             took 0.219 seconds
+epoch 94             took 0.194 seconds
+epoch 95             took 0.189 seconds
+epoch 96             took 0.171 seconds
+epoch 97             took 0.184 seconds
+epoch 98             took 0.172 seconds
+epoch 99             took 0.180 seconds
+
+iter 100
+Train log_ZSMC: -384.343, valid log_ZSMC: -319.414
+Train, Valid k-step Rsq (original space):
+ [ 0.9602536   0.64776337 -0.0890882  -0.83600616 -1.82617998 -2.97959876] 
+ [  0.95533687  -2.31319499  -6.40261078 -13.01012135 -24.26332474
+ -44.44278336]
+Train, Valid k-step Rsq (percent space):
+ [ 0.9602536   0.6477634  -0.08908808 -0.83600593 -1.82617998 -2.97959876] 
+ [  0.95533687  -2.31319451  -6.40260887 -13.01011848 -24.26332664
+ -44.44278336]
+Train, Valid k-step Rsq (log percent space):
+ [  0.90209839  -0.26689827  -7.72956276 -22.40275192 -33.96839523
+ -41.11305237] 
+ [   0.73772994   -9.51157379  -63.70148468 -238.74737549 -389.52810669
+ -483.10845947]
+
+Train, unmaksed Valid k-step Rsq (original space):
+ [ 0.9602536   0.64776338 -0.08908823 -0.83600608 -1.8261799  -2.9795987 ] 
+ [  0.95533686  -2.31319514  -6.40261025 -13.01012112 -24.26332502
+ -44.44278113]
+Train, unmasked Valid k-step Rsq (percent space):
+ [ 0.9602536   0.64776339 -0.08908819 -0.8360061  -1.82617992 -2.97959874] 
+ [  0.95533687  -2.31319508  -6.40261011 -13.01012053 -24.26332598
+ -44.44277814]
+Train, unmaksed Valid k-step Rsq (log percent space):
+ [  0.90209838  -0.26689837  -7.72956265 -22.40275154 -33.96839915
+ -41.11305329] 
+ [   0.7377299    -9.51157394  -63.70149094 -238.74740404 -389.52813255
+ -483.10845269]
+best valid cost on iter: 100
+
+epoch 100            took 0.266 seconds
+epoch 101            took 0.179 seconds
+epoch 102            took 0.194 seconds
+epoch 103            took 0.201 seconds
+epoch 104            took 0.179 seconds
+epoch 105            took 0.171 seconds
+epoch 106            took 0.175 seconds
+epoch 107            took 0.171 seconds
+epoch 108            took 0.171 seconds
+epoch 109            took 0.172 seconds
+epoch 110            took 0.176 seconds
+epoch 111            took 0.171 seconds
+epoch 112            took 0.179 seconds
+epoch 113            took 0.181 seconds
+epoch 114            took 0.194 seconds
+epoch 115            took 0.193 seconds
+epoch 116            took 0.205 seconds
+epoch 117            took 0.199 seconds
+epoch 118            took 0.508 seconds
+epoch 119            took 0.225 seconds
+epoch 120            took 0.621 seconds
+epoch 121            took 0.375 seconds
+epoch 122            took 0.225 seconds
+epoch 123            took 0.260 seconds
+epoch 124            took 0.236 seconds
+epoch 125            took 0.236 seconds
+epoch 126            took 0.179 seconds
+epoch 127            took 0.181 seconds
+epoch 128            took 0.176 seconds
+epoch 129            took 0.178 seconds
+epoch 130            took 0.177 seconds
+epoch 131            took 0.170 seconds
+epoch 132            took 0.176 seconds
+epoch 133            took 0.183 seconds
+epoch 134            took 0.189 seconds
+epoch 135            took 0.269 seconds
+epoch 136            took 0.202 seconds
+epoch 137            took 0.189 seconds
+epoch 138            took 0.190 seconds
+epoch 139            took 0.192 seconds
+epoch 140            took 0.185 seconds
+epoch 141            took 0.206 seconds
+epoch 142            took 0.201 seconds
+epoch 143            took 0.175 seconds
+epoch 144            took 0.173 seconds
+epoch 145            took 0.192 seconds
+epoch 146            took 0.175 seconds
+epoch 147            took 0.184 seconds
+epoch 148            took 0.181 seconds
+epoch 149            took 0.233 seconds
+epoch 150            took 0.253 seconds
+epoch 151            took 0.177 seconds
+epoch 152            took 0.178 seconds
+epoch 153            took 0.179 seconds
+epoch 154            took 0.190 seconds
+epoch 155            took 0.176 seconds
+epoch 156            took 0.176 seconds
+epoch 157            took 0.200 seconds
+epoch 158            took 0.182 seconds
+epoch 159            took 0.278 seconds
+epoch 160            took 0.215 seconds
+epoch 161            took 0.287 seconds
+epoch 162            took 0.800 seconds
+epoch 163            took 0.373 seconds
+epoch 164            took 0.268 seconds
+epoch 165            took 0.359 seconds
+epoch 166            took 0.251 seconds
+epoch 167            took 0.210 seconds
+epoch 168            took 0.181 seconds
+epoch 169            took 0.213 seconds
+epoch 170            took 0.215 seconds
+epoch 171            took 0.229 seconds
+epoch 172            took 0.184 seconds
+epoch 173            took 0.193 seconds
+epoch 174            took 0.190 seconds
+epoch 175            took 0.192 seconds
+epoch 176            took 0.194 seconds
+epoch 177            took 0.193 seconds
+epoch 178            took 0.201 seconds
+epoch 179            took 0.247 seconds
+epoch 180            took 0.191 seconds
+epoch 181            took 0.190 seconds
+epoch 182            took 0.191 seconds
+epoch 183            took 0.191 seconds
+epoch 184            took 0.195 seconds
+epoch 185            took 0.193 seconds
+epoch 186            took 0.218 seconds
+epoch 187            took 0.235 seconds
+epoch 188            took 0.196 seconds
+epoch 189            took 0.192 seconds
+epoch 190            took 0.195 seconds
+epoch 191            took 0.202 seconds
+epoch 192            took 0.199 seconds
+epoch 193            took 0.180 seconds
+epoch 194            took 0.190 seconds
+epoch 195            took 0.184 seconds
+epoch 196            took 0.188 seconds
+epoch 197            took 0.177 seconds
+epoch 198            took 0.215 seconds
+epoch 199            took 0.185 seconds
+
+iter 200
+Train log_ZSMC: -347.461, valid log_ZSMC: -345.990
+Train, Valid k-step Rsq (original space):
+ [ 0.96909551  0.73653764  0.03014237 -0.9036839  -2.08441448 -2.88919306] 
+ [  0.94642845   0.68409884  -0.32781792  -2.11912537  -5.10764647
+ -13.23361969]
+Train, Valid k-step Rsq (percent space):
+ [ 0.96909551  0.73653769  0.03014243 -0.90368366 -2.08441448 -2.8891933 ] 
+ [  0.94642846   0.68409887  -0.32781768  -2.11912441  -5.10764599
+ -13.23361874]
+Train, Valid k-step Rsq (log percent space):
+ [ 9.24004272e-01  4.31074500e-02 -5.27553988e+00 -1.98879280e+01
+ -3.62180901e+01 -4.67402878e+01] 
+ [   0.75702849   -2.74810767  -22.29713058  -71.00366211 -188.49913025
+ -306.68359375]
+
+Train, unmaksed Valid k-step Rsq (original space):
+ [ 0.96909551  0.73653766  0.03014237 -0.90368395 -2.08441464 -2.8891931 ] 
+ [  0.94642845   0.68409882  -0.32781796  -2.11912521  -5.10764628
+ -13.23361995]
+Train, unmasked Valid k-step Rsq (percent space):
+ [ 0.96909551  0.73653766  0.03014235 -0.90368398 -2.08441461 -2.88919315] 
+ [  0.94642846   0.68409882  -0.32781786  -2.11912495  -5.10764639
+ -13.23361859]
+Train, unmaksed Valid k-step Rsq (log percent space):
+ [ 9.24004261e-01  4.31072710e-02 -5.27554015e+00 -1.98879282e+01
+ -3.62180911e+01 -4.67402919e+01] 
+ [   0.75702843   -2.74810823  -22.29713362  -71.00367479 -188.49916438
+ -306.68358508]
+best valid cost on iter: 100
+
+valid cost not improving. reduce learning rate to 0.5
+epoch 200            took 0.330 seconds
+epoch 201            took 0.176 seconds
+epoch 202            took 0.183 seconds
+epoch 203            took 0.192 seconds
+epoch 204            took 0.177 seconds
+epoch 205            took 0.172 seconds
+epoch 206            took 0.204 seconds
+epoch 207            took 0.253 seconds
+epoch 208            took 0.172 seconds
+epoch 209            took 0.174 seconds
+epoch 210            took 0.190 seconds
+epoch 211            took 0.207 seconds
+epoch 212            took 0.176 seconds
+epoch 213            took 0.179 seconds
+epoch 214            took 0.185 seconds
+epoch 215            took 0.176 seconds
+epoch 216            took 0.180 seconds
+epoch 217            took 0.201 seconds
+epoch 218            took 0.277 seconds
+epoch 219            took 0.243 seconds
+epoch 220            took 0.249 seconds
+epoch 221            took 0.248 seconds
+epoch 222            took 0.206 seconds
+epoch 223            took 0.228 seconds
+epoch 224            took 0.218 seconds
+epoch 225            took 0.225 seconds
+epoch 226            took 0.219 seconds
+epoch 227            took 0.211 seconds
+epoch 228            took 0.208 seconds
+epoch 229            took 0.267 seconds
+epoch 230            took 0.225 seconds
+epoch 231            took 0.226 seconds
+epoch 232            took 0.236 seconds
+epoch 233            took 0.235 seconds
+epoch 234            took 0.254 seconds
+epoch 235            took 0.210 seconds
+epoch 236            took 0.194 seconds
+epoch 237            took 0.205 seconds
+epoch 238            took 0.213 seconds
+epoch 239            took 0.284 seconds
+epoch 240            took 0.239 seconds
+epoch 241            took 0.219 seconds
+epoch 242            took 0.224 seconds
+epoch 243            took 0.265 seconds
+epoch 244            took 0.192 seconds
+epoch 245            took 0.233 seconds
+epoch 246            took 0.214 seconds
+epoch 247            took 0.203 seconds
+epoch 248            took 0.211 seconds
+epoch 249            took 0.279 seconds
+epoch 250            took 0.213 seconds
+epoch 251            took 0.203 seconds
+epoch 252            took 0.203 seconds
+epoch 253            took 0.198 seconds
+epoch 254            took 0.207 seconds
+epoch 255            took 0.199 seconds
+epoch 256            took 0.204 seconds
+epoch 257            took 0.210 seconds
+epoch 258            took 0.198 seconds
+epoch 259            took 0.205 seconds
+epoch 260            took 0.205 seconds
+epoch 261            took 0.196 seconds
+epoch 262            took 0.228 seconds

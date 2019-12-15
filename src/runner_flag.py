@@ -25,21 +25,21 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 4                # dimension of hidden states
-Dy = 5                  # dimension of observations. for microbio data, Dy = 11
+Dy = 10                  # dimension of observations. for microbio data, Dy = 11
 Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
-lr = 3e-3               # learning rate
+lr = 5e-3               # learning rate
 Adam_beta1 = 0.9
-epochs = [1000,1000,5000,500,500,5000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
+epochs = [50,1000,5000,500,500,5000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "clv_count_Dx4_obs10_noinput"
+data_type = "clv_gp_sparse_ntrain_600"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
@@ -118,7 +118,7 @@ update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 50 # 100
+print_freq = 20 # 100
 
 # whether to save following into epoch folder
 save_trajectory = False

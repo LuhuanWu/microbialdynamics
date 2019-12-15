@@ -48,12 +48,12 @@ class trainer:
         self.draw_quiver_during_training = False
         # works only for LDA emission
         if self.model.g_tran_type == 'LDA':
-            self.plot_training_dynamics = True
+            self.plot_training_dynamics = False
             if self.plot_training_dynamics:
                 import matplotlib
-                # matplotlib.use("TkAgg")
-            self.plot_topic_bars = False # plot topic bars if True, else plot topic-taxon matrix (beta matrix)
-            self.plot_epoch = 50
+                matplotlib.use("TkAgg")
+            self.plot_topic_bars = True # plot topic bars if True, else plot topic-taxon matrix (beta matrix)
+            self.plot_epoch = 20
         else:
             self.plot_training_dynamics = False
 
@@ -269,22 +269,22 @@ class trainer:
             
             if self.plot_training_dynamics and i % self.plot_epoch == 0:
                 Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
-                # if i == 0:
-                #     save_num = min(8, len(Xs_val_train))
-                #     fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
-                #     fig_theta.suptitle("epoch {}".format("init"))
+                if i == 0:
+                 save_num = min(8, len(Xs_val_train))
+                 fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
+                 fig_theta.suptitle("epoch {}".format("init"))
 
                 beta_val = self.sess.run(self.model.g_tran.beta, {self.model.training: False})
-                # if self.plot_topic_bars:
-                #     plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
-                # else:
-                #     plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
-                # plt.pause(0.0002)
+                if self.plot_topic_bars:
+                    plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
+                else:
+                    plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
+                plt.pause(0.0002)
                 plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
 
-                # plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
-                # fig_theta.suptitle("epoch {}".format(i))
-                # plt.pause(0.0002)
+                plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
+                fig_theta.suptitle("epoch {}".format(i))
+                plt.pause(0.0002)
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -461,7 +461,7 @@ class trainer:
                 raise StopTraining()
 
             self.lr_reduce_count += 1
-            if self.lr_reduce_count * print_freq == self.lr_reduce_patience:
+            if self.lr_reduce_count * print_freq >= self.lr_reduce_patience:
                 self.lr_reduce_count = 0
                 self.lr = max(self.lr * self.lr_reduce_factor, self.min_lr)
                 print("valid cost not improving. reduce learning rate to {}".format(self.lr))
