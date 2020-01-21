@@ -215,7 +215,7 @@ class trainer:
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
         if self.plot_training_dynamics:
-            beta_val = self.sess.run(self.model.g_tran.beta, {self.model.training: False})
+            beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
             #Plot beta
             if self.plot_topic_bars:
                 fig_topic = plt.figure(figsize=(10, 5))
@@ -274,7 +274,7 @@ class trainer:
                  fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
                  fig_theta.suptitle("epoch {}".format("init"))
 
-                beta_val = self.sess.run(self.model.g_tran.beta, {self.model.training: False})
+                beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
                 if self.plot_topic_bars:
                     plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
                 else:

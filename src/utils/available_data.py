@@ -40,8 +40,16 @@ clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_
 clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1500_obp_10_ls_2.p"
 
 
-clv_gp_sparse_ntrain_1800_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1800_sparse_033_ls_1.p"
-clv_gp_sparse_ntrain_600_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_033_ls_1.p"
+clv_gp_sparse_ntrain_1800_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_1800_sparse_033_ls_1.p"
+clv_gp_sparse_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_033_ls_1.p"
+
+# for sparse test
+clv_gp_sparse_1_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_1_ls_1.p"
+clv_gp_sparse_2_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_sparse_2_ls_1.p"
+clv_gp_sparse_2_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_2_ls_1.p"
+clv_gp_sparse_3_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_sparse_3_ls_1.p"
+clv_gp_sparse_3_ntrain_300_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_300_sparse_3_ls_1.p"
+clv_gp_sparse_3_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_3_ls_1.p"
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -83,7 +91,13 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1000_ls_2_dir,
                        clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2=clv_gp_Dx_5_Dy_10_ntrain_1500_ls_2_dir,
                        clv_gp_sparse_ntrain_1800=clv_gp_sparse_ntrain_1800_dir,
-                       clv_gp_sparse_ntrain_600=clv_gp_sparse_ntrain_600_dir
+                       clv_gp_sparse_ntrain_600=clv_gp_sparse_ntrain_600_dir,
+                       clv_gp_sparse_1_ntrain_600=clv_gp_sparse_1_ntrain_600_dir,
+                       clv_gp_sparse_2_ntrain_200=clv_gp_sparse_2_ntrain_200_dir,
+                       clv_gp_sparse_2_ntrain_600=clv_gp_sparse_2_ntrain_600_dir,
+                       clv_gp_sparse_3_ntrain_200=clv_gp_sparse_3_ntrain_200_dir,
+                       clv_gp_sparse_3_ntrain_300=clv_gp_sparse_3_ntrain_300_dir,
+                       clv_gp_sparse_3_ntrain_600=clv_gp_sparse_3_ntrain_600_dir,
                        )
 
 
