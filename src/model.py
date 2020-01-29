@@ -37,12 +37,12 @@ class SSM(object):
 
 
         # Feed-Forward Network (FFN) architectures
-        self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",")]
-        self.q1_layers = [int(x) for x in FLAGS.q1_layers.split(",")]
-        self.q2_layers = [int(x) for x in FLAGS.q2_layers.split(",")]
-        self.f_layers  = [int(x) for x in FLAGS.f_layers.split(",")]
-        self.h_layers  = [int(x) for x in FLAGS.h_layers.split(",")]
-        self.g_layers  = [int(x) for x in FLAGS.g_layers.split(",")]
+        self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",") if x != '']
+        self.q1_layers = [int(x) for x in FLAGS.q1_layers.split(",") if x != '']
+        self.q2_layers = [int(x) for x in FLAGS.q2_layers.split(",") if x != '']
+        self.f_layers  = [int(x) for x in FLAGS.f_layers.split(",") if x != '']
+        self.h_layers  = [int(x) for x in FLAGS.h_layers.split(",") if x != '']
+        self.g_layers  = [int(x) for x in FLAGS.g_layers.split(",") if x != '']
 
         self.q0_sigma_init, self.q0_sigma_min = FLAGS.q0_sigma_init, FLAGS.q0_sigma_min
         self.q1_sigma_init, self.q1_sigma_min = FLAGS.q1_sigma_init, FLAGS.q1_sigma_min
@@ -63,7 +63,7 @@ class SSM(object):
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
 
-        self.f_use_residual              = FLAGS.f_use_residual
+        self.f_use_residual            = FLAGS.f_use_residual
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
         self.PSVO                      = FLAGS.PSVO
