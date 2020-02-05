@@ -44,12 +44,29 @@ clv_gp_sparse_ntrain_1800_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrai
 clv_gp_sparse_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_033_ls_1.p"
 
 # for sparse test
-clv_gp_sparse_1_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_1_ls_1.p"
-clv_gp_sparse_2_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_sparse_2_ls_1.p"
-clv_gp_sparse_2_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_2_ls_1.p"
-clv_gp_sparse_3_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_200_sparse_3_ls_1.p"
-clv_gp_sparse_3_ntrain_300_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_300_sparse_3_ls_1.p"
-clv_gp_sparse_3_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_600_sparse_3_ls_1.p"
+clv_gp_sparse_1_ntrain_100_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_1_ntrain_100_ls_1.p"
+clv_gp_sparse_1_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_1_ntrain_200_ls_1.p"
+clv_gp_sparse_1_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_1_ntrain_100_ls_1.p"
+clv_gp_sparse_2_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_2_ntrain_200_ls_1.p"
+clv_gp_sparse_2_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_2_ntrain_600_ls_1.p"
+clv_gp_sparse_3_ntrain_200_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_3_ntrain_200_ls_1.p"
+clv_gp_sparse_3_ntrain_300_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_3_ntrain_300_ls_1.p"
+clv_gp_sparse_3_ntrain_600_dir = "data/clv_gp/sparse/clv_gp_Dx_5_Dy_10_Dv_0_sparse_3_ntrain_600_ls_1.p"
+
+# for changing sparsity
+clv_gp_fs_1_ls_2_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_1_ls_2_ntrain_320.p"
+clv_gp_fs_1_ls_3_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_1_ls_3_ntrain_360.p"
+clv_gp_fs_1_ls_5_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_1_ls_5_ntrain_400.p"
+clv_gp_fs_2_ls_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_2_ls_1_ntrain_320.p"
+clv_gp_fs_3_ls_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_3_ls_1_ntrain_360.p"
+clv_gp_fs_5_ls_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_fs_5_ls_1_ntrain_400.p"
+clv_gp_half_s_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_1_ntrain_480.p"
+clv_gp_half_s_2_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_2_ntrain_960.p"
+clv_gp_half_s_3_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_3_ntrain_1440.p"
+clv_gp_full_s_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_1_ntrain_240.p"
+clv_gp_full_s_2_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_2_ntrain_480.p"
+clv_gp_full_s_3_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_3_ntrain_720.p"
+
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -98,6 +115,18 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_sparse_3_ntrain_200=clv_gp_sparse_3_ntrain_200_dir,
                        clv_gp_sparse_3_ntrain_300=clv_gp_sparse_3_ntrain_300_dir,
                        clv_gp_sparse_3_ntrain_600=clv_gp_sparse_3_ntrain_600_dir,
+                       clv_gp_fs_1_ls_2=clv_gp_fs_1_ls_2_dir,
+                       clv_gp_fs_1_ls_3=clv_gp_fs_1_ls_3_dir,
+                       clv_gp_fs_1_ls_5=clv_gp_fs_1_ls_5_dir,
+                       clv_gp_fs_2_ls_1=clv_gp_fs_2_ls_1_dir,
+                       clv_gp_fs_3_ls_1=clv_gp_fs_3_ls_1_dir,
+                       clv_gp_fs_5_ls_1=clv_gp_fs_5_ls_1_dir,
+                       clv_gp_half_s_1=clv_gp_half_s_1_dir,
+                       clv_gp_half_s_2=clv_gp_half_s_2_dir,
+                       clv_gp_half_s_3=clv_gp_half_s_3_dir,
+                       clv_gp_full_s_1=clv_gp_full_s_1_dir,
+                       clv_gp_full_s_2=clv_gp_full_s_2_dir,
+                       clv_gp_full_s_3=clv_gp_full_s_3_dir,
                        )
 
 
