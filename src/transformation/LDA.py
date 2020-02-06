@@ -6,7 +6,7 @@ from tensorflow.keras.layers import BatchNormalization
 
 
 class LDA_transformation(transformation):
-    def __init__(self, Dx, Dy, is_x_alr=True, training=False, beta_init_method='uniform'):
+    def __init__(self, Dx, Dy, is_x_alr=True, training=False, beta_init_method='xavier'):
         self.Dx = Dx
         self.Dy = Dy
         self.is_x_lar = is_x_alr
@@ -35,6 +35,8 @@ class LDA_transformation(transformation):
         self.batch_norm = BatchNormalization()
         self.beta = tf.nn.softmax(self.batch_norm(self.beta_log_approx, training=training))
         self.beta_mean = tf.nn.softmax(self.batch_norm(self.beta_log, training=False))
+        # self.beta = tf.nn.softmax(self.beta_log_approx)
+        # self.beta_mean = tf.nn.softmax(self.beta_log)
 
     def transform(self, x):
         if self.is_x_lar:

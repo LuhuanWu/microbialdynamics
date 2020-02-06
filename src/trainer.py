@@ -48,12 +48,12 @@ class trainer:
         self.draw_quiver_during_training = False
         # works only for LDA emission
         if self.model.g_tran_type == 'LDA':
-            self.plot_training_dynamics = False
-            if self.plot_training_dynamics:
-                import matplotlib
-                matplotlib.use("TkAgg")
-            self.plot_topic_bars = True # plot topic bars if True, else plot topic-taxon matrix (beta matrix)
-            self.plot_epoch = 20
+            self.plot_training_dynamics = True
+            self.plot_epoch = 5
+            # if self.plot_training_dynamics:
+            #     import matplotlib
+            #     matplotlib.use("TkAgg")
+            # self.plot_topic_bars = True # plot topic bars if True, else plot topic-taxon matrix (beta matrix)
         else:
             self.plot_training_dynamics = False
 
@@ -151,6 +151,11 @@ class trainer:
         self.Xs = self.log["Xs"]
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.Xs, self.obs, self.input_embedding, self.mask, self.extra_inputs)
+
+        # debug LDA
+        if self.plot_training_dynamics:
+            self.beta_grad = tf.gradients(self.log_ZSMC, self.model.g_tran.beta_log)[0]
+
         # set up feed_dict
         self.set_feed_dict()
 
@@ -214,21 +219,21 @@ class trainer:
     def train(self, print_freq, epoch):
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
-        if self.plot_training_dynamics:
-            beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-            #Plot beta
-            if self.plot_topic_bars:
-                fig_topic = plt.figure(figsize=(10, 5))
-                ax_topic = fig_topic.add_subplot(1, 1, 1)
-                ax_topic.set_xlabel("topic")
-                ax_topic.set_ylabel("taxon")
-                plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch="init")
-            else:
-                fig_beta = plt.figure(figsize=(6,6))
-                ax_beta = fig_beta.add_subplot(1,1,1)
-                cbar_ax = fig_beta.add_axes([.93, .3, .03, .4])
-                plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch='init', cbar_ax=cbar_ax)
-            plt.pause(0.0002)
+        # if self.plot_training_dynamics:
+        #     beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
+        #     #Plot beta
+        #     if self.plot_topic_bars:
+        #         fig_topic = plt.figure(figsize=(10, 5))
+        #         ax_topic = fig_topic.add_subplot(1, 1, 1)
+        #         ax_topic.set_xlabel("topic")
+        #         ax_topic.set_ylabel("taxon")
+        #         plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch="init")
+        #     else:
+        #         fig_beta = plt.figure(figsize=(6,6))
+        #         ax_beta = fig_beta.add_subplot(1,1,1)
+        #         cbar_ax = fig_beta.add_axes([.93, .3, .03, .4])
+        #         plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch='init', cbar_ax=cbar_ax)
+        #     plt.pause(0.0002)
 
         for i in range(epoch):
             if self.use_mask:
@@ -248,7 +253,10 @@ class trainer:
                 self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
                                                self.unmasked_y_hat_N_BxTxDy,
                                                self.unmasked_y_train, self.unmasked_y_test)
-
+            beta_grad_overall = self.evaluate(self.beta_grad,
+                                              feed_dict_w_batches=self.train_all_feed_dict,
+                                              average=True)
+            beta_grad_batches = []
             # training
             obs_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
                 shuffle(self.obs_train, self.input_train, self.mask_train,
@@ -260,31 +268,47 @@ class trainer:
                               feed_dict={self.obs:           obs_train[j:j + self.batch_size],
                                          self.input:         input_train[j:j + self.batch_size],
                                          self.time:          obs_train[j].shape[0],
-                                         self.mask:          mask_train[j:j+self.batch_size],
+                                         self.mask:          mask_train[j:j + self.batch_size],
                                          self.mask_weight:   mask_weight,
-                                         self.time_interval: time_interval_train[j:j+self.batch_size],
-                                         self.extra_inputs:  extra_inputs_train[j:j+self.batch_size],
+                                         self.time_interval: time_interval_train[j:j + self.batch_size],
+                                         self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
                                          self.lr_holder:     self.lr,
                                          self.training:      True})
-            
+
+                beta_grad_batch = self.sess.run(self.beta_grad,
+                                                feed_dict={self.obs:           obs_train[j:j + self.batch_size],
+                                                           self.input:         input_train[j:j + self.batch_size],
+                                                           self.time:          obs_train[j].shape[0],
+                                                           self.mask:          mask_train[j:j + self.batch_size],
+                                                           self.mask_weight:   mask_weight,
+                                                           self.time_interval: time_interval_train[j:j + self.batch_size],
+                                                           self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
+                                                           self.training:      False})
+                beta_grad_batches.append(beta_grad_batch)
+
+            with open(self.epoch_data_DIR + "beta_grad_{}.p".format(i + 1), "wb") as f:
+                pickle.dump({"beta_grad_overall": beta_grad_overall, "beta_grad_batches": beta_grad_batches}, f)
+
             if self.plot_training_dynamics and i % self.plot_epoch == 0:
-                Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
-                if i == 0:
-                 save_num = min(8, len(Xs_val_train))
-                 fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
-                 fig_theta.suptitle("epoch {}".format("init"))
-
                 beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-                if self.plot_topic_bars:
-                    plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
-                else:
-                    plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
-                plt.pause(0.0002)
                 plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
-
-                plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
-                fig_theta.suptitle("epoch {}".format(i))
-                plt.pause(0.0002)
+                with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
+                    pickle.dump(beta_val, f)
+                # Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
+                # if i == 0:
+                #     save_num = min(8, len(Xs_val_train))
+                #     fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
+                #     fig_theta.suptitle("epoch {}".format("init"))
+                #
+                # if self.plot_topic_bars:
+                #     plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
+                # else:
+                #     plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
+                # plt.pause(0.0002)
+                #
+                # plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
+                # fig_theta.suptitle("epoch {}".format(i))
+                # plt.pause(0.0002)
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:

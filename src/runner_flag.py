@@ -31,15 +31,15 @@ Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
-lr = 5e-3               # learning rate
+lr = 3e-4               # learning rate
 Adam_beta1 = 0.9
-epochs = [50,1000,5000,500,500,5000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
+epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "clv_gp_sparse_ntrain_600"
+data_type = "clv_gp_half_s_1"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
