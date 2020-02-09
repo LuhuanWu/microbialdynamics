@@ -67,6 +67,13 @@ clv_gp_full_s_1_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_1_
 clv_gp_full_s_2_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_2_ntrain_480.p"
 clv_gp_full_s_3_dir = "data/clv_gp/changing_sparsity/clv_gp_Dx_5_Dy_10_Dv_0_s_3_ntrain_720.p"
 
+# with input
+clv_gp_w_input_sparse_1_ntrain_100_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_1_ntrain_100.p"
+clv_gp_w_input_sparse_1_ntrain_200_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_1_ntrain_200.p"
+clv_gp_w_input_sparse_2_ntrain_200_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_2_ntrain_200.p"
+clv_gp_w_input_sparse_2_ntrain_400_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_2_ntrain_400.p"
+clv_gp_w_input_sparse_3_ntrain_300_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_3_ntrain_300.p"
+clv_gp_w_input_sparse_3_ntrain_600_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5_Dy_10_Dv_5_s_3_ntrain_600.p"
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -127,6 +134,12 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_full_s_1=clv_gp_full_s_1_dir,
                        clv_gp_full_s_2=clv_gp_full_s_2_dir,
                        clv_gp_full_s_3=clv_gp_full_s_3_dir,
+                       clv_gp_w_input_sparse_1_ntrain_100=clv_gp_w_input_sparse_1_ntrain_100_dir,
+                       clv_gp_w_input_sparse_1_ntrain_200=clv_gp_w_input_sparse_1_ntrain_200_dir,
+                       clv_gp_w_input_sparse_2_ntrain_200=clv_gp_w_input_sparse_2_ntrain_200_dir,
+                       clv_gp_w_input_sparse_2_ntrain_400=clv_gp_w_input_sparse_2_ntrain_400_dir,
+                       clv_gp_w_input_sparse_3_ntrain_300=clv_gp_w_input_sparse_3_ntrain_300_dir,
+                       clv_gp_w_input_sparse_3_ntrain_600=clv_gp_w_input_sparse_3_ntrain_600_dir,
                        )
 
 
