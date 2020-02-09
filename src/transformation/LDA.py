@@ -33,10 +33,10 @@ class LDA_transformation(transformation):
         self.beta_log_approx = self.beta_log + sigma_con * tf.random.normal((Din, Dy))
 
         self.batch_norm = BatchNormalization()
-        self.beta = tf.nn.softmax(self.batch_norm(self.beta_log_approx, training=training))
-        self.beta_mean = tf.nn.softmax(self.batch_norm(self.beta_log, training=False))
-        # self.beta = tf.nn.softmax(self.beta_log_approx)
-        # self.beta_mean = tf.nn.softmax(self.beta_log)
+        # self.beta = tf.nn.softmax(self.batch_norm(self.beta_log_approx, training=training))
+        # self.beta_mean = tf.nn.softmax(self.batch_norm(self.beta_log, training=False))
+        self.beta = tf.nn.softmax(self.beta_log_approx)
+        self.beta_mean = tf.nn.softmax(self.beta_log)
 
     def transform(self, x):
         if self.is_x_lar:

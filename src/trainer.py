@@ -48,7 +48,7 @@ class trainer:
         self.draw_quiver_during_training = False
         # works only for LDA emission
         if self.model.g_tran_type == 'LDA':
-            self.plot_training_dynamics = True
+            self.plot_training_dynamics = False
             self.plot_epoch = 5
             # if self.plot_training_dynamics:
             #     import matplotlib
@@ -253,10 +253,7 @@ class trainer:
                 self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
                                                self.unmasked_y_hat_N_BxTxDy,
                                                self.unmasked_y_train, self.unmasked_y_test)
-            beta_grad_overall = self.evaluate(self.beta_grad,
-                                              feed_dict_w_batches=self.train_all_feed_dict,
-                                              average=True)
-            beta_grad_batches = []
+
             # training
             obs_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
                 shuffle(self.obs_train, self.input_train, self.mask_train,
@@ -275,40 +272,22 @@ class trainer:
                                          self.lr_holder:     self.lr,
                                          self.training:      True})
 
-                beta_grad_batch = self.sess.run(self.beta_grad,
-                                                feed_dict={self.obs:           obs_train[j:j + self.batch_size],
-                                                           self.input:         input_train[j:j + self.batch_size],
-                                                           self.time:          obs_train[j].shape[0],
-                                                           self.mask:          mask_train[j:j + self.batch_size],
-                                                           self.mask_weight:   mask_weight,
-                                                           self.time_interval: time_interval_train[j:j + self.batch_size],
-                                                           self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
-                                                           self.training:      False})
-                beta_grad_batches.append(beta_grad_batch)
-
-            with open(self.epoch_data_DIR + "beta_grad_{}.p".format(i + 1), "wb") as f:
-                pickle.dump({"beta_grad_overall": beta_grad_overall, "beta_grad_batches": beta_grad_batches}, f)
-
-            if self.plot_training_dynamics and i % self.plot_epoch == 0:
-                beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-                plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
-                with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
-                    pickle.dump(beta_val, f)
-                # Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
-                # if i == 0:
-                #     save_num = min(8, len(Xs_val_train))
-                #     fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
-                #     fig_theta.suptitle("epoch {}".format("init"))
-                #
-                # if self.plot_topic_bars:
-                #     plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
-                # else:
-                #     plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
-                # plt.pause(0.0002)
-                #
-                # plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
-                # fig_theta.suptitle("epoch {}".format(i))
-                # plt.pause(0.0002)
+            # if self.plot_training_dynamics and i % self.plot_epoch == 0:
+            #     Xs_val_train = self.evaluate(self.Xs, self.train_feed_dict)
+            #     if i == 0:
+            #         save_num = min(8, len(Xs_val_train))
+            #         fig_theta, axs = plt.subplots(nrows=1, ncols=save_num, figsize=(6 * save_num, 3))
+            #         fig_theta.suptitle("epoch {}".format("init"))
+            #
+            #     if self.plot_topic_bars:
+            #         plot_topic_bar_plot_while_training(ax_topic, beta_val, epoch=i)
+            #     else:
+            #         plot_topic_taxa_matrix_while_training(ax=ax_beta, beta=beta_val, epoch=i, cbar_ax=cbar_ax)
+            #     plt.pause(0.0002)
+            #
+            #     plot_x_bar_plot_while_training(axs=axs, xs_val=Xs_val_train)
+            #     fig_theta.suptitle("epoch {}".format(i))
+            #     plt.pause(0.0002)
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -320,6 +299,12 @@ class trainer:
                     break
 
                 if self.save_res:
+                    if self.model.g_tran_type == 'LDA':
+                        beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
+                        plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
+                        with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
+                            pickle.dump(beta_val, f)
+
                     if self.save_trajectory or self.draw_quiver_during_training:
                         Xs_val = self.evaluate(self.Xs, self.test_feed_dict, average=False)
 
