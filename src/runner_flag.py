@@ -24,22 +24,22 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 4                # dimension of hidden states
-Dy = 10                  # dimension of observations. for microbio data, Dy = 11
+Dx = 3                # dimension of hidden states
+Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
-lr = 3e-4               # learning rate
+lr = 1e-2               # learning rate
 Adam_beta1 = 0.9
-epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
+epochs = [200] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "clv_gp_half_s_1"
+data_type = "lda_4groups_8taxons"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
@@ -70,7 +70,7 @@ g_sigma_init, g_sigma_min = 5, 1e-8
 qh_sigma_init, qh_sigma_min = 5, 1e-8
 h_sigma_init, h_sigma_min = 5, 1e-8
 
-# bidirectional RNN, number of units in each LSTM cells
+# bidirectional RNN, number of funits in each LSTM cells
 # For example, [32, 32] means a bRNN composed of 2 LSTM cells, 32 units in each cell
 y_smoother_Dhs = [16]
 X0_smoother_Dhs = [16]
@@ -90,6 +90,24 @@ g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
 emission_use_auxiliary = True
+
+# ------------------- LDA training beta session --------------------- #
+beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
+f_beta_tran_type = "clv"          # currently, only support clv
+q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_beta_layers = [16]         # target evolution
+
+q0_beta_sigma_init, q0_beta_sigma_min = 5, 1e-8
+q1_beta_sigma_init, q1_beta_sigma_min = 5, 1e-8
+q2_beta_sigma_init, q2_beta_sigma_min = 5, 1e-8
+f_beta_sigma_init, f_beta_sigma_min = 5, 1e-8
+
+q0_beta_layers = ",".join([str(x) for x in q0_beta_layers])
+q1_beta_layers = ",".join([str(x) for x in q1_beta_layers])
+q2_beta_layers = ",".join([str(x) for x in q2_beta_layers])
+f_beta_layers = ",".join([str(x) for x in f_beta_layers])
 
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
@@ -231,6 +249,28 @@ flags.DEFINE_string("X0_smoother_Dhs", X0_smoother_Dhs, "number of units for X0_
 flags.DEFINE_boolean("f_use_residual", f_use_residual, "whether use batch normalization and residual for transition")
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
+
+# ------------------------ LDA training beta session ----------------------#
+flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as traininable constant, or a trainable random variable")
+flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
+flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int seperated by comma, "
+                                            "for example: '50,50' ")
+flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int seperated by comma, "
+                                            "for example: '50,50' ")
+flags.DEFINE_string("q2_beta_layers", q2_beta_layers, "architecture for q2_beta network, int seperated by comma, "
+                                            "for example: '50,50' ")
+flags.DEFINE_string("f_beta_layers",  f_beta_layers,  "architecture for f_eta network, int seperated by comma, "
+                                            "for example: '50,50' ")
+flags.DEFINE_float("q0_beta_sigma_init", q0_beta_sigma_init, "initial value of q0_beta_sigma")
+flags.DEFINE_float("q1_beta_sigma_init", q1_beta_sigma_init, "initial value of q1_beta_sigma")
+flags.DEFINE_float("q2_beta_sigma_init", q2_beta_sigma_init, "initial value of q2_beta_sigma")
+flags.DEFINE_float("f_beta_sigma_init",  f_beta_sigma_init,  "initial value of f_beta_sigma")
+
+flags.DEFINE_float("q0_beta_sigma_min", q0_beta_sigma_min, "minimal value of q0_beta_sigma")
+flags.DEFINE_float("q1_beta_sigma_min", q1_beta_sigma_min, "minimal value of q1_beta_sigma")
+flags.DEFINE_float("q2_beta_sigma_min", q2_beta_sigma_min, "minimal value of q2_beta_sigma")
+flags.DEFINE_float("f_beta_sigma_min",  f_beta_sigma_min,  "minimal value of f_beta_sigma")
+
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether to use mask interpolation for missing observations")

@@ -34,6 +34,8 @@ class trainer:
         self.Dv = self.FLAGS.Dv
         self.n_particles = self.FLAGS.n_particles
 
+        self.beta_constant = FLAGS.beta_constant
+
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
         self.use_mask = self.FLAGS.use_mask
@@ -149,8 +151,12 @@ class trainer:
                                                         self.mask_weight)
 
         self.Xs = self.log["Xs"]
+        self.particles = [self.Xs]
+        if not self.beta_constant:
+            self.beta_logs = self.log["beta_logs"]
+            self.particles.append(self.beta_logs)
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
-            self.SMC.n_step_MSE(self.MSE_steps, self.Xs, self.obs, self.input_embedding, self.mask, self.extra_inputs)
+            self.SMC.n_step_MSE(self.MSE_steps, self.particles, self.obs, self.input_embedding, self.mask, self.extra_inputs)
 
         # debug LDA
         if self.plot_training_dynamics:
@@ -300,10 +306,11 @@ class trainer:
 
                 if self.save_res:
                     if self.model.g_tran_type == 'LDA':
-                        beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-                        plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
-                        with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(beta_val, f)
+                        if self.beta_constant:
+                            beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
+                            plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
+                            with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
+                                pickle.dump(beta_val, f)
 
                     if self.save_trajectory or self.draw_quiver_during_training:
                         Xs_val = self.evaluate(self.Xs, self.test_feed_dict, average=False)

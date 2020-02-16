@@ -66,7 +66,7 @@ if __name__ == "__main__":
         X[t] = lorenz.transform(X[t-1])
 
     # plt.figure()
-    # plt.plot(X[:, 0], X[:, 1])
+    # plt.plot(particles[:, 0], particles[:, 1])
     # plt.show()
 
     # for tf ver

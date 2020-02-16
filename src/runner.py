@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.special import logsumexp
+from scipy.special import logsumexp, softmax
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -147,7 +147,7 @@ def main(_):
                          "lr":            FLAGS.lr,
                          "epochs":        FLAGS.epochs,
                          "seed":          FLAGS.seed,
-                         "rslt_dir_name": FLAGS.rslt_dir_name}
+                         "rslt_dir_name": FLAGS.rslt_dir_name} # TODO: add n_train, n_test
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)
@@ -203,11 +203,9 @@ def main(_):
                 # y hat val = (batch_size, n_days, Dy)
                 for j in range(len(y_hat_val_test[i])):
                     n_days = y_hat_val_test[i][j].shape[0] # (n_days, Dy)
-
                     percentage = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
                     percentage = \
                         np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
-
                     percentage_hat_val_test[i][j] = percentage
 
             obs_train, obs_test, y_hat_val_train, y_hat_val_test = \
@@ -232,11 +230,32 @@ def main(_):
         learned_model_dict = {"Xs_val_test": Xs_val_test,
                               "y_hat_val_test": y_hat_val_test}
         if FLAGS.g_tran_type == "LDA":
-            beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
-            learned_model_dict["topic"] = beta_val
-            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_val_train)
-            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_val_test)
-            plot_topic_bar_plot(checkpoint_dir, beta_val)
+            if FLAGS.beta_constant:
+                beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
+                learned_model_dict["topic"] = beta_val
+                plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_val_train)
+                plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_val_test)
+                plot_topic_bar_plot(checkpoint_dir, beta_val)
+            else:
+                beta_logs_train = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.train_feed_dict) # batch_size, (time, n_particles, Dx+1, Dy-1)
+                beta_logs_val = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.test_feed_dict)
+                beta_train = []
+                for i, beta_log in enumerate(beta_logs_train):
+                    beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
+                    beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
+                    beta = softmax(beta_log, axis=-1) # (time, Dx+1, Dy)
+                    beta_train.append(beta)
+                    plot_topic_bar_plot_across_time(checkpoint_dir+"topic_contents", beta, name="train_{}".format(i))
+                beta_test = []
+                for i, beta_log in enumerate(beta_logs_val):
+                    beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
+                    beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
+                    beta = softmax(beta_log, axis=-1)  # (time, Dx+1, Dy)
+                    beta_test.append(beta)
+                    plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents", beta, name="test_{}".format(i))
+                betas = {"beta_train": beta_train, "beta_test": beta_test}
+                with open(checkpoint_dir + "beta.p", "wb") as f:
+                    pickle.dump(betas, f)
         data_dict = {"testing_data_dict": testing_data_dict,
                      "learned_model_dict": learned_model_dict}
 

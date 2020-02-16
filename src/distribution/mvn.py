@@ -22,10 +22,11 @@ class mvn(distribution):
 class tf_mvn(distribution):
     # multivariate normal distribution
 
-    def __init__(self, transformation, name='tf_mvn', sigma_init=5, sigma_min=1):
+    def __init__(self, transformation, name='tf_mvn', sigma_init=5, sigma_min=1, rank=1):
         super(tf_mvn, self).__init__(transformation, name)
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
+        self.rank = rank  # rank of the random variable
 
     def get_mvn(self, Input):
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
@@ -37,9 +38,9 @@ class tf_mvn(distribution):
             return mvn
 
     def get_sigma(self, mu):
-        Dout = mu.shape.as_list()[-1]
+        shape = [mu.shape.as_list()[-self.rank+i] for i in range(self.rank)]
         sigma_con = tf.get_variable("sigma_con",
-                                    shape=[Dout],
+                                    shape=shape,
                                     dtype=tf.float32,
                                     initializer=tf.constant_initializer(self.sigma_init),
                                     trainable=True)

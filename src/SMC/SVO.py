@@ -26,6 +26,13 @@ class SVO:
 
         self.model = model
 
+        self.beta_constant = FLAGS.beta_constant
+        if not self.beta_constant:
+            self.q0_beta = model.q0_beta_dist
+            self.q1_beta = model.q1_beta_dist
+            self.q2_beta = model.q2_beta_dist
+            self.f_beta = model.f_beta_dist
+
         self.smooth_obs = True
         self.resample_particles = True
 
@@ -54,19 +61,25 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
+            if self.beta_constant:
+                X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
+            else:
+                X_prevs, X_ancestors, log_Ws, beta_log_prevs, beta_log_ancestors = \
+                    self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
             Xs = X_ancestors
 
-            # shape = (batch_size, time, n_particles, Dx)
-            Xs = tf.transpose(Xs, perm=[2, 0, 1, 3], name="Xs")
-
+            Xs = tf.transpose(Xs, perm=[2, 0, 1, 3], name="Xs") # (batch_size, time, n_particles, Dx)
             log["Xs"] = Xs
+            if not self.beta_constant:
+                beta_logs = tf.transpose(beta_log_prevs, perm=[2,0,1,3,4], name='beta_logs') # (batch_size, time, n_particles, Dx+1, Dy-1)
+                log["beta_logs"] = beta_logs
 
         return log_ZSMC, log
 
     def SMC(self, obs, input, mask, time_interval, extra_inputs, mask_weight, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
+        Dy = self.model.Dy
 
         # preprocessing obs
         if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
@@ -86,6 +99,14 @@ class SVO:
                                                                   q_f_0_feed,
                                                                   self.preprocessed_obs[0],
                                                                   sample_size=n_particles)
+        if not self.beta_constant:
+            beta_log_0, q_0_log_prob_beta, f_0_log_prob_beta = self.sample_from_2_dist(self.q0_beta,
+                                                                      self.q2_beta,
+                                                                      q_f_0_feed,
+                                                                      self.preprocessed_obs[0],
+                                                                      sample_size=n_particles)
+            q_0_log_prob_beta = tf.reduce_sum(q_0_log_prob_beta, axis=-1)   # (n_particles, batch_size)
+            f_0_log_prob_beta = tf.reduce_sum(f_0_log_prob_beta, axis=-1)   # (n_particles, batch_size)
 
         # emission log probability and log weights
         if self.emission_use_auxiliary:
@@ -94,15 +115,24 @@ class SVO:
         else:
             g_input = X_0
             qh_0_log_prob = h_0_log_prob = 0
+        if not self.beta_constant:
+            g_input = [g_input, beta_log_0]
         g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
         log_alpha_0 = f_0_log_prob + h_0_log_prob + g_0_log_prob - q_0_log_prob - qh_0_log_prob
+        if not self.beta_constant:
+            log_alpha_0 += f_0_log_prob_beta - q_0_log_prob_beta
 
         log_W_0 = tf.add(log_alpha_0, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
                          name="log_W_0")  # (n_particles, batch_size)
-        X_ancestor_0 = self.resample_X(X_0, log_W_0, sample_size=n_particles,
-                                       resample_particles=self.resample_particles)
+
+        if self.beta_constant:
+            X_ancestor_0 = self.resample_X(X_0, log_W_0, sample_size=n_particles,
+                                           resample_particles=self.resample_particles)
+        else:
+            X_ancestor_0, beta_log_ancestor_0 = self.resample_X([X_0, beta_log_0], log_W_0, sample_size=n_particles,
+                                                                resample_particles=self.resample_particles)
         if self.resample_particles:
             log_normalized_W_0 = tf.negative(tf.log(tf.constant(n_particles, dtype=tf.float32,
                                                                 shape=(n_particles, batch_size))),
@@ -118,6 +148,12 @@ class SVO:
         X_ancestors_ta = tf.TensorArray(tf.float32, size=time, name="X_ancestors_ta")
         log_Ws_ta = tf.TensorArray(tf.float32, size=time, name="log_Ws_ta")
 
+        beta_logs_ta = tf.TensorArray(tf.float32, size=time, name="beta_logs_ta")
+        beta_log_ancestors_ta = tf.TensorArray(tf.float32, size=time, name="beta_log_ancestors_ta")
+        if not self.beta_constant:
+            beta_logs_ta = beta_logs_ta.write(0, beta_log_0)
+            beta_log_ancestors_ta = beta_log_ancestors_ta.write(0, beta_log_ancestor_0)
+
         Xs_ta = Xs_ta.write(0, X_0)
         X_ancestors_ta = X_ancestors_ta.write(0, X_ancestor_0)
         log_Ws_ta = log_Ws_ta.write(0, log_W_0)
@@ -127,35 +163,57 @@ class SVO:
         def while_cond(t, *unused_args):
             return t < time
 
-        def while_body(t, X_ancestor_tm1, log_normalized_W_tm1, Xs_ta, X_ancestors_ta, log_Ws_ta):
+        def while_body(t, X_ancestor_tm1, log_normalized_W_tm1, Xs_ta, X_ancestors_ta, log_Ws_ta,
+                       beta_logs_ta, beta_log_ancestors_ta):
+
             # q_f_t_feed = X_ancestor_tm1
             Input = tf.tile(tf.expand_dims(input[:, t - 1, :], axis=0),
                             (n_particles, 1, 1))  # (n_particles, batch_size, Dev)
             q_f_t_feed = tf.concat((X_ancestor_tm1, Input), axis=-1)  # (n_particles, batch_size, Dx + Dev)
 
             # proposal
+            preprocessed_obs_t = preprocessed_obs_ta.read(t)
             X_t, q_t_log_prob, f_t_log_prob = self.sample_from_2_dist(q1,
                                                                       self.q2,
                                                                       q_f_t_feed,
-                                                                      preprocessed_obs_ta.read(t),
+                                                                      preprocessed_obs_t,
                                                                       inputs=Input,
                                                                       sample_size=())
-
+            if not self.beta_constant:
+                q_f_t_beta_feed = [input[:,t-1,:], beta_log_ancestors_ta.read(t - 1)]
+                beta_log_t, q_t_log_prob_beta, f_t_log_prob_beta = self.sample_from_2_dist(self.q1_beta,
+                                                                          self.q2_beta,
+                                                                          q_f_t_beta_feed,
+                                                                          preprocessed_obs_t,
+                                                                          inputs=Input,
+                                                                          sample_size=())
+                q_t_log_prob_beta = tf.reduce_sum(q_t_log_prob_beta, axis=-1)
+                f_t_log_prob_beta = tf.reduce_sum(f_t_log_prob_beta, axis=-1)
             if self.emission_use_auxiliary:
                 g_input, qh_t_log_prob = self.qh.sample_and_log_prob(X_t)
                 h_t_log_prob = self.h.log_prob(X_t, g_input)
             else:
                 g_input = X_t
                 qh_t_log_prob = h_t_log_prob = 0
+            if not self.beta_constant:
+                g_input = [g_input, beta_log_t]
             # emission log probability and log weights
             g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
             g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
             log_alpha_t = f_t_log_prob + h_t_log_prob + g_t_log_prob - q_t_log_prob - qh_t_log_prob
+            if not self.beta_constant:
+                log_alpha_t += f_t_log_prob_beta - q_t_log_prob_beta
+
             log_W_t = log_alpha_t + log_normalized_W_tm1
 
-            X_ancestor_t = self.resample_X(X_t, log_W_t, sample_size=n_particles,
-                                           resample_particles=self.resample_particles)
+            if self.beta_constant:
+                X_ancestor_t = self.resample_X(X_t, log_W_t, sample_size=n_particles,
+                                               resample_particles=self.resample_particles)
+            else:
+                X_ancestor_t, beta_log_ancestor_t = self.resample_X([X_t, beta_log_t], log_W_t, sample_size=n_particles,
+                                                                            resample_particles=self.resample_particles)
+
             if self.resample_particles:
                 log_normalized_W_t = -tf.log(tf.constant(n_particles, dtype=tf.float32, shape=(n_particles, batch_size)))
             else:
@@ -165,12 +223,18 @@ class SVO:
             Xs_ta = Xs_ta.write(t, X_t)
             X_ancestors_ta = X_ancestors_ta.write(t, X_ancestor_t)
             log_Ws_ta = log_Ws_ta.write(t, log_W_t)
+            if not self.beta_constant:
+                beta_logs_ta = beta_logs_ta.write(t, beta_log_t)
+                beta_log_ancestors_ta = beta_log_ancestors_ta.write(t, beta_log_ancestor_t)
 
-            return t + 1, X_ancestor_t, log_normalized_W_t, Xs_ta, X_ancestors_ta, log_Ws_ta
+            return t + 1, X_ancestor_t, log_normalized_W_t, Xs_ta, X_ancestors_ta, log_Ws_ta, \
+                   beta_logs_ta, beta_log_ancestors_ta
 
         # conduct the while loop
-        init_state = (1, X_ancestor_0, log_normalized_W_0, Xs_ta, X_ancestors_ta, log_Ws_ta)
-        _, _, _, Xs_ta, X_ancestors_ta, log_Ws_ta = tf.while_loop(while_cond, while_body, init_state)
+        init_state = (1, X_ancestor_0, log_normalized_W_0, Xs_ta, X_ancestors_ta, log_Ws_ta,
+                      beta_logs_ta, beta_log_ancestors_ta)
+        _, _, _, Xs_ta, X_ancestors_ta, log_Ws_ta, beta_logs_ta, beta_log_ancestors_ta = \
+            tf.while_loop(while_cond, while_body, init_state)
 
         # convert tensor arrays to tensors
         Xs = Xs_ta.stack()
@@ -180,6 +244,12 @@ class SVO:
         Xs.set_shape((None, n_particles, batch_size, Dx))
         X_ancestors.set_shape((None, n_particles, batch_size, Dx))
         log_Ws.set_shape((None, n_particles, batch_size))
+        if not self.beta_constant:
+            beta_logs = beta_logs_ta.stack()
+            beta_log_ancestors = beta_log_ancestors_ta.stack()
+            beta_logs.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+            beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+            return Xs, X_ancestors, log_Ws, beta_logs, beta_log_ancestors
 
         return Xs, X_ancestors, log_Ws
 
@@ -237,9 +307,9 @@ class SVO:
 
     def resample_X(self, X, log_W, sample_size=(), resample_particles=True):
         """
-        Resample X using categorical with logits = log_W
+        Resample particles using categorical with logits = log_W
         Input:
-            X: can be a list, each element e.shape = (K, batch_size_0, ..., batch_size_last, e_dim_0, ..., e_dim_last)
+            particles: can be a list, each element e.shape = (K, batch_size_0, ..., batch_size_last, e_dim_0, ..., e_dim_last)
             log_W.shape = (K, batch_size_0, ..., batch_size_last)
             sample_size: () or int
         """
@@ -359,10 +429,11 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, X, obs, input, mask, extra_inputs):
+    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
+        :param particles, a list of particles, each type of particle is of shape (batch_size, time, n_particles, particle_shape)
         :param obs: (batch_size, time, Dy)
         :param input: (batch_size, time, Dv)
         :param mask: (batch_size, time)
@@ -370,7 +441,11 @@ class SVO:
         :return:
         """
 
-        batch_size, _, _, _ = X.shape.as_list()
+        if not self.beta_constant:
+            assert isinstance(particles, list), type(particles)
+            assert len(particles) == 2, len(particles)
+
+        batch_size = particles[0].shape.as_list()[0]
 
         assert batch_size == 1
 
@@ -378,28 +453,35 @@ class SVO:
         # assert n_steps < time, "n_steps = {} >= time".format(n_steps)
 
         with tf.variable_scope(self.name):
-            X = tf.reduce_mean(X, axis=2)  # average over paths (n_particles),shape (batch_size, time, Dx)
-            x_BxTmkxDz = X
+            particles = [tf.reduce_mean(p, axis=2) for p in particles]  # average over paths (n_particles), each is shape (batch_size, time, particle_shape)
+            particle_BxTmkxDz = particles
 
             # get y_hat
             y_hat_N_BxTxDy = []
             unmasked_y_hat_N_BxTxDy = []
 
             for k in range(n_steps):
-                unmasked_y_hat_BxTmkxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, k:])
+                g_input = particle_BxTmkxDz[0] if self.beta_constant else particle_BxTmkxDz
+                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
                 unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
-                x_BxTmkxDz = x_BxTmkxDz[:, :-1, :]  # (batch_size, time - k - 1, Dx)
+                particle_BxTmkxDz = [p[:, :-1] for p in particle_BxTmkxDz]  # x: (batch_size, time - k - 1, Dx), beta_log: (batch_size, time-k-1, Dx+1, Dy-1)
 
-                f_k_feed = tf.concat([x_BxTmkxDz, input[:, k:-1]], axis=-1)  # (batch_size, time - k - 1, Dx+Dev)
-                f_k_feed = tf.transpose(f_k_feed, [1, 0, 2])
+                f_k_feed = tf.concat([particle_BxTmkxDz[0], input[:, k:-1]], axis=-1)  # (batch_size, time - k - 1, Dx+Dev)
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
-                x_BxTmkxDz = tf.transpose(x_BxTmkxDz, [1, 0, 2])
 
-            unmasked_y_hat_BxTmNxDy = self.g.mean(x_BxTmkxDz, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
+                if not self.beta_constant:
+                    f_k_beta_feed = [input[:, k:-1], particle_BxTmkxDz[1]] #(batch_size, time-k-1, (Dev or (Dx+1, Dy-1)))
+                    beta_log_BxTmkxDx = self.f_beta.mean(f_k_beta_feed)
+                    particle_BxTmkxDz = [x_BxTmkxDz, beta_log_BxTmkxDx]
+                else:
+                    particle_BxTmkxDz = [x_BxTmkxDz]
+
+            g_input = particle_BxTmkxDz[0] if self.beta_constant else particle_BxTmkxDz
+            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)

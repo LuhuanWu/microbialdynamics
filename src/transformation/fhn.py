@@ -20,7 +20,7 @@ class fhn_transformation(transformation):
         dt: timestep
 
         Output
-        X = [V, w]
+        particles = [V, w]
             V - membrane voltage
             w - recovery variable that mimics activation of an outward current
         """

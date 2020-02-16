@@ -352,8 +352,6 @@ def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
 
 
 def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
-    # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
-    # each of which is an array (T-k, Dy)
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
@@ -372,6 +370,32 @@ def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
         plt.savefig(RLT_DIR + "/topic_content")
     else:
         plt.savefig(RLT_DIR + "/topic_content_epoch{}".format(epoch))
+    plt.close()
+
+
+def plot_topic_bar_plot_across_time(RLT_DIR, betas, name):
+    if not os.path.exists(RLT_DIR):
+        os.makedirs(RLT_DIR)
+    time, n_topics, n_taxons = betas.shape
+
+    #plt.xlabel("topic")
+    #plt.ylabel("taxon")
+    bottom = np.zeros(n_topics)
+
+    fig, axes = plt.subplots(nrows=time, ncols=1, figsize=(15, 3*time))
+
+    for t in range(time):
+        beta = betas[t]
+        for j in range(beta.shape[1]):
+            axes[t].bar(np.arange(n_topics), beta[:, j], bottom=bottom, edgecolor='white')
+            bottom += beta[:, j]
+        axes[t].set_xticks(np.arange(n_topics))
+    #fig.suptitle("topic content")
+    fig.tight_layout()
+    #fig.subplots_adjust(top=0.88)
+    sns.despine()
+
+    plt.savefig(RLT_DIR + "/{}".format(name))
     plt.close()
 
 

@@ -22,12 +22,14 @@ class clv_transformation(transformation):
         A, g, Wg = self.A, self.g, self.Wg
         Dx = self.Dx
 
+        """
         shape = Input.shape.as_list()
         if len(shape) > 3:
             batch_size, DxpDev = shape[-2], shape[-1]
             shape[-1] = Dx
             Input = tf.reshape(Input, (-1, batch_size, DxpDev))
         assert Dx > 0
+        """
 
         x = Input[..., 0:Dx]  # (n_particles, batch_size, Dx)
         v = Input[0, 0:1, Dx:] # (1, Dev)
@@ -37,16 +39,20 @@ class clv_transformation(transformation):
         p = tf.concat([x, zeros], axis=-1)
         p = tf.nn.softmax(p, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
+        # (..., Dx+1, 1) * (Dx+1, Dx)
+        pA = tf.reduce_sum(p[..., None]*A, axis=-2) # (..., Dx)
         if v_size > 0:
             # Wg shape (Dev, Dx)
             Wgv = batch_matmul(v, Wg)  # (n_particles, batch_size, Dx)
-
-            output = x + g + Wgv + batch_matmul(p, A)
+            #output = x + g + Wgv + batch_matmul(p, A)
+            output = x + g + Wgv + pA
         else:
-            output = x + g + batch_matmul(p, A)
-
+            #output = x + g + batch_matmul(p, A)
+            output = x + g + pA
+        """
         if len(shape) > 3:
             output = tf.reshape(output, shape)
+        """
         return output
 
 
@@ -69,3 +75,25 @@ def batch_matmul(Input, A):
     output = tf.reshape(output_reshaped, output_shape)
 
     return output
+
+
+def test_batch_matmul():
+    import numpy as np
+
+    A = tf.reshape(tf.range(12), (4,3))
+    Input = tf.reshape(tf.range(720), (2,5,6,3,4))
+
+    out_1 = batch_matmul(Input, A)
+    out_2 = tf.reduce_sum(Input[..., None]*A, axis=-2)
+
+    sess = tf.Session()
+    out_1_np = sess.run(out_1)
+    out_2_np = sess.run(out_2)
+
+    assert np.all(out_1_np, out_2_np)
+
+    A = np.reshape(np.arange(12), (4,3))
+    Input = np.reshape(np.arange(720), (2,5,6,3,4))
+
+    out = np.matmul(Input, A)
+    assert np.all(out, out_1_np)
