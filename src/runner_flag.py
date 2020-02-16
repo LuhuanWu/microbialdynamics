@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 3                # dimension of hidden states
-Dy = 8                  # dimension of observations. for microbio data, Dy = 11
+Dx = 4                # dimension of hidden states
+Dy = 10                  # dimension of observations. for microbio data, Dy = 11
 Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
@@ -33,13 +33,13 @@ n_bw_particles = 16  # number of subparticles sampled when augmenting the trajec
 batch_size = 1          # batch size
 lr = 1e-2               # learning rate
 Adam_beta1 = 0.9
-epochs = [200] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
+epochs = [1] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "lda_4groups_8taxons"
+data_type = "clv_gp_fs_1_ls_2"
 interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
 interpolation_data_type = 'count_clv'
 
@@ -329,6 +329,9 @@ flags.DEFINE_integer("saving_test_num", saving_test_num, "number of testing data
 
 flags.DEFINE_boolean("save_tensorboard", save_tensorboard, "whether to save tensorboard")
 flags.DEFINE_boolean("save_model", save_model, "whether to save model")
+
+flags.DEFINE_integer("n_train", 0, "number of training samples")
+flags.DEFINE_integer("n_test", 0, "number of testing samples")
 
 FLAGS = flags.FLAGS
 

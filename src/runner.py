@@ -91,6 +91,7 @@ def main(_):
         extra_inputs_train, extra_inputs_test = \
             load_data(data_dir, Dx, training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
         n_train, n_test = len(obs_train), len(obs_test)
+        FLAGS.n_train, FLAGS.n_test = n_train, n_test
 
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
         mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
@@ -143,11 +144,13 @@ def main(_):
 
     # =========================================== data saving part =========================================== #
     # create dir to save results
-    Experiment_params = {"np":            FLAGS.n_particles,
+    Experiment_params = {"n_train":       n_train,
+                         "n_test":        n_test,
+                         "np":            FLAGS.n_particles,
                          "lr":            FLAGS.lr,
                          "epochs":        FLAGS.epochs,
                          "seed":          FLAGS.seed,
-                         "rslt_dir_name": FLAGS.rslt_dir_name} # TODO: add n_train, n_test
+                         "rslt_dir_name": FLAGS.rslt_dir_name}
 
     RLT_DIR = create_RLT_DIR(Experiment_params)
     save_experiment_param(RLT_DIR, FLAGS)
@@ -240,20 +243,30 @@ def main(_):
                 beta_logs_train = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.train_feed_dict) # batch_size, (time, n_particles, Dx+1, Dy-1)
                 beta_logs_val = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.test_feed_dict)
                 beta_train = []
-                for i, beta_log in enumerate(beta_logs_train):
+                saving_num = 10
+                for i in range(saving_num):
+                    beta_log = beta_logs_train[i]
                     beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
                     beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
                     beta = softmax(beta_log, axis=-1) # (time, Dx+1, Dy)
                     beta_train.append(beta)
                     plot_topic_bar_plot_across_time(checkpoint_dir+"topic_contents", beta, name="train_{}".format(i))
                 beta_test = []
-                for i, beta_log in enumerate(beta_logs_val):
+                for i in range(saving_num):
+                    beta_log = beta_logs_val[i]
                     beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
                     beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
                     beta = softmax(beta_log, axis=-1)  # (time, Dx+1, Dy)
                     beta_test.append(beta)
                     plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents", beta, name="test_{}".format(i))
-                betas = {"beta_train": beta_train, "beta_test": beta_test}
+
+                A_beta, g_beta, Wg_beta = mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
+                                                              SSM_model.f_beta_tran.g_beta,
+                                                              SSM_model.f_beta_tran.Wg_beta],
+                                                             {SSM_model.training: False})
+                betas = {"beta_train": beta_train, "beta_test": beta_test,
+                         "A_beta": A_beta, "g_beta": g_beta, "Wg_beta": Wg_beta}
+
                 with open(checkpoint_dir + "beta.p", "wb") as f:
                     pickle.dump(betas, f)
         data_dict = {"testing_data_dict": testing_data_dict,

@@ -374,6 +374,7 @@ def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
 
 
 def plot_topic_bar_plot_across_time(RLT_DIR, betas, name):
+
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
     time, n_topics, n_taxons = betas.shape
