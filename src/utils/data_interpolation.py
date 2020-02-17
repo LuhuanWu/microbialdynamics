@@ -1,7 +1,7 @@
 import numpy as np
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import RBF, ConstantKernel as C
-from scipy.misc import logsumexp
+from scipy.special import logsumexp
 
 
 def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
