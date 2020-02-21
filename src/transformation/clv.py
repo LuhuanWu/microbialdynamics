@@ -3,13 +3,30 @@ import tensorflow as tf
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev):
+    def __init__(self, Dx, Dev, beta_constant=True):
         self.Dx = Dx
         self.Dev = Dev
 
-        self.A = tf.Variable(tf.zeros((self.Dx + 1, self.Dx)))
-        self.g = tf.Variable(tf.zeros((self.Dx,)))
-        self.Wg = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+        self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dx + 1)))
+        self.g_var = tf.Variable(tf.zeros((self.Dx + 1,)))
+        self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx + 1)))
+
+        if beta_constant:
+            upper_triangle = tf.linalg.band_part(self.A_var, 0, -1)     # including diagonal
+            upper_triangle = -tf.nn.softplus(upper_triangle)
+            upper_triangle = tf.linalg.band_part(upper_triangle, 0, -1)
+            lower_triangle = tf.linalg.band_part(self.A_var, -1, 0)     # including diagonal
+            diagonal = -tf.nn.softplus(tf.linalg.diag_part(self.A_var))
+            A_tmp = upper_triangle + lower_triangle
+            self.A = tf.linalg.set_diag(A_tmp, diagonal)
+        else:
+            self_interaction = -tf.nn.softplus(tf.linalg.diag_part(self.A_var))
+            self.A = tf.linalg.set_diag(self.A_var, self_interaction)   # self-interaction should be negative
+        self.g = tf.nn.softplus(self.g_var)                             # growth should be positive
+        self.Wg = self.Wg_var
+        self.A_r = self.A[..., :-1] - self.A[..., -1:]
+        self.g_r = self.g[:-1] - self.g[-1:]
+        self.Wg_r = self.Wg[..., :-1] - self.Wg[..., -1:]
 
     def transform(self, Input):
         """
@@ -19,7 +36,7 @@ class clv_transformation(transformation):
         """
         # x_t + g_t + v_t * Wg + p_t * A
 
-        A, g, Wg = self.A, self.g, self.Wg
+        A, g, Wg = self.A_r, self.g_r, self.Wg_r
         Dx = self.Dx
 
         """

@@ -33,10 +33,8 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    if FLAGS.g_dist_type == "dirichlet" or FLAGS.g_dist_type == "mvn":
+    if FLAGS.g_dist_type == "dirichlet":
         y_hat_bar_plot_to_normalize = False
-        if FLAGS.g_dist_type == "mvn":
-            assert FLAGS.data_type in PERCENTAGE_DATA_DICT, "mvn emission is only compatible to percentage data."
     elif FLAGS.g_dist_type == "poisson" or FLAGS.g_dist_type == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
@@ -99,18 +97,6 @@ def main(_):
                              extra_inputs_train, extra_inputs_test,
                              interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data,
                              pseudo_count=FLAGS.pseudo_count)
-
-        if FLAGS.data_type in PERCENTAGE_DATA_DICT and FLAGS.g_dist_type == "mvn":
-            # transform to log additive ratio
-            percentage_train = []
-            for i in range(len(obs_train)):
-                percentage_train.append(obs_train[i])
-                obs_train[i] = np.log(obs_train[i][:,:-1]) - np.log(obs_train[i][:, -1:])
-
-            percentage_test = []
-            for i in range(len(obs_test)):
-                percentage_test.append(obs_test[i])
-                obs_test[i] = np.log(obs_test[i][:, :-1]) - np.log(obs_test[i][:, -1:])
     else:
         raise ValueError("Data type must be one of available data types.")
 
@@ -187,33 +173,6 @@ def main(_):
         y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
         print("Finish evaluating training results...")
 
-        if FLAGS.g_dist_type == "mvn":
-            # transform log additive ratio back to observation
-
-            percentage_hat_val_train = [[[] for _ in range(n_train)] for _ in range(FLAGS.MSE_steps+1)]
-            for i in range(len(y_hat_val_train)):
-                # y hat val = (batch_size, n_days, Dy)
-                for j in range(len(y_hat_val_train[i])):
-                    n_days = y_hat_val_train[i][j].shape[0]  # (n_days, Dy)
-
-                    percentage = np.concatenate((y_hat_val_train[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
-                    percentage = \
-                        np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
-                    percentage_hat_val_train[i][j] = percentage
-
-            percentage_hat_val_test = [[[] for _ in range(FLAGS.saving_test_num)] for _ in range(FLAGS.MSE_steps+1)]
-            for i in range(len(y_hat_val_test)):
-                # y hat val = (batch_size, n_days, Dy)
-                for j in range(len(y_hat_val_test[i])):
-                    n_days = y_hat_val_test[i][j].shape[0] # (n_days, Dy)
-                    percentage = np.concatenate((y_hat_val_test[i][j], np.zeros((n_days, 1))), axis=-1)  # (n_days, Dy+1)
-                    percentage = \
-                        np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
-                    percentage_hat_val_test[i][j] = percentage
-
-            obs_train, obs_test, y_hat_val_train, y_hat_val_test = \
-                percentage_train, percentage_test, percentage_hat_val_train, percentage_hat_val_test
-
         plot_y_hat(checkpoint_dir + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                    saving_num=FLAGS.saving_train_num)
         plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
@@ -222,7 +181,7 @@ def main(_):
         plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
-        if  Dx == 2:
+        if Dx == 2:
             plot_fhn_results(checkpoint_dir, Xs_val_test)
         if Dx == 3:
             plot_lorenz_results(checkpoint_dir, Xs_val_test)
@@ -240,7 +199,8 @@ def main(_):
                 plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_val_test)
                 plot_topic_bar_plot(checkpoint_dir, beta_val)
             else:
-                beta_logs_train = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.train_feed_dict) # batch_size, (time, n_particles, Dx+1, Dy-1)
+                # batch_size, (time, n_particles, Dx+1, Dy-1)
+                beta_logs_train = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.train_feed_dict)
                 beta_logs_val = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.test_feed_dict)
                 beta_train = []
                 saving_num = 10
@@ -275,10 +235,6 @@ def main(_):
         with open(checkpoint_dir + "data.p", "wb") as f:
             pickle.dump(data_dict, f)
 
-        # plot_MSEs(checkpoint_dir, history["MSE_trains"], history["MSE_tests"], print_freq)
-        #
-        # plot_R_square(checkpoint_dir, history["R_square_trains"][plot_start_idx:],
-        #              history["R_square_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][plot_start_idx:],
                       history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
         plot_start_idx += int(epoch / print_freq) + 1

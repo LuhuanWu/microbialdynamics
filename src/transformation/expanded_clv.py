@@ -13,9 +13,19 @@ class ExpandedCLVTransformation(transformation):
 
         # batch_matrices for beta. beta is (n_topis, n_words) = (Dx+1, Dy)
         # for each topic, there is a set of matrix
-        self.A_beta = tf.Variable(tf.zeros((self.Dx + 1, self.Dy, self.Dy-1)))
-        self.g_beta = tf.Variable(tf.zeros((self.Dx + 1, self.Dy-1)))
-        self.Wg_beta = tf.Variable(tf.zeros((self.Dx + 1, self.Dev, self.Dy-1)))
+        self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dy, self.Dy)))
+        self.g_var = tf.Variable(tf.zeros((1, self.Dy)))
+        self.Wg_var = tf.Variable(tf.zeros((1, self.Dev, self.Dy)))
+
+        self.A_beta = tf.nn.softplus(self.A_var)                          # off-diagonal elements should be positive
+        self_interaction = tf.linalg.diag_part(self.A_beta)
+        self.A_beta = tf.linalg.set_diag(self.A_beta, -self_interaction)  # self-interaction should be negative
+        self.g_beta = tf.nn.softplus(self.g_var)                          # growth should be positive
+        self.Wg_beta = self.Wg_var
+
+        self.A_beta_r = self.A_beta[..., :-1] - self.A_beta[..., -1:]
+        self.g_beta_r = self.g_beta[..., :-1] - self.g_beta[..., -1:]
+        self.Wg_beta_r = self.Wg_beta[..., :-1] - self.Wg_beta[..., -1:]
 
     def transform(self, Input):
         """
@@ -39,17 +49,17 @@ class ExpandedCLVTransformation(transformation):
         p_beta = tf.nn.softmax(p_beta, axis=-1)  # (..., Dx + 1, Dy)
 
         # (..., Dx+1, Dy, 1) * (Dx+1, Dy, Dy-1)
-        pA = tf.reduce_sum(p_beta[..., None]*self.A_beta, axis=-2) # (...,  Dx+1, Dy-1)
+        pA = tf.reduce_sum(p_beta[..., None] * self.A_beta_r, axis=-2) # (...,  Dx+1, Dy-1)
         if self.Dev > 0:
             assert v.shape[-1] == self.Dev
 
             v = tf.expand_dims(v, axis=-2) # (..., 1, Dev)
             # (..., 1, Dev, 1) * (Dx+1, Dev, Dy-1)
-            Wg_beta_v = tf.reduce_sum(v[..., None]*self.Wg_beta, axis=-2) # (..., Dx+1, Dy-1)
+            Wg_beta_v = tf.reduce_sum(v[..., None] * self.Wg_beta_r, axis=-2) # (..., Dx+1, Dy-1)
 
-            output_beta_log = beta_log + self.g_beta + Wg_beta_v + pA
+            output_beta_log = beta_log + self.g_beta_r + Wg_beta_v + pA
         else:
-            output_beta_log = beta_log + self.g_beta + pA
+            output_beta_log = beta_log + self.g_beta_r + pA
 
         #assert output_beta_log.shape == beta_log.shape, \
          #   "output shape {}, input shape {}".format(output_beta_log.shape, beta_log.shape)

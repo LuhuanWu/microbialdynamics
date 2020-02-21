@@ -108,7 +108,7 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev)
+            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
