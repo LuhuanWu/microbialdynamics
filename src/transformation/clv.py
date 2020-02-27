@@ -3,13 +3,19 @@ import tensorflow as tf
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev, beta_constant=True):
+    def __init__(self, Dx, Dev, beta_constant=True, clv_in_alr=True):
         self.Dx = Dx
         self.Dev = Dev
+        self.clv_in_alr = clv_in_alr
 
-        self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dx + 1)))
-        self.g_var = tf.Variable(tf.zeros((self.Dx + 1,)))
-        self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx + 1)))
+        if clv_in_alr:
+            self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dx + 1)))
+            self.g_var = tf.Variable(tf.zeros((self.Dx + 1,)))
+            self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx + 1)))
+        else:
+            self.A_var = tf.Variable(tf.zeros((self.Dx, self.Dx)))
+            self.g_var = tf.Variable(tf.zeros((self.Dx,)))
+            self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx)))
 
         if beta_constant:
             upper_triangle = tf.linalg.band_part(self.A_var, 0, -1)     # including diagonal
@@ -24,9 +30,6 @@ class clv_transformation(transformation):
             self.A = tf.linalg.set_diag(self.A_var, self_interaction)   # self-interaction should be negative
         self.g = tf.nn.softplus(self.g_var)                             # growth should be positive
         self.Wg = self.Wg_var
-        self.A_r = self.A[..., :-1] - self.A[..., -1:]
-        self.g_r = self.g[:-1] - self.g[-1:]
-        self.Wg_r = self.Wg[..., :-1] - self.Wg[..., -1:]
 
     def transform(self, Input):
         """
@@ -36,7 +39,7 @@ class clv_transformation(transformation):
         """
         # x_t + g_t + v_t * Wg + p_t * A
 
-        A, g, Wg = self.A_r, self.g_r, self.Wg_r
+        A, g, Wg = self.A, self.g, self.Wg
         Dx = self.Dx
 
         """
@@ -52,24 +55,23 @@ class clv_transformation(transformation):
         v = Input[0, 0:1, Dx:] # (1, Dev)
         v_size = v.shape[-1]
 
-        zeros = tf.zeros_like(x[..., 0:1])
-        p = tf.concat([x, zeros], axis=-1)
-        p = tf.nn.softmax(p, axis=-1)  # (n_particles, batch_size, Dx + 1)
+        if self.clv_in_alr:
+            zeros = tf.zeros_like(x[..., 0:1])
+            x = tf.concat([x, zeros], axis=-1)
+        p = tf.nn.softmax(x, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
         pA = tf.reduce_sum(p[..., None]*A, axis=-2) # (..., Dx)
         if v_size > 0:
             # Wg shape (Dev, Dx)
             Wgv = batch_matmul(v, Wg)  # (n_particles, batch_size, Dx)
-            #output = x + g + Wgv + batch_matmul(p, A)
             output = x + g + Wgv + pA
         else:
-            #output = x + g + batch_matmul(p, A)
             output = x + g + pA
-        """
-        if len(shape) > 3:
-            output = tf.reshape(output, shape)
-        """
+
+        if self.clv_in_alr:
+            output = output[..., :-1] - output[..., -1:]
+
         return output
 
 

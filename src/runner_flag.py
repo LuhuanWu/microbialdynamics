@@ -32,7 +32,6 @@ n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 lr = 1e-2               # learning rate
-Adam_beta1 = 0.9
 epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
@@ -40,9 +39,7 @@ seed = 0
 
 # see options: utils/available_data.py
 data_type = "clv_gp_w_input_sparse_1_ntrain_200"
-interpolation_type = 'none'  # choose from 'linear_lar', 'gp_lar', 'clv' and 'none'
-interpolation_data_type = 'count_clv'
-
+interpolation_type = "none"
 pseudo_count = 0
 
 # choose samples from the data set for training. -1 indicates use default training set
@@ -83,11 +80,12 @@ use_stack_rnn = True
 
 # ------------------------ State Space Model ------------------------- #
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
-use_mask_interpolation = False  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
 f_tran_type = "clv"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+
+clv_in_alr = True
 
 emission_use_auxiliary = True
 
@@ -190,7 +188,6 @@ flags.DEFINE_integer("Dev", Dev, "input embedding size")
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")
 flags.DEFINE_float("lr", lr, "learning rate")
-flags.DEFINE_float("Adam_beta1", Adam_beta1, "Adam optimizer beta1")
 flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
@@ -201,7 +198,6 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
-flags.DEFINE_string("interpolation_data_type", interpolation_data_type, "The file for data interpolation")
 flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the observations")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
@@ -273,11 +269,12 @@ flags.DEFINE_float("f_beta_sigma_min",  f_beta_sigma_min,  "minimal value of f_b
 
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
-flags.DEFINE_boolean("use_mask_interpolation", use_mask_interpolation, "whether to use mask interpolation for missing observations")
 
 flags.DEFINE_string("f_tran_type", f_tran_type, "type of f transformation, choose from MLP, linear, clv and clv_original")
 flags.DEFINE_string("g_tran_type", g_tran_type, "type of g transformation, choose from MLP and LDA")
 flags.DEFINE_string("g_dist_type", g_dist_type, "type of g distribution, chosen from dirichlet, poisson, mvn and multinomial")
+
+flags.DEFINE_boolean("clv_in_alr", clv_in_alr, "whether hidden space is in alr space")
 
 flags.DEFINE_boolean("emission_use_auxiliary", emission_use_auxiliary, "whether to use auxiliary variables in emission")
 

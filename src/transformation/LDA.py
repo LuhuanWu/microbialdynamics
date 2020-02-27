@@ -1,19 +1,16 @@
 import tensorflow as tf
 
 from src.transformation.base import transformation, xavier_init
-from src.transformation.clv import batch_matmul
-from tensorflow.keras.layers import BatchNormalization
 
 
 class LDA_transformation(transformation):
-    def __init__(self, Dx, Dy, is_x_alr=True, training=False, beta_constant=True, beta_init_method='xavier'):
+    def __init__(self, Dx, Dy, clv_in_alr=True, beta_constant=True, beta_init_method='xavier'):
         self.Dx = Dx
         self.Dy = Dy
-        self.is_x_lar = is_x_alr
-        self.training = training
+        self.clv_in_alr = clv_in_alr
         self.beta_constant = beta_constant
 
-        Din = Dx + (1 if is_x_alr else 0)
+        Din = Dx + (1 if clv_in_alr else 0)
 
         sigma_con = tf.get_variable("sigma_con",
                                     shape=(Din, Dy),
@@ -34,10 +31,6 @@ class LDA_transformation(transformation):
                                  "Please choose from 'uniform', 'xavier'.".format(beta_init_method))
 
             self.beta_log_approx = self.beta_log + sigma_con * tf.random.normal((Din, Dy))
-
-            self.batch_norm = BatchNormalization()
-            #self.beta = tf.nn.softmax(self.batch_norm(self.beta_log_approx, training=training))
-            # self.beta_mean = tf.nn.softmax(self.batch_norm(self.beta_log, training=False))
             self.beta = tf.nn.softmax(self.beta_log_approx)
             self.beta_mean = tf.nn.softmax(self.beta_log)
 
@@ -47,7 +40,7 @@ class LDA_transformation(transformation):
             x, beta_log = x
             # x: (..., Dx), beta_log: (..., Dx+1, Dy-1). batch shape should match
 
-        if self.is_x_lar:
+        if self.clv_in_alr:
             zeros = tf.zeros_like(x[..., 0:1])
             x = tf.concat([x, zeros], axis=-1)
         x = tf.nn.softmax(x, axis=-1)  #(..., Dx+1)
@@ -60,8 +53,9 @@ class LDA_transformation(transformation):
             output = tf.reduce_sum(x[...,None]*self.beta, axis=-2) # (..., Dy)
         else:
             assert beta_log is not None
-            zeros = tf.zeros_like(beta_log[..., 0:1])  # (..., Dx+1, 1)
-            beta_log = tf.concat([beta_log, zeros], axis=-1)  # (..., Dx+1, Dy)
+            if self.clv_in_alr:
+                zeros = tf.zeros_like(beta_log[..., 0:1])  # (..., Dx+1, 1)
+                beta_log = tf.concat([beta_log, zeros], axis=-1)  # (..., Dx+1, Dy)
             beta = tf.nn.softmax(beta_log, axis=-1)
 
             # (..., Dx + 1,1) * (..., Dx+1, Dy)

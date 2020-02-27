@@ -39,7 +39,6 @@ class trainer:
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
         self.use_mask = self.FLAGS.use_mask
-        self.use_mask_interpolation = self.FLAGS.use_mask_interpolation
         self.epochs = self.FLAGS.epochs
         #self.interp_data = None
 
@@ -153,7 +152,7 @@ class trainer:
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
-            optimizer = tf.train.AdamOptimizer(self.lr_holder, beta1=self.FLAGS.Adam_beta1)
+            optimizer = tf.train.AdamOptimizer(self.lr_holder)
             self.train_op = optimizer.minimize(-self.log_ZSMC)
 
         init = tf.global_variables_initializer()
@@ -216,10 +215,7 @@ class trainer:
             if self.use_mask:
                 mask_weight = 0
             else:
-                if self.use_mask_interpolation:
-                    mask_weight = 1 - self.total_epoch_count / np.sum(self.epochs)
-                else:
-                    mask_weight = 1
+                mask_weight = 1
             self.train_feed_dict[self.mask_weight] = [mask_weight] * self.saving_train_num
             self.test_feed_dict[self.mask_weight] = [mask_weight] * self.saving_test_num
             self.train_all_feed_dict[self.mask_weight] = [mask_weight] * len(self.obs_train)

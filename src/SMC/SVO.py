@@ -27,6 +27,7 @@ class SVO:
         self.model = model
 
         self.beta_constant = FLAGS.beta_constant
+        self.clv_in_alr = FLAGS.clv_in_alr
         if not self.beta_constant:
             self.q0_beta = model.q0_beta_dist
             self.q1_beta = model.q1_beta_dist
@@ -247,8 +248,12 @@ class SVO:
         if not self.beta_constant:
             beta_logs = beta_logs_ta.stack()
             beta_log_ancestors = beta_log_ancestors_ta.stack()
-            beta_logs.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
-            beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+            if self.clv_in_alr:
+                beta_logs.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+                beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+            else:
+                beta_logs.set_shape((None, n_particles, batch_size, Dx, Dy))
+                beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx, Dy))
             return Xs, X_ancestors, log_Ws, beta_logs, beta_log_ancestors
 
         return Xs, X_ancestors, log_Ws

@@ -60,31 +60,10 @@ def main(_):
 
     data_dir = DATA_DIR_DICT[FLAGS.data_type]
     data_dir = os.path.join(repo_dir, data_dir)
-    if FLAGS.interpolation_type == "clv":
-        interpolation_data_dir = INTERPOLATION_DATA_DICT[FLAGS.interpolation_data_type]
-        interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
-        with open(interpolation_data_dir, "rb") as f:
-            interpolation_data = pickle.load(f)
-        # TODO: make sure that interpolation matches the shape
-    elif FLAGS.interpolation_type == 'none':
+    if FLAGS.interpolation_type == 'none':
         FLAGS.interpolation_type = None
-        interpolation_data = None
-    else:
-        interpolation_data = None
 
-    if FLAGS.data_type == "toy":
-        print("Use toy data")
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test = joblib.load(data_dir)
-        print("Finish loading the toy data.")
-
-        train_num, test_num = len(obs_train), len(obs_test)
-        T_train, T_test = obs_train[0].shape[0], obs_test[0].shape[0]
-
-        mask_train, mask_test = np.ones((train_num, T_train), dtype=bool), np.ones((test_num, T_test), dtype=bool)
-        time_interval_train, time_interval_test = np.zeros_like(mask_train), np.zeros_like(mask_test)
-        extra_inputs_train, extra_inputs_test = np.zeros((train_num, T_train)), np.zeros((test_num, T_test))
-
-    elif FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
+    if FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
         extra_inputs_train, extra_inputs_test = \
             load_data(data_dir, Dx, training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
@@ -95,7 +74,7 @@ def main(_):
         mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
             interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                              extra_inputs_train, extra_inputs_test,
-                             interpolation_type=FLAGS.interpolation_type, interpolation_data=interpolation_data,
+                             interpolation_type=FLAGS.interpolation_type,
                              pseudo_count=FLAGS.pseudo_count)
     else:
         raise ValueError("Data type must be one of available data types.")

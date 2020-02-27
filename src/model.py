@@ -36,9 +36,9 @@ class SSM(object):
         self.Dev = FLAGS.Dev
 
         self.beta_constant = FLAGS.beta_constant
+        self.clv_in_alr = FLAGS.clv_in_alr
 
         self.batch_size = FLAGS.batch_size
-
 
         # Feed-Forward Network (FFN) architectures
         self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",") if x != '']
@@ -108,33 +108,43 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant)
+            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant, self.clv_in_alr)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
         if not self.beta_constant:
             if self.f_beta_tran_type == "MLP":
-                # currently only support clv
                 self.f_beta_tran = ExpandedMLPTransformation(batch_size=self.Dx+1,
                                                              Dhs=self.f_beta_layers, Dout=self.Dy-1, name='f_beta_tran')
-            elif self.f_tran_type == "clv":
-                self.f_beta_tran = ExpandedCLVTransformation(Dx=self.Dx, Dev=self.Dev, Dy=self.Dy)
+            elif self.f_beta_tran_type == "clv":
+                self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy, self.clv_in_alr)
             else:
                 raise ValueError("Invalid value for f_beta transformation. Must choose from MLP, linear and clv")
 
-            self.q0_beta_tran = ExpandedMLPTransformation_v2(batch_size=self.Dx+1,
-                                                          Dhs=self.q0_beta_layers, Dout=self.Dy-1, name='q0_beta_tran')
+            if self.clv_in_alr:
+                beta_batch_size = self.Dx + 1
+                beta_Dout = self.Dy - 1
+            else:
+                beta_batch_size = self.Dx
+                beta_Dout = self.Dy
 
-            self.q2_beta_tran = ExpandedMLPTransformation_v2(batch_size=self.Dx+1,
-                                                          Dhs=self.q2_beta_layers, Dout=self.Dy-1, name='q2_beta_tran')
-
+            self.q0_beta_tran = ExpandedMLPTransformation_v2(batch_size=beta_batch_size,
+                                                             Dhs=self.q0_beta_layers,
+                                                             Dout=beta_Dout,
+                                                             name='q0_beta_tran')
+            self.q2_beta_tran = ExpandedMLPTransformation_v2(batch_size=beta_batch_size,
+                                                             Dhs=self.q2_beta_layers,
+                                                             Dout=beta_Dout,
+                                                             name='q2_beta_tran')
             # by default, use bootstrap for beta proposal
             self.q1_beta_tran = self.f_beta_tran
 
         if self.g_tran_type == "MLP":
             self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
         elif self.g_tran_type == "LDA":
-            self.g_tran = LDA_transformation(self.Dx, self.Dy, training=self.training, beta_constant=self.beta_constant)
+            self.g_tran = LDA_transformation(self.Dx, self.Dy,
+                                             beta_constant=self.beta_constant,
+                                             clv_in_alr=self.clv_in_alr)
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
