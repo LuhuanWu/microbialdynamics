@@ -79,6 +79,9 @@ clv_gp_w_input_sparse_3_ntrain_600_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5
 clv_gp_pw_s_1_ntrain_600_Kvar_00_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.0_ntrain_200.p"
 clv_gp_pw_s_1_ntrain_600_Kvar_01_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.1_ntrain_200.p"
 clv_gp_pw_s_1_ntrain_600_Kvar_02_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.2_ntrain_200.p"
+clv_gp_pw_s_1_ntrain_600_Kvar_03_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.3_ntrain_200.p"
+clv_gp_pw_s_1_ntrain_600_Kvar_04_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.4_ntrain_200.p"
+clv_gp_pw_s_1_ntrain_600_Kvar_05_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.5_ntrain_200.p"
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -148,6 +151,9 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_00_dir=clv_gp_pw_s_1_ntrain_600_Kvar_00_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_01_dir=clv_gp_pw_s_1_ntrain_600_Kvar_01_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_02_dir=clv_gp_pw_s_1_ntrain_600_Kvar_02_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_03_dir=clv_gp_pw_s_1_ntrain_600_Kvar_03_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_04_dir=clv_gp_pw_s_1_ntrain_600_Kvar_04_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_05_dir=clv_gp_pw_s_1_ntrain_600_Kvar_05_dir,
                        )
 
 
