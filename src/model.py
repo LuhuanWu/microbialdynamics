@@ -145,6 +145,8 @@ class SSM(object):
             self.g_tran = LDA_transformation(self.Dx, self.Dy,
                                              beta_constant=self.beta_constant,
                                              clv_in_alr=self.clv_in_alr)
+        elif self.g_tran_type == "Identity":
+            self.g_tran = identity_transformation()
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
