@@ -8,6 +8,7 @@ from src.transformation.linear import tf_linear_transformation
 from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
 from src.transformation.identity import identity_transformation
+from src.transformation.inv_alr import inv_alr_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
@@ -145,8 +146,8 @@ class SSM(object):
             self.g_tran = LDA_transformation(self.Dx, self.Dy,
                                              beta_constant=self.beta_constant,
                                              clv_in_alr=self.clv_in_alr)
-        elif self.g_tran_type == "Identity":
-            self.g_tran = identity_transformation()
+        elif self.g_tran_type == "inv_alr":
+            self.g_tran = inv_alr_transformation()
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
