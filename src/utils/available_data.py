@@ -85,7 +85,9 @@ clv_gp_pw_s_1_ntrain_600_Kvar_05_dir = "data/clv_gp/pairwise_interaction/clv_gp_
 
 # group interaction
 group_Dx_2_ntrain_100_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_2_Dy_8_Dv_0_s_1_Kvar_0.3_ntrain_100.p"
+group_Dx_2_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_2_Dy_8_Dv_0_s_1_Kvar_0.3_ntrain_300.p"
 group_Dx_3_ntrain_100_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_3_Dy_12_Dv_0_s_1_Kvar_0.3_ntrain_100.p"
+group_Dx_3_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_3_Dy_12_Dv_0_s_1_Kvar_0.3_ntrain_300.p"
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -152,14 +154,16 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_w_input_sparse_2_ntrain_400=clv_gp_w_input_sparse_2_ntrain_400_dir,
                        clv_gp_w_input_sparse_3_ntrain_300=clv_gp_w_input_sparse_3_ntrain_300_dir,
                        clv_gp_w_input_sparse_3_ntrain_600=clv_gp_w_input_sparse_3_ntrain_600_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_00_dir=clv_gp_pw_s_1_ntrain_600_Kvar_00_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_01_dir=clv_gp_pw_s_1_ntrain_600_Kvar_01_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_02_dir=clv_gp_pw_s_1_ntrain_600_Kvar_02_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_03_dir=clv_gp_pw_s_1_ntrain_600_Kvar_03_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_04_dir=clv_gp_pw_s_1_ntrain_600_Kvar_04_dir,
-                       clv_gp_pw_s_1_ntrain_600_Kvar_05_dir=clv_gp_pw_s_1_ntrain_600_Kvar_05_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_00=clv_gp_pw_s_1_ntrain_600_Kvar_00_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_01=clv_gp_pw_s_1_ntrain_600_Kvar_01_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_02=clv_gp_pw_s_1_ntrain_600_Kvar_02_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_03=clv_gp_pw_s_1_ntrain_600_Kvar_03_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_04=clv_gp_pw_s_1_ntrain_600_Kvar_04_dir,
+                       clv_gp_pw_s_1_ntrain_600_Kvar_05=clv_gp_pw_s_1_ntrain_600_Kvar_05_dir,
                        group_Dx_2_ntrain_100_Kvar_05=group_Dx_2_ntrain_100_Kvar_05_dir,
+                       group_Dx_2_ntrain_300_Kvar_05=group_Dx_2_ntrain_300_Kvar_05_dir,
                        group_Dx_3_ntrain_100_Kvar_05=group_Dx_3_ntrain_100_Kvar_05_dir,
+                       group_Dx_3_ntrain_300_Kvar_05=group_Dx_3_ntrain_300_Kvar_05_dir,
                        )
 
 
