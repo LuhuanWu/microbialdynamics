@@ -84,10 +84,10 @@ clv_gp_pw_s_1_ntrain_600_Kvar_04_dir = "data/clv_gp/pairwise_interaction/clv_gp_
 clv_gp_pw_s_1_ntrain_600_Kvar_05_dir = "data/clv_gp/pairwise_interaction/clv_gp_Dx_10_Dy_10_Dv_5_s_1_Kvar_0.5_ntrain_200.p"
 
 # group interaction
-group_Dx_2_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_2_Dy_8_Dv_5_s_1_Kvar_0.3_ntrain_300.p"
-group_Dx_3_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_3_Dy_12_Dv_5_s_1_Kvar_0.3_ntrain_300.p"
 group_Dx_2_Dv_0_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_2_Dy_8_Dv_0_s_1_Kvar_0.3_ntrain_300.p"
+group_Dx_2_Dv_5_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_2_Dy_8_Dv_5_s_1_Kvar_0.3_ntrain_300.p"
 group_Dx_3_Dv_0_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_3_Dy_12_Dv_0_s_1_Kvar_0.3_ntrain_300.p"
+group_Dx_3_Dv_5_ntrain_300_Kvar_05_dir = "data/clv_gp/group_interaction/Dx_3_Dy_12_Dv_5_s_1_Kvar_0.3_ntrain_300.p"
 
 # ----------------------------------------- linear + lda data ----------------------------------------- #
 # noinput
@@ -160,8 +160,8 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_03=clv_gp_pw_s_1_ntrain_600_Kvar_03_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_04=clv_gp_pw_s_1_ntrain_600_Kvar_04_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_05=clv_gp_pw_s_1_ntrain_600_Kvar_05_dir,
-                       group_Dx_2_ntrain_300_Kvar_05=group_Dx_2_ntrain_300_Kvar_05_dir,
-                       group_Dx_3_ntrain_300_Kvar_05=group_Dx_3_ntrain_300_Kvar_05_dir,
+                       group_Dx_2_Dv_5_ntrain_300_Kvar_05=group_Dx_2_Dv_5_ntrain_300_Kvar_05_dir,
+                       group_Dx_3_Dv_5_ntrain_300_Kvar_05=group_Dx_3_Dv_5_ntrain_300_Kvar_05_dir,
                        group_Dx_2_Dv_0_ntrain_300_Kvar_05=group_Dx_2_Dv_0_ntrain_300_Kvar_05_dir,
                        group_Dx_3_Dv_0_ntrain_300_Kvar_05=group_Dx_3_Dv_0_ntrain_300_Kvar_05_dir,
                        )
