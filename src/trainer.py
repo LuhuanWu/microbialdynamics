@@ -150,10 +150,17 @@ class trainer:
         # set up feed_dict
         self.set_feed_dict()
 
+        loss = -self.log_ZSMC
+        if not self.beta_constant and self.model.f_beta_tran_type == "clv":
+            dkl = self.model.f_beta_tran.variational_dropout_dkl_loss()
+            step = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
+            reg_scalar = tf.minimum(step / (100.0 * len(obs_train) / self.batch_size), 1.0)
+            loss += dkl * reg_scalar
+
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self.lr_holder)
-            self.train_op = optimizer.minimize(-self.log_ZSMC)
+            self.train_op = optimizer.minimize(loss)
 
         init = tf.global_variables_initializer()
         self.sess = tf.Session()
@@ -264,13 +271,15 @@ class trainer:
 
                     if not self.beta_constant:
                         A, g, Wg = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wg])
-                        A_beta, g_beta, Wg_beta = self.sess.run([self.model.f_beta_tran.A_beta,
-                                                                 self.model.f_beta_tran.g_beta,
-                                                                 self.model.f_beta_tran.Wg_beta])
+                        A_beta, dropout_A_beta, g_beta, Wg_beta = self.sess.run([self.model.f_beta_tran.A_beta,
+                                                                                 self.model.f_beta_tran.dropout_A_beta,
+                                                                                 self.model.f_beta_tran.g_beta,
+                                                                                 self.model.f_beta_tran.Wg_beta])
                         interaction = {"A": A,
                                        "g": g,
                                        "Wg": Wg,
                                        "A_beta": A_beta,
+                                       "dropout_A_beta": dropout_A_beta,
                                        "g_beta": g_beta,
                                        "Wg_beta": Wg_beta,}
                         with open(self.epoch_data_DIR + "interaction_{}.p".format(i + 1), "wb") as f:

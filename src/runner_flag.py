@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 4                # dimension of hidden states
-Dy = 10                  # dimension of observations. for microbio data, Dy = 11
+Dx = 2                # dimension of hidden states
+Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 5                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
 n_particles = 16        # number of particles
@@ -38,7 +38,7 @@ seed = 0
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "clv_gp_w_input_sparse_1_ntrain_200"
+data_type = "group_Dx_2_Dv_5_ntrain_300_Kvar_05"
 interpolation_type = "none"
 pseudo_count = 0
 
@@ -85,13 +85,15 @@ f_tran_type = "clv"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
-clv_in_alr = True
+clv_in_alr = False
 
 emission_use_auxiliary = True
 
 # ------------------- LDA training beta session --------------------- #
 beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
 f_beta_tran_type = "clv"          # currently, only support clv
+clip_alpha = 8
+alpha_valid_threshold = 3
 q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
 q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
 q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
@@ -249,6 +251,8 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ LDA training beta session ----------------------#
 flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as traininable constant, or a trainable random variable")
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
+flags.DEFINE_float("clip_alpha", clip_alpha, "initial value of q0_beta_sigma")
+flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "initial value of q0_beta_sigma")
 flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int seperated by comma, "
                                             "for example: '50,50' ")
 flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int seperated by comma, "
