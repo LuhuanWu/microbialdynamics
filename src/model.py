@@ -79,6 +79,8 @@ class SSM(object):
         self.g_dist_type               = FLAGS.g_dist_type
         if not self.beta_constant:
             self.f_beta_tran_type = FLAGS.f_beta_tran_type
+            self.clip_alpha = FLAGS.clip_alpha
+            self.alpha_valid_threshold = FLAGS.alpha_valid_threshold
 
         self.f_use_residual            = FLAGS.f_use_residual
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -118,7 +120,11 @@ class SSM(object):
                 self.f_beta_tran = ExpandedMLPTransformation(batch_size=self.Dx+1,
                                                              Dhs=self.f_beta_layers, Dout=self.Dy-1, name='f_beta_tran')
             elif self.f_beta_tran_type == "clv":
-                self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy, self.clv_in_alr)
+                self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
+                                                             self.clv_in_alr,
+                                                             self.training,
+                                                             clip_alpha=self.clip_alpha,
+                                                             threshold=self.alpha_valid_threshold)
             else:
                 raise ValueError("Invalid value for f_beta transformation. Must choose from MLP, linear and clv")
 
