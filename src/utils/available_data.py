@@ -160,10 +160,10 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_03=clv_gp_pw_s_1_ntrain_600_Kvar_03_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_04=clv_gp_pw_s_1_ntrain_600_Kvar_04_dir,
                        clv_gp_pw_s_1_ntrain_600_Kvar_05=clv_gp_pw_s_1_ntrain_600_Kvar_05_dir,
-                       group_Dx_2_Dv_5_ntrain_300_Kvar_05=group_Dx_2_Dv_5_ntrain_300_Kvar_05_dir,
-                       group_Dx_3_Dv_5_ntrain_300_Kvar_05=group_Dx_3_Dv_5_ntrain_300_Kvar_05_dir,
                        group_Dx_2_Dv_0_ntrain_300_Kvar_05=group_Dx_2_Dv_0_ntrain_300_Kvar_05_dir,
+                       group_Dx_2_Dv_5_ntrain_300_Kvar_05=group_Dx_2_Dv_5_ntrain_300_Kvar_05_dir,
                        group_Dx_3_Dv_0_ntrain_300_Kvar_05=group_Dx_3_Dv_0_ntrain_300_Kvar_05_dir,
+                       group_Dx_3_Dv_5_ntrain_300_Kvar_05=group_Dx_3_Dv_5_ntrain_300_Kvar_05_dir,
                        )
 
 
