@@ -157,10 +157,14 @@ class SSM(object):
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
-        self.q0_tran = MLP_transformation(self.q0_layers, self.Dx, name="q0_tran")
+        self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
+                                          initialize_around_zero=self.f_tran_type == "clv",
+                                          name="q0_tran")
 
         if self.use_2_q:
-            self.q2_tran = MLP_transformation(self.q2_layers, self.Dx, name="q2_tran")
+            self.q2_tran = MLP_transformation(self.q2_layers, self.Dx,
+                                              initialize_around_zero=self.f_tran_type == "clv",
+                                              name="q2_tran")
         else:
             self.q2_tran = None
 
