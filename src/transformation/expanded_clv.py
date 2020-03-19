@@ -23,12 +23,12 @@ class ExpandedCLVTransformation(transformation):
         # for each topic, there is a set of matrix
         if clv_in_alr:
             self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dy, self.Dy)))
-            self.g_var = tf.Variable(tf.zeros((1, self.Dy)))
-            self.Wg_var = tf.Variable(tf.zeros((1, self.Dev, self.Dy)))
+            self.g_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dy)))
+            self.Wg_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dev, self.Dy)))
         else:
             self.A_var = tf.Variable(tf.zeros((self.Dx, self.Dy, self.Dy)))
-            self.g_var = tf.Variable(tf.zeros((1, self.Dy)))
-            self.Wg_var = tf.Variable(tf.zeros((1, self.Dev, self.Dy)))
+            self.g_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
+            self.Wg_var = tf.Variable(tf.zeros((self.Dx, self.Dev, self.Dy)))
 
         self.A_beta = tf.nn.softplus(self.A_var)                          # off-diagonal elements should be positive
         self_interaction = tf.linalg.diag_part(self.A_beta)
