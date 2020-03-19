@@ -90,7 +90,7 @@ def main(_):
     print("finished preparing dataset")
 
     # ============================================== model part ============================================== #
-    SSM_model = SSM(FLAGS)
+    SSM_model = SSM(FLAGS, data_dir)
 
     # at most one of them can be set to True
     assert FLAGS.PSVO + FLAGS.SVO + FLAGS.AESMC + FLAGS.IWAE < 2
@@ -199,12 +199,12 @@ def main(_):
                     beta_test.append(beta)
                     plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents", beta, name="test_{}".format(i))
 
-                A_beta, g_beta, Wg_beta = mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
+                A_beta, g_beta, Wv_beta = mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
                                                               SSM_model.f_beta_tran.g_beta,
-                                                              SSM_model.f_beta_tran.Wg_beta],
+                                                              SSM_model.f_beta_tran.Wv_beta],
                                                              {SSM_model.training: False})
                 betas = {"beta_train": beta_train, "beta_test": beta_test,
-                         "A_beta": A_beta, "g_beta": g_beta, "Wg_beta": Wg_beta}
+                         "A_beta": A_beta, "g_beta": g_beta, "Wv_beta": Wv_beta}
 
                 with open(checkpoint_dir + "beta.p", "wb") as f:
                     pickle.dump(betas, f)

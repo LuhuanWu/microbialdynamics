@@ -1,23 +1,31 @@
 import tensorflow as tf
+import pickle
 
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev, beta_constant=True, clv_in_alr=True):
+    def __init__(self, Dx, Dev, beta_constant=True, clv_in_alr=True, data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
         self.clv_in_alr = clv_in_alr
 
-        if clv_in_alr:
-            self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dx + 1)))
-            self.g_var = tf.Variable(tf.zeros((self.Dx + 1,)))
-            self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx + 1)))
-        else:
-            self.A_var = tf.Variable(tf.zeros((self.Dx, self.Dx)))
-            self.g_var = tf.Variable(tf.zeros((self.Dx,)))
-            self.Wg_var = tf.Variable(tf.zeros((self.Dev, self.Dx)))
+        if data_dir is not None:
+            with open(data_dir, "rb") as f:
+                d = pickle.load(f)
+            A_init_val = tf.constant(d['A'], dtype=tf.float32)
+            g_init_val = tf.constant(d['g'], dtype=tf.float32)
+            Wv_init_val = tf.constant(d['Wv'].T, dtype=tf.float32)
 
-        if beta_constant:
+        hidden_dim = self.Dx + 1 if clv_in_alr else self.Dx
+        if data_dir is not None and d['A'].shape[0] != hidden_dim:
+            A_init_val = tf.zeros((hidden_dim, hidden_dim))
+            g_init_val = tf.zeros((hidden_dim,))
+            Wv_init_val = tf.zeros((self.Dev, hidden_dim))
+        self.A_var = tf.Variable(A_init_val)
+        self.g_var = tf.Variable(g_init_val)
+        self.Wv_var = tf.Variable(Wv_init_val)
+
+        if not beta_constant:
             upper_triangle = tf.linalg.band_part(self.A_var, 0, -1)     # including diagonal
             upper_triangle = -tf.nn.softplus(upper_triangle)
             upper_triangle = tf.linalg.band_part(upper_triangle, 0, -1)
@@ -29,7 +37,7 @@ class clv_transformation(transformation):
             self_interaction = -tf.nn.softplus(tf.linalg.diag_part(self.A_var))
             self.A = tf.linalg.set_diag(self.A_var, self_interaction)   # self-interaction should be negative
         self.g = tf.nn.softplus(self.g_var)                             # growth should be positive
-        self.Wg = self.Wg_var
+        self.Wv = self.Wv_var
 
     def transform(self, Input):
         """
@@ -37,9 +45,9 @@ class clv_transformation(transformation):
         :param Dx: dimension of hidden space
         :return: output: (n_particles, batch_size, Dx)
         """
-        # x_t + g_t + v_t * Wg + p_t * A
+        # x_t + g_t + v_t * Wv + p_t * A
 
-        A, g, Wg = self.A, self.g, self.Wg
+        A, g, Wv = self.A, self.g, self.Wv
         Dx = self.Dx
 
         """
@@ -61,11 +69,11 @@ class clv_transformation(transformation):
         p = tf.nn.softmax(x, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
-        pA = tf.reduce_sum(p[..., None]*A, axis=-2) # (..., Dx)
+        pA = tf.reduce_sum(p[..., None] * A, axis=-2) # (..., Dx)
         if v_size > 0:
-            # Wg shape (Dev, Dx)
-            Wgv = batch_matmul(v, Wg)  # (n_particles, batch_size, Dx)
-            output = x + g + Wgv + pA
+            # Wv shape (Dev, Dx)
+            Wvv = batch_matmul(v, Wv)  # (n_particles, batch_size, Dx)
+            output = x + g + Wvv + pA
         else:
             output = x + g + pA
 

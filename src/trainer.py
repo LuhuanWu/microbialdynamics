@@ -270,18 +270,18 @@ class trainer:
                                 pickle.dump(beta_val, f)
 
                     if not self.beta_constant:
-                        A, g, Wg = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wg])
-                        A_beta, dropout_A_beta, g_beta, Wg_beta = self.sess.run([self.model.f_beta_tran.A_beta,
+                        A, g, Wv = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wv])
+                        A_beta, dropout_A_beta, g_beta, Wv_beta = self.sess.run([self.model.f_beta_tran.A_beta,
                                                                                  self.model.f_beta_tran.dropout_A_beta,
                                                                                  self.model.f_beta_tran.g_beta,
-                                                                                 self.model.f_beta_tran.Wg_beta])
+                                                                                 self.model.f_beta_tran.Wv_beta])
                         interaction = {"A": A,
                                        "g": g,
-                                       "Wg": Wg,
+                                       "Wv": Wv,
                                        "A_beta": A_beta,
                                        "dropout_A_beta": dropout_A_beta,
                                        "g_beta": g_beta,
-                                       "Wg_beta": Wg_beta,}
+                                       "Wv_beta": Wv_beta,}
                         with open(self.epoch_data_DIR + "interaction_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(interaction, f)
 

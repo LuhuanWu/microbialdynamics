@@ -24,7 +24,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
+Dx = 7                # dimension of hidden states
 Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 5                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
@@ -35,12 +35,19 @@ lr = 1e-2               # learning rate
 epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
+clv_in_alr = True
+beta_constant = True  # if True, beta is treated as constant; if False, beta is treated as latent variable
+f_beta_tran_type = "clv"          # currently, only support clv
+clip_alpha = 8
+alpha_valid_threshold = 0
+
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
 data_type = "group_Dx_2_Dv_5_ntrain_300_Kvar_05"
 interpolation_type = "none"
 pseudo_count = 0
+initialize_w_true_params = True
 
 # choose samples from the data set for training. -1 indicates use default training set
 training_sample_idx = [-1]
@@ -85,15 +92,10 @@ f_tran_type = "clv"          # choose from MLP, linear, clv
 g_tran_type = "LDA"          # choose from MLP, LDA
 g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
 
-clv_in_alr = False
-
 emission_use_auxiliary = True
 
 # ------------------- LDA training beta session --------------------- #
-beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
-f_beta_tran_type = "clv"          # currently, only support clv
-clip_alpha = 8
-alpha_valid_threshold = 3
+
 q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
 q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
 q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
@@ -201,6 +203,9 @@ flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, 
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
 flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the observations")
+
+flags.DEFINE_boolean("initialize_w_true_params", initialize_w_true_params, "whether to initialize clv with "
+                     "ground truth parameters")
 
 flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
 flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")

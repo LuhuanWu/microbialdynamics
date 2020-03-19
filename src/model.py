@@ -28,8 +28,9 @@ class SSM(object):
     keeps q, f, g and obs smoother
     """
 
-    def __init__(self, FLAGS):
-        assert FLAGS.g_dist_type in SUPPORTED_EMISSION.keys(), "g_dist_type must be one of " + str(SUPPORTED_EMISSION.keys())
+    def __init__(self, FLAGS, data_dir):
+        assert FLAGS.g_dist_type in SUPPORTED_EMISSION.keys(), "g_dist_type must be one of " +\
+                                                               str(SUPPORTED_EMISSION.keys())
 
         self.Dx = FLAGS.Dx
         self.Dy = FLAGS.Dy
@@ -88,6 +89,8 @@ class SSM(object):
         self.PSVO                      = FLAGS.PSVO
         self.SVO                       = FLAGS.SVO
 
+        self.data_dir = data_dir if FLAGS.initialize_w_true_params else None
+
         self.init_placeholder()
         self.init_trans()
         self.init_dist()
@@ -111,7 +114,8 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant, self.clv_in_alr)
+            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant, self.clv_in_alr,
+                                             data_dir=self.data_dir)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
@@ -124,7 +128,8 @@ class SSM(object):
                                                              self.clv_in_alr,
                                                              self.training,
                                                              clip_alpha=self.clip_alpha,
-                                                             threshold=self.alpha_valid_threshold)
+                                                             threshold=self.alpha_valid_threshold,
+                                                             data_dir=self.data_dir)
             else:
                 raise ValueError("Invalid value for f_beta transformation. Must choose from MLP, linear and clv")
 

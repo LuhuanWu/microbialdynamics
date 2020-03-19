@@ -1,3 +1,5 @@
+import pickle
+import numpy as np
 import tensorflow as tf
 
 from src.transformation.base import transformation
@@ -10,7 +12,7 @@ EPSILON = 1e-8
 
 
 class ExpandedCLVTransformation(transformation):
-    def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True, clip_alpha=8., threshold=3.):
+    def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True, clip_alpha=8., threshold=3., data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
         self.Dy = Dy
@@ -21,20 +23,28 @@ class ExpandedCLVTransformation(transformation):
 
         # batch_matrices for beta. beta is (n_topis, n_words) = (Dx+1, Dy)
         # for each topic, there is a set of matrix
-        if clv_in_alr:
-            self.A_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dy, self.Dy)))
-            self.g_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dy)))
-            self.Wg_var = tf.Variable(tf.zeros((self.Dx + 1, self.Dev, self.Dy)))
+        hidden_dim = self.Dx + 1 if clv_in_alr else self.Dx
+        if data_dir is not None:
+            with open(data_dir, "rb") as f:
+                d = pickle.load(f)
+            A_init_val = tf.constant(d['A_g'], dtype=tf.float32)
+            g_g = np.array([d['g_g']] * hidden_dim)
+            Wv_g = np.array([d['Wv_g'].T] * hidden_dim)
+            g_init_val = tf.constant(g_g, dtype=tf.float32)
+            Wv_init_val = tf.constant(Wv_g, dtype=tf.float32)
         else:
-            self.A_var = tf.Variable(tf.zeros((self.Dx, self.Dy, self.Dy)))
-            self.g_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
-            self.Wg_var = tf.Variable(tf.zeros((self.Dx, self.Dev, self.Dy)))
+            A_init_val = tf.zeros((hidden_dim, self.Dy, self.Dy))
+            g_init_val = tf.zeros((hidden_dim, self.Dy))
+            Wv_init_val = tf.zeros((hidden_dim, self.Dev, self.Dy))
+        self.A_var = tf.Variable(A_init_val)
+        self.g_var = tf.Variable(g_init_val)
+        self.Wv_var = tf.Variable(Wv_init_val)
 
         self.A_beta = tf.nn.softplus(self.A_var)                          # off-diagonal elements should be positive
         self_interaction = tf.linalg.diag_part(self.A_beta)
         self.A_beta = tf.linalg.set_diag(self.A_beta, -self_interaction)  # self-interaction should be negative
         self.g_beta = tf.nn.softplus(self.g_var)                          # growth should be positive
-        self.Wg_beta = self.Wg_var
+        self.Wv_beta = self.Wv_var
 
         self.A_beta_log_sigma2 = tf.Variable(-10 * tf.ones((self.Dx, self.Dy, self.Dy)))
         log_alpha = compute_log_alpha(self.A_beta_log_sigma2, self.A_beta, EPSILON, value_limit=None)
@@ -47,7 +57,7 @@ class ExpandedCLVTransformation(transformation):
         batch_shape_v should match the trailing shape of batch_shape_beta
         :return: output: (..., batch_size, Dx+1, Dy) if self.clv_in_alr else (..., batch_size, Dx, Dy)
         """
-        # x_t + g_t + v_t * Wg + p_t * A
+        # x_t + g_t + v_t * Wv + p_t * A
         assert isinstance(Input, list), type(Input)
         assert len(Input) == 2, len(Input)
         v, beta_log = Input
@@ -72,9 +82,9 @@ class ExpandedCLVTransformation(transformation):
 
             v = tf.expand_dims(v, axis=-2) # (..., 1, Dev)
             # (..., 1, Dev, 1) * (Dx + 1, Dev, Dy)
-            Wg_beta_v = tf.reduce_sum(v[..., None] * self.Wg_beta, axis=-2) # (..., Dx + 1, Dy)
+            Wv_beta_v = tf.reduce_sum(v[..., None] * self.Wv_beta, axis=-2) # (..., Dx + 1, Dy)
 
-            output_beta_log = beta_log + self.g_beta + Wg_beta_v + pA
+            output_beta_log = beta_log + self.g_beta + Wv_beta_v + pA
         else:
             output_beta_log = beta_log + self.g_beta + pA
 
