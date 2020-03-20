@@ -80,6 +80,7 @@ class SSM(object):
         self.g_dist_type               = FLAGS.g_dist_type
         if not self.beta_constant:
             self.f_beta_tran_type = FLAGS.f_beta_tran_type
+            self.use_variational_dropout = FLAGS.use_variational_dropout
             self.clip_alpha = FLAGS.clip_alpha
             self.alpha_valid_threshold = FLAGS.alpha_valid_threshold
 
@@ -127,6 +128,7 @@ class SSM(object):
                 self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
                                                              self.clv_in_alr,
                                                              self.training,
+                                                             use_variational_dropout=self.use_variational_dropout,
                                                              clip_alpha=self.clip_alpha,
                                                              threshold=self.alpha_valid_threshold,
                                                              data_dir=self.data_dir)

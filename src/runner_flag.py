@@ -24,7 +24,7 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # --------------------- Training Hyperparameters --------------------- #
-Dx = 7                # dimension of hidden states
+Dx = 2                # dimension of hidden states
 Dy = 8                  # dimension of observations. for microbio data, Dy = 11
 Dv = 5                 # dimension of inputs. for microbio data, Dv = 15
 Dev = 5                 # dimension of inputs.
@@ -35,9 +35,10 @@ lr = 1e-2               # learning rate
 epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
 seed = 0
 
-clv_in_alr = True
-beta_constant = True  # if True, beta is treated as constant; if False, beta is treated as latent variable
+clv_in_alr = False
+beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
 f_beta_tran_type = "clv"          # currently, only support clv
+use_variational_dropout = True
 clip_alpha = 8
 alpha_valid_threshold = 0
 
@@ -256,8 +257,12 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ LDA training beta session ----------------------#
 flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as traininable constant, or a trainable random variable")
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
-flags.DEFINE_float("clip_alpha", clip_alpha, "initial value of q0_beta_sigma")
-flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "initial value of q0_beta_sigma")
+flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whether to use variational dropout to "
+                     "sparsify in-group interaction matrix")
+flags.DEFINE_float("clip_alpha", clip_alpha, "clip value for alpha in variational dropout")
+flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold for dropping elements in interaction "
+                   "matrix given alpha")
+
 flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int seperated by comma, "
                                             "for example: '50,50' ")
 flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int seperated by comma, "

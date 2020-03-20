@@ -12,7 +12,9 @@ EPSILON = 1e-8
 
 
 class ExpandedCLVTransformation(transformation):
-    def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True, clip_alpha=8., threshold=3., data_dir=None):
+    def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True,
+                 use_variational_dropout=False, clip_alpha=8., threshold=3.,
+                 data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
         self.Dy = Dy
@@ -46,7 +48,10 @@ class ExpandedCLVTransformation(transformation):
         self.g_beta = tf.nn.softplus(self.g_var)                          # growth should be positive
         self.Wv_beta = self.Wv_var
 
-        self.A_beta_log_sigma2 = tf.Variable(-10 * tf.ones((self.Dx, self.Dy, self.Dy)))
+        if use_variational_dropout:
+            self.A_beta_log_sigma2 = tf.Variable(-10 * tf.ones((self.Dx, self.Dy, self.Dy)))
+        else:
+            self.A_beta_log_sigma2 = -10 * tf.ones((self.Dx, self.Dy, self.Dy), dtype=tf.float32)
         log_alpha = compute_log_alpha(self.A_beta_log_sigma2, self.A_beta, EPSILON, value_limit=None)
         weight_mask = tf.cast(tf.less(log_alpha, threshold), tf.float32)
         self.dropout_A_beta = self.A_beta * weight_mask
