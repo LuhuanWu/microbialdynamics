@@ -17,7 +17,7 @@ class clv_transformation(transformation):
             Wv_init_val = tf.constant(d['Wv'].T, dtype=tf.float32)
 
         hidden_dim = self.Dx + 1 if clv_in_alr else self.Dx
-        if data_dir is not None and d['A'].shape[0] != hidden_dim:
+        if data_dir is None or d['A'].shape[0] != hidden_dim:
             A_init_val = tf.zeros((hidden_dim, hidden_dim))
             g_init_val = tf.zeros((hidden_dim,))
             Wv_init_val = tf.zeros((self.Dev, hidden_dim))
