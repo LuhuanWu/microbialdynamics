@@ -35,6 +35,7 @@ class trainer:
         self.n_particles = self.FLAGS.n_particles
 
         self.beta_constant = FLAGS.beta_constant
+        self.use_anchor = FLAGS.use_anchor
 
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
@@ -125,11 +126,24 @@ class trainer:
     def init_train(self, obs_train, obs_test, input_train, input_test, mask_train, mask_test,
                    time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
         # set data
+        def add_anchor_to_obs(obses):
+            obses_w_anchor = []
+            for obs in obses:
+                depth = np.sum(obs, axis=-1, keepdims=True)
+                anchor = (depth * 0.2).astype(int)
+                obs_w_anchor = np.concatenate([obs, anchor, anchor], axis=-1)
+                obses_w_anchor.append(obs_w_anchor)
+            return obses_w_anchor
+
+        if self.use_anchor:
+            obs_train, obs_test = add_anchor_to_obs(obs_train), add_anchor_to_obs(obs_test)
+            extra_inputs_train = [np.sum(obs, axis=-1) for obs in obs_train]
+            extra_inputs_test = [np.sum(obs, axis=-1) for obs in obs_test]
         self.obs_train, self.obs_test = obs_train, obs_test
+        self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
-        self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
 
         # set up unmasked data
         self.set_interp_val()
@@ -145,7 +159,9 @@ class trainer:
             self.beta_logs = self.log["beta_logs"]
             self.particles.append(self.beta_logs)
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
-            self.SMC.n_step_MSE(self.MSE_steps, self.particles, self.obs, self.input_embedding, self.mask, self.extra_inputs)
+            self.SMC.n_step_MSE(self.MSE_steps, self.particles,
+                                self.obs, self.input_embedding, self.mask, self.extra_inputs,
+                                self.use_anchor)
 
         # set up feed_dict
         self.set_feed_dict()
@@ -176,9 +192,12 @@ class trainer:
         self.unmasked_y_train = []
         self.unmasked_y_test = []
 
+        if self.use_anchor:
+            obs_train = [obs[:, :-2] for obs in self.obs_train]
+            obs_test = [obs[:, :-2] for obs in self.obs_test]
         for k in range(self.MSE_steps + 1):
-            self.unmasked_y_train.append([obs[k:][None,] for obs in self.obs_train])
-            self.unmasked_y_test.append([obs[k:][None,] for obs in self.obs_test])
+            self.unmasked_y_train.append([obs[k:][None, ] for obs in obs_train])
+            self.unmasked_y_test.append([obs[k:][None, ] for obs in obs_test])
 
     def set_feed_dict(self):
         # data up to saving_num

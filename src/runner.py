@@ -49,6 +49,9 @@ def main(_):
     if test_sample_idx == [-1]:
         test_sample_idx = None
 
+    if FLAGS.beta_constant or FLAGS.f_beta_tran_type != "clv" or FLAGS.g_tran_type != "LDA":
+        FLAGS.use_anchor = False
+
     tf.set_random_seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
@@ -154,7 +157,8 @@ def main(_):
 
         plot_y_hat(checkpoint_dir + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
                    saving_num=FLAGS.saving_train_num)
-        plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test, saving_num=FLAGS.saving_test_num)
+        plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test,
+                   saving_num=FLAGS.saving_test_num)
         plot_y_hat_bar_plot(checkpoint_dir+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
                             saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
         plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,

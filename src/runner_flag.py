@@ -38,9 +38,12 @@ seed = 0
 clv_in_alr = False
 beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
 f_beta_tran_type = "clv"          # currently, only support clv
+
 use_variational_dropout = True
 clip_alpha = 8
 alpha_valid_threshold = 0
+
+use_anchor = True
 
 # ------------------------------- Data ------------------------------- #
 
@@ -257,11 +260,14 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ LDA training beta session ----------------------#
 flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as traininable constant, or a trainable random variable")
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
+
 flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whether to use variational dropout to "
                      "sparsify in-group interaction matrix")
 flags.DEFINE_float("clip_alpha", clip_alpha, "clip value for alpha in variational dropout")
 flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold for dropping elements in interaction "
                    "matrix given alpha")
+
+flags.DEFINE_boolean("use_anchor", use_anchor, "whether to use an anchor taxon as base for the hidden log space")
 
 flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int seperated by comma, "
                                             "for example: '50,50' ")

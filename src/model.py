@@ -79,10 +79,11 @@ class SSM(object):
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
         if not self.beta_constant:
-            self.f_beta_tran_type = FLAGS.f_beta_tran_type
+            self.f_beta_tran_type        = FLAGS.f_beta_tran_type
             self.use_variational_dropout = FLAGS.use_variational_dropout
-            self.clip_alpha = FLAGS.clip_alpha
-            self.alpha_valid_threshold = FLAGS.alpha_valid_threshold
+            self.clip_alpha              = FLAGS.clip_alpha
+            self.alpha_valid_threshold   = FLAGS.alpha_valid_threshold
+            self.use_anchor = FLAGS.use_anchor
 
         self.f_use_residual            = FLAGS.f_use_residual
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -99,7 +100,10 @@ class SSM(object):
         self.init_input_embedding()
 
     def init_placeholder(self):
-        self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
+        if not self.beta_constant and self.f_beta_tran_type == "clv" and self.use_anchor:
+            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy + 2), name="obs")
+        else:
+            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
         self.input = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dv), name="input")
         self.time = tf.placeholder(tf.int32, shape=(), name="time")
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
@@ -158,7 +162,8 @@ class SSM(object):
         elif self.g_tran_type == "LDA":
             self.g_tran = LDA_transformation(self.Dx, self.Dy,
                                              beta_constant=self.beta_constant,
-                                             clv_in_alr=self.clv_in_alr)
+                                             clv_in_alr=self.clv_in_alr,
+                                             use_anchor=self.use_anchor)
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
         else:

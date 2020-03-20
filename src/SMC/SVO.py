@@ -249,8 +249,8 @@ class SVO:
             beta_logs = beta_logs_ta.stack()
             beta_log_ancestors = beta_log_ancestors_ta.stack()
             if self.clv_in_alr:
-                beta_logs.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
-                beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx+1, Dy-1))
+                beta_logs.set_shape((None, n_particles, batch_size, Dx + 1, Dy - 1))
+                beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx + 1, Dy - 1))
             else:
                 beta_logs.set_shape((None, n_particles, batch_size, Dx, Dy))
                 beta_log_ancestors.set_shape((None, n_particles, batch_size, Dx, Dy))
@@ -434,7 +434,7 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs):
+    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs, use_anchor=False):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -443,6 +443,7 @@ class SVO:
         :param input: (batch_size, time, Dv)
         :param mask: (batch_size, time)
         :param extra_inputs: (batch_size, time)
+        :param use_anchor: whether use anchor as the base taxon for clv
         :return:
         """
 
@@ -469,8 +470,11 @@ class SVO:
                 g_input = particle_BxTmkxDz[0] if self.beta_constant else particle_BxTmkxDz
                 unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
                 # (batch_size, time - k, Dy)
-                unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
+                if use_anchor:
+                    y_hat_BxTmkxDy = y_hat_BxTmkxDy[..., :-2]
+                    unmasked_y_hat_BxTmkxDy = unmasked_y_hat_BxTmkxDy[..., :-2]
+                unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
                 particle_BxTmkxDz = [p[:, :-1] for p in particle_BxTmkxDz]  # x: (batch_size, time - k - 1, Dx), beta_log: (batch_size, time-k-1, Dx+1, Dy-1)
@@ -487,15 +491,20 @@ class SVO:
 
             g_input = particle_BxTmkxDz[0] if self.beta_constant else particle_BxTmkxDz
             unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
-            unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
+            if use_anchor:
+                y_hat_BxTmNxDy = y_hat_BxTmNxDy[..., :-2]
+                unmasked_y_hat_BxTmNxDy = unmasked_y_hat_BxTmNxDy[..., :-2]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
+            unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
 
             # get y_true
             y_N_BxTxDy = []
             #y_unmaksed_BxTxDy = []
             for k in range(n_steps + 1):
                 y_BxTmkxDy = obs[:, k:, :]
+                if use_anchor:
+                    y_BxTmkxDy = y_BxTmkxDy[..., :-2]
                 y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_N_BxTxDy.append(y_BxTmkxDy)
                 #y_unmaksed_BxTxDy.append(obs[:,k:,:])
