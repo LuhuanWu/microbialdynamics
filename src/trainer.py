@@ -195,6 +195,8 @@ class trainer:
         if self.use_anchor:
             obs_train = [obs[:, :-2] for obs in self.obs_train]
             obs_test = [obs[:, :-2] for obs in self.obs_test]
+        else:
+            obs_train, obs_test = self.obs_train, self.obs_test
         for k in range(self.MSE_steps + 1):
             self.unmasked_y_train.append([obs[k:][None, ] for obs in obs_train])
             self.unmasked_y_test.append([obs[k:][None, ] for obs in obs_test])
