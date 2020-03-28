@@ -86,8 +86,7 @@ def interpolate_datapoint(hidden, obs, input, extra_inputs, interpolation_type=N
             mask[t - days[0]] = False
             time_interval[idx] = time_interval[idx - 1] + 1
 
-    # hidden
-    hidden = np.zeros((time, hidden.shape[1]))
+    # hidden: do nothing
 
     # obs
     Dy = obs.shape[1] - 1
@@ -302,13 +301,10 @@ def test_interpolate_data(interpolation_type, plot_interpolation=False,
     repo_dir = repo.working_tree_dir  # microbialdynamics
     data_dir = os.path.join(repo_dir, data_dir)
     Dx = 10
-    training_sample_idx = None
-    test_sample_idx = None
 
     hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
     extra_inputs_train, extra_inputs_test = \
-        load_data(data_dir, Dx, False,
-                  training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
+        load_data(data_dir, Dx, False)
 
     if interpolation_type == 'count_clv':
         from src.utils.available_data import INTERPOLATION_DATA_DICT
