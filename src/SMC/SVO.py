@@ -434,7 +434,7 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs, use_anchor=False):
+    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs, use_anchor=False, D_anchor=1):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -444,6 +444,7 @@ class SVO:
         :param mask: (batch_size, time)
         :param extra_inputs: (batch_size, time)
         :param use_anchor: whether use anchor as the base taxon for clv
+        :param D_anchor: dimension of anchor used
         :return:
         """
 
@@ -472,8 +473,8 @@ class SVO:
                 # (batch_size, time - k, Dy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 if use_anchor:
-                    y_hat_BxTmkxDy = y_hat_BxTmkxDy[..., :-2]
-                    unmasked_y_hat_BxTmkxDy = unmasked_y_hat_BxTmkxDy[..., :-2]
+                    y_hat_BxTmkxDy = y_hat_BxTmkxDy[..., :-D_anchor]
+                    unmasked_y_hat_BxTmkxDy = unmasked_y_hat_BxTmkxDy[..., :-D_anchor]
                 unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
 
@@ -493,8 +494,8 @@ class SVO:
             unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])   # (batch_size, T - N, Dy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
             if use_anchor:
-                y_hat_BxTmNxDy = y_hat_BxTmNxDy[..., :-2]
-                unmasked_y_hat_BxTmNxDy = unmasked_y_hat_BxTmNxDy[..., :-2]
+                y_hat_BxTmNxDy = y_hat_BxTmNxDy[..., :-D_anchor]
+                unmasked_y_hat_BxTmNxDy = unmasked_y_hat_BxTmNxDy[..., :-D_anchor]
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
             unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
 
@@ -504,7 +505,7 @@ class SVO:
             for k in range(n_steps + 1):
                 y_BxTmkxDy = obs[:, k:, :]
                 if use_anchor:
-                    y_BxTmkxDy = y_BxTmkxDy[..., :-2]
+                    y_BxTmkxDy = y_BxTmkxDy[..., :-D_anchor]
                 y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
                 y_N_BxTxDy.append(y_BxTmkxDy)
                 #y_unmaksed_BxTxDy.append(obs[:,k:,:])

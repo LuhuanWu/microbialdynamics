@@ -44,6 +44,13 @@ clip_alpha = 8
 alpha_valid_threshold = 0
 
 use_anchor = True
+in_group_anchor_x = [0, 0]
+in_group_anchor_p_base = 0.1
+between_group_anchor_x = [0, 0]
+between_group_anchor_p_base = 0.1
+
+in_group_anchor_x = ",".join([str(x) for x in in_group_anchor_x])
+between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
 
 # ------------------------------- Data ------------------------------- #
 
@@ -54,9 +61,9 @@ pseudo_count = 0
 initialize_w_true_params = True
 
 # choose samples from the data set for training. -1 indicates use default training set
-training_sample_idx = [-1]
+train_num = -1
 # choose samples from the test set for test. -1 indicates default test set
-test_sample_idx = [-1]
+test_num = -1
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
@@ -177,9 +184,6 @@ g_layers = ",".join([str(x) for x in g_layers])
 y_smoother_Dhs = ",".join([str(x) for x in y_smoother_Dhs])
 X0_smoother_Dhs = ",".join([str(x) for x in X0_smoother_Dhs])
 
-training_sample_idx = ",".join([str(x) for x in training_sample_idx])
-test_sample_idx = ",".join([str(x) for x in test_sample_idx])
-
 
 # ================================================ tf.flags ================================================ #
 
@@ -211,8 +215,8 @@ flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the ob
 flags.DEFINE_boolean("initialize_w_true_params", initialize_w_true_params, "whether to initialize clv with "
                      "ground truth parameters")
 
-flags.DEFINE_string("training_sample_idx", training_sample_idx, "choose samples from the dataset for training")
-flags.DEFINE_string("test_sample_idx", test_sample_idx, "choose samples from the dataset for test")
+flags.DEFINE_integer("train_num", train_num, "number of samples from the dataset for training")
+flags.DEFINE_integer("test_num", test_num, "number of samples from the dataset for testing")
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Network (FFN) architectures
@@ -258,7 +262,8 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 
 # ------------------------ LDA training beta session ----------------------#
-flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as traininable constant, or a trainable random variable")
+flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as trainable constant, "
+                                                     "or a trainable random variable")
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
 
 flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whether to use variational dropout to "
@@ -268,15 +273,22 @@ flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold fo
                    "matrix given alpha")
 
 flags.DEFINE_boolean("use_anchor", use_anchor, "whether to use an anchor taxon as base for the hidden log space")
+flags.DEFINE_string("in_group_anchor_x", in_group_anchor_x, "anchor for in-group interaction in hidden space")
+flags.DEFINE_float("in_group_anchor_p_base", in_group_anchor_p_base,
+                   "anchor for in-group interaction in relative abundance")
+flags.DEFINE_string("between_group_anchor_x", between_group_anchor_x,
+                    "anchor for between-group interaction in hidden space")
+flags.DEFINE_float("between_group_anchor_p_base", between_group_anchor_p_base,
+                   "anchor for between-group interaction in relative abundance")
 
-flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int seperated by comma, "
-                                            "for example: '50,50' ")
-flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int seperated by comma, "
-                                            "for example: '50,50' ")
-flags.DEFINE_string("q2_beta_layers", q2_beta_layers, "architecture for q2_beta network, int seperated by comma, "
-                                            "for example: '50,50' ")
-flags.DEFINE_string("f_beta_layers",  f_beta_layers,  "architecture for f_eta network, int seperated by comma, "
-                                            "for example: '50,50' ")
+flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int separated by comma, "
+                    "for example: '50,50' ")
+flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int separated by comma, "
+                    "for example: '50,50' ")
+flags.DEFINE_string("q2_beta_layers", q2_beta_layers, "architecture for q2_beta network, int separated by comma, "
+                    "for example: '50,50' ")
+flags.DEFINE_string("f_beta_layers",  f_beta_layers,  "architecture for f_eta network, int separated by comma, "
+                    "for example: '50,50' ")
 flags.DEFINE_float("q0_beta_sigma_init", q0_beta_sigma_init, "initial value of q0_beta_sigma")
 flags.DEFINE_float("q1_beta_sigma_init", q1_beta_sigma_init, "initial value of q1_beta_sigma")
 flags.DEFINE_float("q2_beta_sigma_init", q2_beta_sigma_init, "initial value of q2_beta_sigma")

@@ -42,13 +42,6 @@ def main(_):
 
     FLAGS.epochs = [int(epoch) for epoch in FLAGS.epochs.split(",")]
 
-    training_sample_idx = [int(x) for x in FLAGS.training_sample_idx.split(",")]
-    test_sample_idx = [int(x) for x in FLAGS.test_sample_idx.split(",")]
-    if training_sample_idx == [-1]:
-        training_sample_idx = None
-    if test_sample_idx == [-1]:
-        test_sample_idx = None
-
     if FLAGS.beta_constant or FLAGS.f_beta_tran_type != "clv" or FLAGS.g_tran_type != "LDA":
         FLAGS.use_anchor = False
 
@@ -67,15 +60,18 @@ def main(_):
         FLAGS.interpolation_type = None
 
     if FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        extra_inputs_train, extra_inputs_test = \
-            load_data(data_dir, Dx, training_sample_idx=training_sample_idx, test_sample_idx=test_sample_idx)
+        hidden_train, hidden_test, obs_train, obs_test, \
+            input_train, input_test, \
+            extra_inputs_train, extra_inputs_test = \
+            load_data(data_dir, Dx, train_num=FLAGS.train_num, test_num=FLAGS.test_num)
         n_train, n_test = len(obs_train), len(obs_test)
         FLAGS.n_train, FLAGS.n_test = n_train, n_test
 
         hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
-            interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+            mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
+            interpolate_data(hidden_train, hidden_test,
+                             obs_train, obs_test,
+                             input_train, input_test,
                              extra_inputs_train, extra_inputs_test,
                              interpolation_type=FLAGS.interpolation_type,
                              pseudo_count=FLAGS.pseudo_count)
@@ -127,8 +123,9 @@ def main(_):
     # ============================================= training part ============================================ #
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
     mytrainer.set_data_saving()
-    mytrainer.init_train(obs_train, obs_test, input_train, input_test, mask_train, mask_test,
-                         time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test)
+    mytrainer.init_train(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                         mask_train, mask_test, time_interval_train, time_interval_test,
+                         extra_inputs_train, extra_inputs_test)
 
     plot_start_idx = 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):

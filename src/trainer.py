@@ -1,5 +1,6 @@
 import numpy as np
 from sklearn.utils import shuffle
+from scipy.special import softmax
 import math
 
 import tensorflow as tf
@@ -36,6 +37,11 @@ class trainer:
 
         self.beta_constant = FLAGS.beta_constant
         self.use_anchor = FLAGS.use_anchor
+        self.in_group_anchor_x = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
+        self.between_group_anchor_x = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
+        self.in_group_anchor_p_base = FLAGS.in_group_anchor_p_base
+        self.between_group_anchor_p_base = FLAGS.between_group_anchor_p_base
+
 
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
@@ -123,22 +129,34 @@ class trainer:
         if self.Dx == 2 or self.Dx == 3:
             self.draw_quiver_during_training = True
 
-    def init_train(self, obs_train, obs_test, input_train, input_test, mask_train, mask_test,
-                   time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test):
-        # set data
-        def add_anchor_to_obs(obses):
-            obses_w_anchor = []
-            for obs in obses:
-                depth = np.sum(obs, axis=-1, keepdims=True)
-                anchor = (depth * 0.2).astype(int)
-                obs_w_anchor = np.concatenate([obs, anchor, anchor], axis=-1)
-                obses_w_anchor.append(obs_w_anchor)
-            return obses_w_anchor
-
+    def init_train(self, hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+                   mask_train, mask_test, time_interval_train, time_interval_test,
+                   extra_inputs_train, extra_inputs_test):
+        self.D_anchor = 1
         if self.use_anchor:
+            self.D_anchor = len(self.in_group_anchor_x) + len(self.between_group_anchor_x)
+            in_group_anchor_p = np.exp(self.in_group_anchor_x) * self.in_group_anchor_p_base
+            between_group_anchor_p = np.exp(self.between_group_anchor_x) * self.between_group_anchor_x
+            total_anchor_p = np.sum(in_group_anchor_p) + np.sum(between_group_anchor_p)
+            assert total_anchor_p < 1
+
+            # set data
+            def add_anchor_to_obs(obses):
+                obses_w_anchor = []
+                for obs in obses:
+                    depth = np.sum(obs, axis=-1, keepdims=True)
+                    in_group_anchor = (depth / (1 - total_anchor_p) * in_group_anchor_p).astype(int)
+                    between_group_anchor = (depth / (1 - total_anchor_p) * between_group_anchor_p).astype(int)
+                    obs_w_anchor = np.concatenate([obs, in_group_anchor, between_group_anchor], axis=-1)
+                    obses_w_anchor.append(obs_w_anchor)
+                return obses_w_anchor
+
             obs_train, obs_test = add_anchor_to_obs(obs_train), add_anchor_to_obs(obs_test)
             extra_inputs_train = [np.sum(obs, axis=-1) for obs in obs_train]
             extra_inputs_test = [np.sum(obs, axis=-1) for obs in obs_test]
+
+        self.hidden_train = [softmax(hidden, axis=-1) for hidden in hidden_train]
+        self.hidden_test = [softmax(hidden, axis=-1) for hidden in hidden_test]
         self.obs_train, self.obs_test = obs_train, obs_test
         self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
         self.input_train, self.input_test = input_train, input_test
@@ -161,7 +179,7 @@ class trainer:
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.particles,
                                 self.obs, self.input_embedding, self.mask, self.extra_inputs,
-                                self.use_anchor)
+                                self.use_anchor, self.D_anchor)
 
         # set up feed_dict
         self.set_feed_dict()
@@ -193,8 +211,8 @@ class trainer:
         self.unmasked_y_test = []
 
         if self.use_anchor:
-            obs_train = [obs[:, :-2] for obs in self.obs_train]
-            obs_test = [obs[:, :-2] for obs in self.obs_test]
+            obs_train = [obs[:, :-self.D_anchor] for obs in self.obs_train]
+            obs_test = [obs[:, :-self.D_anchor] for obs in self.obs_test]
         else:
             obs_train, obs_test = self.obs_train, self.obs_test
         for k in range(self.MSE_steps + 1):
@@ -251,9 +269,7 @@ class trainer:
             start = time.time()
 
             if i == 0:
-                self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
-                                               self.unmasked_y_hat_N_BxTxDy,
-                                               self.unmasked_y_train, self.unmasked_y_test)
+                self.evaluate_and_save_metrics(self.total_epoch_count)
 
             # training
             obs_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
@@ -275,9 +291,7 @@ class trainer:
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
-                    self.evaluate_and_save_metrics(self.total_epoch_count, self.y_hat_N_BxTxDy, self.y_N_BxTxDy,
-                                                   self.unmasked_y_hat_N_BxTxDy,
-                                                   self.unmasked_y_train, self.unmasked_y_test)
+                    self.evaluate_and_save_metrics(self.total_epoch_count)
                     self.adjust_lr(i, print_freq)
                 except StopTraining:
                     break
@@ -385,15 +399,14 @@ class trainer:
     def close_session(self):
         self.sess.close()
 
-    def evaluate_and_save_metrics(self, iter_num, y_hat_N_BxTxDy, y_N_BxTxDy,
-                                  unmasked_y_hat_N_BxTxDy, unmasked_y_train=None, unmaksed_y_test=None):
+    def evaluate_and_save_metrics(self, iter_num):
 
-        log_ZSMC_train, y_hat_train, y_train, unmasked_y_hat_train = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy],
+        log_ZSMC_train, y_hat_train, y_train, unmasked_y_hat_train, Xs_train = \
+            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, self.Xs],
                           feed_dict_w_batches=self.train_all_feed_dict)
 
-        log_ZSMC_test, y_hat_test, y_test, unmasked_y_hat_test = \
-            self.evaluate([self.log_ZSMC, y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy],
+        log_ZSMC_test, y_hat_test, y_test, unmasked_y_hat_test, Xs_test = \
+            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, self.Xs],
                           feed_dict_w_batches=self.test_all_feed_dict)
 
         log_ZSMC_train, log_ZSMC_test = np.mean(log_ZSMC_train), np.mean(log_ZSMC_test)
@@ -411,18 +424,64 @@ class trainer:
         print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
         print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
 
-        if unmasked_y_train is not None and unmaksed_y_test is not None:
-            unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
-                self.evaluate_R_square(unmasked_y_hat_train, unmasked_y_train)
-            unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
-                self.evaluate_R_square(unmasked_y_hat_test, unmaksed_y_test)
+        unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
+            self.evaluate_R_square(unmasked_y_hat_train, self.unmasked_y_train)
+        unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
+            self.evaluate_R_square(unmasked_y_hat_test, self.unmasked_y_test)
+        print()
+        print("Train, unmaksed Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
+              unmasked_R_square_original_test)
+        print("Train, unmasked Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
+              unmasked_R_square_percentage_test)
+        print("Train, unmaksed Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
+              unmasked_R_square_logp_test)
+
+        if self.use_anchor:
+            assert not self.FLAGS.clv_in_alr
+            assert len(Xs_train) == len(self.hidden_train)
+            assert len(Xs_test) == len(self.hidden_test)
+            Xs_train = [softmax(np.mean(x_traj, axis=1), axis=-1) for x_traj in Xs_train]
+            Xs_test = [softmax(np.mean(x_traj, axis=1), axis=-1) for x_traj in Xs_test]
+
+            Xs_train = np.concatenate(Xs_train, axis=0)
+            Xs_test = np.concatenate(Xs_test, axis=0)
+            hidden_train = np.concatenate(self.hidden_train, axis=0)
+            hidden_test = np.concatenate(self.hidden_test, axis=0)
+
+            assert Xs_train.shape == hidden_train.shape
+
+            permutation_counter = {}
+            for x, h in zip(Xs_train, hidden_train):
+                permutation = np.zeros_like(x)
+                x_arg = np.argsort(x)
+                h_arg = np.argsort(h)
+                for x_idx, h_idx in zip(x_arg, h_arg):
+                    permutation[x_idx] = h_idx
+                permutation = permutation.astype(int)
+                permutation_key = ",".join([str(ele) for ele in permutation])
+                permutation_counter[permutation_key] = permutation_counter.get(permutation_key, 0) + 1
+            max_permutation_key, max_count = None, 0
+            for permutation, count in permutation_counter.items():
+                if count > max_count:
+                    max_permutation_key = permutation
+            assert max_permutation_key is not None
+            max_permutation = np.array([int(ele) for ele in max_permutation_key.split(",")])
+
+            Xs_train_permuted = np.stack([Xs_train[:, i] for i in max_permutation], axis=-1)
+            Xs_test_permuted = np.stack([Xs_test[:, i] for i in max_permutation], axis=-1)
+
+            def R_square(pred, truth):
+                MSE = np.sum((pred - truth) ** 2)
+                truth_mean = np.mean(truth, axis=0, keepdims=True)
+                truth_var = np.sum((truth - truth_mean) ** 2)
+                return 1 - MSE / truth_var
+
+            Xs_train_R_sq = R_square(Xs_train_permuted, hidden_train)
+            Xs_test_R_sq = R_square(Xs_test_permuted, hidden_test)
+
             print()
-            print("Train, unmaksed Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
-                  unmasked_R_square_original_test)
-            print("Train, unmasked Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
-                  unmasked_R_square_percentage_test)
-            print("Train, unmaksed Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
-                  unmasked_R_square_logp_test)
+            print("permutation:", max_permutation_key)
+            print("Train, Valid k-step Rsq:\n", Xs_train_R_sq, "\n", Xs_test_R_sq)
 
         if not math.isfinite(log_ZSMC_train):
             print("Nan in log_ZSMC, stop training")
@@ -549,9 +608,6 @@ class trainer:
 
     def evaluate_R_square(self, y_hat_N_BxTxDy, y_N_BxTxDy):
         n_steps = len(y_hat_N_BxTxDy) - 1
-        # for y_hat_i in y_hat_N_BxTxDy:
-        #     for ele in y_hat_i:
-        #         print(ele.shape)
         y_hat = [np.concatenate(y_hat_i, axis=1)[0] for y_hat_i in y_hat_N_BxTxDy]
         y = [np.concatenate(y_i, axis=1)[0] for y_i in y_N_BxTxDy]
         n_tp, Dy = y[0].shape

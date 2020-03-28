@@ -78,12 +78,13 @@ class SSM(object):
         self.f_tran_type               = FLAGS.f_tran_type
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
-        if not self.beta_constant:
-            self.f_beta_tran_type        = FLAGS.f_beta_tran_type
-            self.use_variational_dropout = FLAGS.use_variational_dropout
-            self.clip_alpha              = FLAGS.clip_alpha
-            self.alpha_valid_threshold   = FLAGS.alpha_valid_threshold
-            self.use_anchor = FLAGS.use_anchor
+        self.f_beta_tran_type          = FLAGS.f_beta_tran_type
+        self.use_variational_dropout   = FLAGS.use_variational_dropout
+        self.clip_alpha                = FLAGS.clip_alpha
+        self.alpha_valid_threshold     = FLAGS.alpha_valid_threshold
+        self.use_anchor                = FLAGS.use_anchor
+        self.in_group_anchor_x         = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
+        self.between_group_anchor_x    = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
 
         self.f_use_residual            = FLAGS.f_use_residual
         self.use_stack_rnn             = FLAGS.use_stack_rnn
@@ -101,7 +102,8 @@ class SSM(object):
 
     def init_placeholder(self):
         if not self.beta_constant and self.f_beta_tran_type == "clv" and self.use_anchor:
-            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy + 2), name="obs")
+            anchor_dim = len(self.between_group_anchor_x) + len(self.in_group_anchor_x)
+            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy + anchor_dim), name="obs")
         else:
             self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
         self.input = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dv), name="input")
@@ -119,7 +121,10 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev, self.beta_constant, self.clv_in_alr,
+            self.f_tran = clv_transformation(self.Dx, self.Dev,
+                                             self.beta_constant, self.clv_in_alr,
+                                             use_anchor=self.use_anchor,
+                                             anchor_x=self.between_group_anchor_x,
                                              data_dir=self.data_dir)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
@@ -135,6 +140,8 @@ class SSM(object):
                                                              use_variational_dropout=self.use_variational_dropout,
                                                              clip_alpha=self.clip_alpha,
                                                              threshold=self.alpha_valid_threshold,
+                                                             use_anchor=self.use_anchor,
+                                                             anchor_x=self.in_group_anchor_x,
                                                              data_dir=self.data_dir)
             else:
                 raise ValueError("Invalid value for f_beta transformation. Must choose from MLP, linear and clv")
@@ -163,7 +170,9 @@ class SSM(object):
             self.g_tran = LDA_transformation(self.Dx, self.Dy,
                                              beta_constant=self.beta_constant,
                                              clv_in_alr=self.clv_in_alr,
-                                             use_anchor=self.use_anchor)
+                                             use_anchor=self.use_anchor,
+                                             in_group_anchor_x=self.in_group_anchor_x,
+                                             between_group_anchor_x=self.between_group_anchor_x)
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
         else:
