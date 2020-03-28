@@ -4,10 +4,17 @@ import pickle
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev, beta_constant=True, clv_in_alr=True, data_dir=None):
+    def __init__(self, Dx, Dev,
+                 beta_constant=True, clv_in_alr=True,
+                 use_anchor=False, anchor_x=[],
+                 data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
         self.clv_in_alr = clv_in_alr
+        self.use_anchor = use_anchor
+        self.anchor_x = anchor_x
+        if use_anchor:
+            assert len(anchor_x) > 0
 
         if data_dir is not None:
             with open(data_dir, "rb") as f:
@@ -66,7 +73,14 @@ class clv_transformation(transformation):
         if self.clv_in_alr:
             zeros = tf.zeros_like(x[..., 0:1])
             x = tf.concat([x, zeros], axis=-1)
-        p = tf.nn.softmax(x, axis=-1)  # (n_particles, batch_size, Dx + 1)
+            x_ = x
+        if self.use_anchor:
+            ones = tf.ones_like(x[..., 0:1])
+            anchors = [ones * x_val for x_val in self.anchor_x]
+            x_ = tf.concat([x] + anchors, axis=-1)
+        p = tf.nn.softmax(x_, axis=-1)  # (n_particles, batch_size, Dx + 1)
+        if self.use_anchor:
+            p = p[..., :-len(self.anchor_x)]
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
         pA = tf.reduce_sum(p[..., None] * A, axis=-2) # (..., Dx)

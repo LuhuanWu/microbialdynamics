@@ -6,12 +6,17 @@ from src.transformation.base import transformation, xavier_init
 class LDA_transformation(transformation):
     def __init__(self, Dx, Dy, clv_in_alr=True,
                  beta_constant=True, beta_init_method='xavier',
-                 use_anchor=False):
+                 use_anchor=False, in_group_anchor_x=[], between_group_anchor_x=[]):
         self.Dx = Dx
         self.Dy = Dy
         self.clv_in_alr = clv_in_alr
         self.beta_constant = beta_constant
         self.use_anchor = use_anchor
+        self.in_group_anchor_x = in_group_anchor_x
+        self.between_group_anchor_x = between_group_anchor_x
+        if use_anchor:
+            assert not beta_constant
+            assert len(in_group_anchor_x) and len(between_group_anchor_x)
 
         Din = Dx + (1 if clv_in_alr else 0)
 
@@ -45,8 +50,9 @@ class LDA_transformation(transformation):
             zeros = tf.zeros_like(x[..., 0:1])
             x = tf.concat([x, zeros], axis=-1)
         if self.use_anchor:
-            zeros = tf.zeros_like(x[..., 0:1])
-            x = tf.concat([x, zeros], axis=-1)
+            ones = tf.ones_like(x[..., 0:1])
+            anchors = [ones * x_val for x_val in self.between_group_anchor_x]
+            x = tf.concat([x] + anchors, axis=-1)
         x = tf.nn.softmax(x, axis=-1)  #(..., Dx+1)
 
         # print(x.shape.as_list())
@@ -61,17 +67,19 @@ class LDA_transformation(transformation):
                 zeros = tf.zeros_like(beta_log[..., 0:1])  # (..., Dx+1, 1)
                 beta_log = tf.concat([beta_log, zeros], axis=-1)  # (..., Dx+1, Dy)
             if self.use_anchor:
-                zeros = tf.zeros_like(beta_log[..., 0:1])
-                beta_log = tf.concat([beta_log, zeros], axis=-1)
+                ones = tf.ones_like(beta_log[..., 0:1])
+                anchors = [ones * x_val for x_val in self.in_group_anchor_x]
+                beta_log = tf.concat([beta_log] + anchors, axis=-1)
             beta = tf.nn.softmax(beta_log, axis=-1)
 
             if self.use_anchor:
-                group_anchor = tf.zeros_like(beta[..., 0:1, :])
-                group_anchor_last_obs = tf.ones_like(group_anchor[..., :1])
-                group_ancher_beta = tf.concat([group_anchor, group_anchor_last_obs], axis=-1)
-                zeros = tf.zeros_like(beta[..., 0:1])
-                beta = tf.concat([beta, zeros], axis=-1)
-                beta = tf.concat([beta, group_ancher_beta], axis=-2)
+                for _ in self.between_group_anchor_x:
+                    group_anchor = tf.zeros_like(beta[..., 0:1, :])
+                    group_anchor_obs = tf.ones_like(group_anchor[..., :1])
+                    group_ancher_beta = tf.concat([group_anchor, group_anchor_obs], axis=-1)
+                    zeros = tf.zeros_like(beta[..., 0:1])
+                    beta = tf.concat([beta, zeros], axis=-1)
+                    beta = tf.concat([beta, group_ancher_beta], axis=-2)
 
             # Dh = Dx + self.clv_in_alr + self.use_anchor
             # Dobs = Dy + 2 * self.use_anchor

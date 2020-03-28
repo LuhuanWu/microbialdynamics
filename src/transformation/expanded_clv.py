@@ -14,6 +14,7 @@ EPSILON = 1e-8
 class ExpandedCLVTransformation(transformation):
     def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True,
                  use_variational_dropout=False, clip_alpha=8., threshold=3.,
+                 use_anchor=False, anchor_x=[],
                  data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
@@ -22,6 +23,10 @@ class ExpandedCLVTransformation(transformation):
         self.training = training
         self.clip_alpha = clip_alpha
         self.threshold = threshold
+        self.use_anchor = use_anchor
+        self.anchor_x = anchor_x
+        if use_anchor:
+            assert len(anchor_x) > 0
 
         # batch_matrices for beta. beta is (n_topis, n_words) = (Dx+1, Dy)
         # for each topic, there is a set of matrix
@@ -75,7 +80,14 @@ class ExpandedCLVTransformation(transformation):
         if self.clv_in_alr:
             zeros = tf.zeros_like(beta_log[..., 0:1])
             beta_log = tf.concat([beta_log, zeros], axis=-1)
-        p_beta = tf.nn.softmax(beta_log, axis=-1)  # (..., Dx, Dy) if self.clv_in_alr else (..., Dx, Dy)
+            beta_log_ = beta_log
+        if self.use_anchor:
+            ones = tf.ones_like(beta_log[..., 0:1])
+            anchors = [ones * x_val for x_val in self.anchor_x]
+            beta_log_ = tf.concat([beta_log] + anchors, axis=-1)
+        p_beta = tf.nn.softmax(beta_log_, axis=-1)  # (n_particles, batch_size, Dx + 1)
+        if self.use_anchor:
+            p_beta = p_beta[..., :-len(self.anchor_x)]
 
         pA = tf.cond(self.training,
                      lambda: matmul_train(p_beta, (self.A_beta, self.A_beta_log_sigma2), clip_alpha=self.clip_alpha),
