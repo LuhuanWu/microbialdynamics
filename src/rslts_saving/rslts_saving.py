@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import logsumexp
 
 import os
 import json
@@ -8,6 +7,7 @@ import pickle
 import seaborn as sns
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.special import logsumexp, softmax
 
 from src.rslts_saving.datetools import addDateTime
 
@@ -318,7 +318,7 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, original_obs, mask, saving_num=20, 
             plt.close()
 
 
-def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
+def plot_x_bar_plot(RLT_DIR, xs_val, clv_in_alr=False, saving_num=20):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
     if not os.path.exists(RLT_DIR):
@@ -328,24 +328,24 @@ def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
         return
     xs_val = [np.mean(x_traj, axis=1) for x_traj in xs_val]
 
-    Dy = xs_val[0].shape[1] + 1
     saving_num = min(len(xs_val), saving_num)
 
     for i in range(saving_num):
         x_traj = xs_val[i]
         time = x_traj.shape[0]
-        percentage = np.concatenate((x_traj, np.zeros((time, 1))), axis=-1)  # (n_days, Dy+1)
-        percentage = np.exp(percentage - logsumexp(percentage, axis=-1, keepdims=True))
+        if clv_in_alr:
+            x_traj = np.concatenate((x_traj, np.zeros((time, 1))), axis=-1)  # (n_days, Dy+1)
+        percentage = softmax(x_traj, axis=-1)
 
-        plt.figure(figsize=(15,5))
+        plt.figure(figsize=(15, 5))
         plt.title("topic proportion idx {}".format(i))
         plt.xlabel("Time")
         bottom = np.zeros(time)
-        for j in range(Dy):
+        for j in range(percentage.shape[1]):
             plt.bar(np.arange(time), percentage[:, j], bottom=bottom, edgecolor='white')
             bottom += percentage[:, j]
 
-        plt.xticks(np.arange(time))
+        plt.xticks(np.arange(0, time, time // 15))
         sns.despine()
         plt.savefig(RLT_DIR + "/topic_proportion_idx_{}".format(i))
         plt.close()
@@ -355,7 +355,7 @@ def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
-    plt.figure(figsize=(15,5))
+    plt.figure(figsize=(15, 5))
     plt.title("topic content")
     plt.xlabel("topic")
     plt.ylabel("taxon")
@@ -373,31 +373,37 @@ def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
     plt.close()
 
 
-def plot_topic_bar_plot_across_time(RLT_DIR, betas, name):
+def plot_topic_bar_plot_across_time(RLT_DIR, beta_logs, clv_in_alr=False, saving_num=20):
 
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
-    time, n_topics, n_taxons = betas.shape
 
-    #plt.xlabel("topic")
-    #plt.ylabel("taxon")
-    bottom = np.zeros(n_topics)
+    saving_num = min(len(beta_logs), saving_num)
 
-    fig, axes = plt.subplots(nrows=time, ncols=1, figsize=(15, 3*time))
+    for i in range(saving_num):
+        beta_log = beta_logs[i]
+        beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
+        if clv_in_alr:
+            beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
+        beta = softmax(beta_log, axis=-1)  # (time, Dx+1, Dy)
 
-    for t in range(time):
-        beta = betas[t]
-        for j in range(beta.shape[1]):
-            axes[t].bar(np.arange(n_topics), beta[:, j], bottom=bottom, edgecolor='white')
-            bottom += beta[:, j]
-        axes[t].set_xticks(np.arange(n_topics))
-    #fig.suptitle("topic content")
-    fig.tight_layout()
-    #fig.subplots_adjust(top=0.88)
-    sns.despine()
+        time, n_topics, n_taxa = beta.shape
 
-    plt.savefig(RLT_DIR + "/{}".format(name))
-    plt.close()
+        for j in range(n_topics):
+            plt.figure(figsize=(15, 5))
+            plt.title("taxon proportion idx {} topic {}".format(i, j))
+            plt.xlabel("time")
+            bottom = np.zeros(time)
+            for k in range(n_taxa):
+                plt.bar(np.arange(time), beta[:, j, k], bottom=bottom, edgecolor='white')
+                bottom += beta[:, j, k]
+
+            plt.xticks(np.arange(0, time, time // 15))
+            plt.tight_layout()
+            sns.despine()
+
+            plt.savefig(RLT_DIR + "/traj_{}_group_{}".format(i, j))
+            plt.close()
 
 
 def plot_topic_bar_plot_while_training(ax, beta, epoch):
@@ -448,3 +454,35 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
         ax.set_xticks(np.arange(time))
         sns.despine()
+
+
+def plot_interaction_matrix(RLT_DIR, A, A_beta, A_truth, A_beta_truth):
+    Dx = A.shape[0]
+    Dy = A_beta.shape[1]
+    if not os.path.exists(RLT_DIR):
+        os.makedirs(RLT_DIR)
+    sns.heatmap(A, cmap="seismic", center=0, square=True, linewidth=0.5)
+    plt.plot([0, Dx], [0, Dx], "k")
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/A")
+    plt.close()
+
+    for i, A_group in enumerate(A_beta):
+        sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.plot([0, Dy], [0, Dy], "k")
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_beta_{}".format(i))
+        plt.close()
+
+    sns.heatmap(A_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+    plt.plot([0, Dx], [0, Dx], "k")
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/A_truth")
+    plt.close()
+
+    for i, A_group in enumerate(A_beta_truth):
+        sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.plot([0, Dy], [0, Dy], "k")
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_beta_truth_{}".format(i))
+        plt.close()
