@@ -20,6 +20,9 @@ from src.rslts_saving.rslts_saving import plot_topic_bar_plot_while_training, pl
 from tensorflow.python import debug as tf_debug
 
 
+EPS = 1e-6
+
+
 class StopTraining(Exception):
     pass
 
@@ -136,7 +139,7 @@ class trainer:
         if self.use_anchor:
             self.D_anchor = len(self.in_group_anchor_x) + len(self.between_group_anchor_x)
             in_group_anchor_p = np.exp(self.in_group_anchor_x) * self.in_group_anchor_p_base
-            between_group_anchor_p = np.exp(self.between_group_anchor_x) * self.between_group_anchor_x
+            between_group_anchor_p = np.exp(self.between_group_anchor_x) * self.between_group_anchor_p_base
             total_anchor_p = np.sum(in_group_anchor_p) + np.sum(between_group_anchor_p)
             assert total_anchor_p < 1
 
@@ -171,25 +174,64 @@ class trainer:
                                                         self.mask, self.time_interval, self.extra_inputs,
                                                         self.mask_weight)
 
-        self.Xs = self.log["Xs"]
+        self.Xs = self.log["Xs_resampled"]
         self.particles = [self.Xs]
         if not self.beta_constant:
-            self.beta_logs = self.log["beta_logs"]
+            self.beta_logs = self.log["beta_logs_resampled"]
             self.particles.append(self.beta_logs)
-        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
+        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, \
+            self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.particles,
                                 self.obs, self.input_embedding, self.mask, self.extra_inputs,
                                 self.use_anchor, self.D_anchor)
+        self.log["y_hat"] = self.y_hat_N_BxTxDy
+        self.log["y_hat_full"] = self.y_hat_full_N_BxTxDy
 
         # set up feed_dict
         self.set_feed_dict()
 
         loss = -self.log_ZSMC
-        if not self.beta_constant and self.model.f_beta_tran_type == "clv":
-            dkl = self.model.f_beta_tran.variational_dropout_dkl_loss()
-            step = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
-            reg_scalar = tf.minimum(step / (100.0 * len(obs_train) / self.batch_size), 1.0)
-            loss += dkl * reg_scalar
+        if not self.beta_constant:
+            if self.model.f_beta_tran_type == "clv" and self.model.use_variational_dropout:
+                dkl = self.model.f_beta_tran.variational_dropout_dkl_loss()
+                step = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
+                reg_scalar = tf.minimum(step / (100.0 * len(obs_train) / self.batch_size), 1.0)
+                loss += dkl * reg_scalar
+
+            assert not self.FLAGS.clv_in_alr
+
+            global_step = tf.Variable(0, name='global_step', trainable=False, dtype=tf.float32)
+
+            # encourage large entropy for group proportion
+            # (batch_size, time, n_particles, Dx)
+            Xs_prev = self.log["Xs"]
+            group_ps = tf.nn.softmax(Xs_prev, axis=-1)
+            group_ps = tf.clip_by_value(group_ps, EPS, 1 - EPS)
+            group_ps_ent = -group_ps * tf.log(group_ps)
+            group_ent_loss = tf.reduce_mean(tf.reduce_sum(group_ps_ent, axis=(1, 3)))
+            loss += -100 * group_ent_loss * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+
+            # encourage divergence between taxon proportions of different groups
+            # (batch_size, time, n_particles, Dx, Dy)
+            beta_logs_prev = self.log["beta_logs"]
+            beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
+            beta_ps = tf.clip_by_value(beta_ps, EPS, 1 - EPS)
+            divergences = 0
+            for i in range(self.Dx):
+                p = beta_ps[:, :, :, i, :]
+                for j in range(i + 1, self.Dx):
+                    q = beta_ps[:, :, :, j, :]
+                    divergence = 0.5 * (p * (tf.log(p) - tf.log(q)) + q * (tf.log(q) - tf.log(p)))
+                    divergence = tf.reduce_mean(tf.reduce_sum(divergence, axis=(1, 3)))
+                    divergences += divergence
+            loss += -100 * divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+
+            # L1 regularization
+            A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
+            A, g = self.model.f_tran.A, self.model.f_tran.g
+            L1 = tf.reduce_sum(tf.abs(A_beta)) + tf.reduce_sum(tf.abs(g_beta)) + \
+                 tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
+            loss += 100 * L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
@@ -392,7 +434,6 @@ class trainer:
                    "R_square_percentage_tests":  self.R_square_percentage_tests,
                    "R_square_logp_trains":       self.R_square_logp_trains,
                    "R_square_logp_tests":        self.R_square_logp_tests}
-        self.log["y_hat_original"] = self.y_hat_N_BxTxDy
 
         return metrics, self.log
 
@@ -401,12 +442,24 @@ class trainer:
 
     def evaluate_and_save_metrics(self, iter_num):
 
-        log_ZSMC_train, y_hat_train, y_train, unmasked_y_hat_train, Xs_train = \
-            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, self.Xs],
+        [log_ZSMC_train,
+         y_hat_train, y_train, unmasked_y_hat_train,
+         y_hat_full_train, y_full_train, unmasked_y_hat_full_train,
+         Xs_train] = \
+            self.evaluate([self.log_ZSMC,
+                           self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy,
+                           self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy,
+                           self.Xs],
                           feed_dict_w_batches=self.train_all_feed_dict)
 
-        log_ZSMC_test, y_hat_test, y_test, unmasked_y_hat_test, Xs_test = \
-            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, self.Xs],
+        [log_ZSMC_test,
+         y_hat_test, y_test, unmasked_y_hat_test,
+         y_hat_full_test, y_full_test, unmasked_y_hat_full_test,
+         Xs_test] = \
+            self.evaluate([self.log_ZSMC,
+                           self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy,
+                           self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy,
+                           self.Xs],
                           feed_dict_w_batches=self.test_all_feed_dict)
 
         log_ZSMC_train, log_ZSMC_test = np.mean(log_ZSMC_train), np.mean(log_ZSMC_test)
@@ -422,19 +475,31 @@ class trainer:
 
         print("Train, Valid k-step Rsq (original space):\n", R_square_original_train, "\n", R_square_original_test)
         print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
-        print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
+        # print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
 
-        unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
-            self.evaluate_R_square(unmasked_y_hat_train, self.unmasked_y_train)
-        unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
-            self.evaluate_R_square(unmasked_y_hat_test, self.unmasked_y_test)
+        # unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
+        #     self.evaluate_R_square(unmasked_y_hat_train, self.unmasked_y_train)
+        # unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
+        #     self.evaluate_R_square(unmasked_y_hat_test, self.unmasked_y_test)
+        # print()
+        # print("Unmasked Train, Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
+        #       unmasked_R_square_original_test)
+        # print("Unmasked Train, Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
+        #       unmasked_R_square_percentage_test)
+        # print("Unmasked Train, Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
+        #       unmasked_R_square_logp_test)
+
+        R_square_full_original_train, R_square_full_percentage_train, R_square_full_logp_train = \
+            self.evaluate_R_square(y_hat_full_train, y_full_train)
+        R_square_full_original_test, R_square_full_percentage_test, R_square_full_logp_test = \
+            self.evaluate_R_square(y_hat_full_test, y_full_test)
         print()
-        print("Train, unmaksed Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
-              unmasked_R_square_original_test)
-        print("Train, unmasked Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
-              unmasked_R_square_percentage_test)
-        print("Train, unmaksed Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
-              unmasked_R_square_logp_test)
+        print("Full Train, Valid k-step Rsq (original space):\n", R_square_full_original_train, "\n",
+              R_square_full_original_test)
+        print("Full Train, Valid k-step Rsq (percent space):\n", R_square_full_percentage_train, "\n",
+              R_square_full_percentage_test)
+        # print("Full Train, Valid k-step Rsq (log percent space):\n", R_square_full_logp_train, "\n",
+        #       R_square_full_logp_test)
 
         if self.use_anchor:
             assert not self.FLAGS.clv_in_alr
