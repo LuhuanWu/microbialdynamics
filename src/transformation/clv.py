@@ -67,18 +67,22 @@ class clv_transformation(transformation):
         """
 
         x = Input[..., 0:Dx]  # (n_particles, batch_size, Dx)
-        v = Input[0, 0:1, Dx:] # (1, Dev)
+        v = Input[0, 0:1, Dx:]  # (1, Dev)
         v_size = v.shape[-1]
 
         if self.clv_in_alr:
             zeros = tf.zeros_like(x[..., 0:1])
             x = tf.concat([x, zeros], axis=-1)
-            x_ = x
+
+        x_ = x
+
         if self.use_anchor:
-            ones = tf.ones_like(x[..., 0:1])
+            ones = tf.ones_like(x_[..., 0:1])
             anchors = [ones * x_val for x_val in self.anchor_x]
-            x_ = tf.concat([x] + anchors, axis=-1)
+            x_ = tf.concat([x_] + anchors, axis=-1)
+
         p = tf.nn.softmax(x_, axis=-1)  # (n_particles, batch_size, Dx + 1)
+
         if self.use_anchor:
             p = p[..., :-len(self.anchor_x)]
 

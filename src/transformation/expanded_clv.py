@@ -12,14 +12,13 @@ EPSILON = 1e-8
 
 
 class ExpandedCLVTransformation(transformation):
-    def __init__(self, Dx, Dev, Dy, clv_in_alr=True, training=True,
+    def __init__(self, Dx, Dev, Dy, training=True,
                  use_variational_dropout=False, clip_alpha=8., threshold=3.,
                  use_anchor=False, anchor_x=[],
                  data_dir=None):
         self.Dx = Dx
         self.Dev = Dev
         self.Dy = Dy
-        self.clv_in_alr = clv_in_alr
         self.training = training
         self.clip_alpha = clip_alpha
         self.threshold = threshold
@@ -30,19 +29,18 @@ class ExpandedCLVTransformation(transformation):
 
         # batch_matrices for beta. beta is (n_topis, n_words) = (Dx+1, Dy)
         # for each topic, there is a set of matrix
-        hidden_dim = self.Dx + 1 if clv_in_alr else self.Dx
         if data_dir is not None:
             with open(data_dir, "rb") as f:
                 d = pickle.load(f)
             A_init_val = tf.constant(d['A_g'], dtype=tf.float32)
-            g_g = np.array([d['g_g']] * hidden_dim)
-            Wv_g = np.array([d['Wv_g'].T] * hidden_dim)
+            g_g = np.array([d['g_g']] * self.Dx)
+            Wv_g = np.array([d['Wv_g'].T] * self.Dx)
             g_init_val = tf.constant(g_g, dtype=tf.float32)
             Wv_init_val = tf.constant(Wv_g, dtype=tf.float32)
         else:
-            A_init_val = tf.zeros((hidden_dim, self.Dy, self.Dy))
-            g_init_val = tf.zeros((hidden_dim, self.Dy))
-            Wv_init_val = tf.zeros((hidden_dim, self.Dev, self.Dy))
+            A_init_val = tf.zeros((self.Dx, self.Dy, self.Dy))
+            g_init_val = tf.zeros((self.Dx, self.Dy))
+            Wv_init_val = tf.zeros((self.Dx, self.Dev, self.Dy))
         self.A_var = tf.Variable(A_init_val)
         self.g_var = tf.Variable(g_init_val)
         self.Wv_var = tf.Variable(Wv_init_val)
@@ -65,7 +63,7 @@ class ExpandedCLVTransformation(transformation):
         """
         :param Input: [v, beta_log].  v(batch_shape_v), beta_log (batch_shape_beta, Dx+1, Dy)
         batch_shape_v should match the trailing shape of batch_shape_beta
-        :return: output: (..., batch_size, Dx+1, Dy) if self.clv_in_alr else (..., batch_size, Dx, Dy)
+        :return: output: (..., batch_size, Dx, Dy)
         """
         # x_t + g_t + v_t * Wv + p_t * A
         assert isinstance(Input, list), type(Input)
@@ -73,26 +71,26 @@ class ExpandedCLVTransformation(transformation):
         v, beta_log = Input
         assert v.shape.as_list()[-1] == self.Dev, "v_dim = {}, Dev = {}".format(v.shape.as_list()[-1], self.Dev)
 
-       # check batch shape compatibility
+        # check batch shape compatibility
         batch_shape_v, batch_shape_beta_log = v.shape[:-1], beta_log.shape[:-2]
         assert len(batch_shape_v) <= len(batch_shape_beta_log), "{}, {}".format(batch_shape_v, batch_shape_beta_log)
 
-        if self.clv_in_alr:
-            zeros = tf.zeros_like(beta_log[..., 0:1])
-            beta_log = tf.concat([beta_log, zeros], axis=-1)
-            beta_log_ = beta_log
+        beta_log_ = beta_log
+
         if self.use_anchor:
-            ones = tf.ones_like(beta_log[..., 0:1])
+            ones = tf.ones_like(beta_log_[..., 0:1])
             anchors = [ones * x_val for x_val in self.anchor_x]
-            beta_log_ = tf.concat([beta_log] + anchors, axis=-1)
+            beta_log_ = tf.concat([beta_log_] + anchors, axis=-1)
+
         p_beta = tf.nn.softmax(beta_log_, axis=-1)  # (n_particles, batch_size, Dx + 1)
+
         if self.use_anchor:
             p_beta = p_beta[..., :-len(self.anchor_x)]
 
         pA = tf.cond(self.training,
                      lambda: matmul_train(p_beta, (self.A_beta, self.A_beta_log_sigma2), clip_alpha=self.clip_alpha),
                      lambda: matmul_eval(p_beta, (self.A_beta, self.A_beta_log_sigma2), threshold=self.threshold))
-        # (..., Dx + 1, Dy, 1) * (Dx + 1, Dy, Dy) if self.clv_in_alr else (..., Dx, Dy, 1) * (Dx, Dy, Dy)
+        # (..., Dx, Dy, 1) * (Dx, Dy, Dy)
         # pA = tf.reduce_sum(p_beta[..., None] * self.A_beta, axis=-2)  # (...,  Dx + 1, Dy) or (...,  Dx, Dy)
         if self.Dev > 0:
             assert v.shape[-1] == self.Dev
@@ -105,8 +103,6 @@ class ExpandedCLVTransformation(transformation):
         else:
             output_beta_log = beta_log + self.g_beta + pA
 
-        if self.clv_in_alr:
-            output_beta_log = output_beta_log[..., :-1] - output_beta_log[..., -1:]
         return output_beta_log
 
 
