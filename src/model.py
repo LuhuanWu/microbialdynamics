@@ -135,7 +135,6 @@ class SSM(object):
                                                              Dhs=self.f_beta_layers, Dout=self.Dy-1, name='f_beta_tran')
             elif self.f_beta_tran_type == "clv":
                 self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
-                                                             self.clv_in_alr,
                                                              self.training,
                                                              use_variational_dropout=self.use_variational_dropout,
                                                              clip_alpha=self.clip_alpha,

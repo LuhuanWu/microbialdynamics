@@ -1,5 +1,4 @@
 import numpy as np
-from scipy.special import logsumexp, softmax
 
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -144,67 +143,65 @@ def main(_):
         with open(checkpoint_dir + "history.json", "w") as f:
             json.dump(history, f, indent=4, cls=NumpyEncoder)
 
-        Xs, y_hat = log["Xs"], log["y_hat_original"]
-        Xs_val_train = mytrainer.evaluate(Xs, mytrainer.train_feed_dict)
-        Xs_val_test = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
+        Xs, beta_logs = log["Xs_resampled"], log["beta_logs_resampled"]
+        y_hat, y_hat_full = log["y_hat"], log["y_hat_full"]
+        Xs_train = mytrainer.evaluate(Xs, mytrainer.train_feed_dict)
+        Xs_test = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
 
-        y_hat_val_train = mytrainer.evaluate(y_hat, mytrainer.train_feed_dict)
-        y_hat_val_test = mytrainer.evaluate(y_hat, mytrainer.test_feed_dict)
-        print("Finish evaluating training results...")
+        y_hat_train, y_hat_full_train = mytrainer.evaluate([y_hat, y_hat_full], mytrainer.train_feed_dict)
+        y_hat_test, y_hat_full_test = mytrainer.evaluate([y_hat, y_hat_full], mytrainer.test_feed_dict)
 
-        plot_y_hat(checkpoint_dir + "y_hat_train_plots", y_hat_val_train, obs_train, mask=mask_train,
-                   saving_num=FLAGS.saving_train_num)
-        plot_y_hat(checkpoint_dir + "y_hat_test_plots", y_hat_val_test, obs_test, mask=mask_test,
-                   saving_num=FLAGS.saving_test_num)
-        plot_y_hat_bar_plot(checkpoint_dir+"train_obs_y_hat_bar_plots", y_hat_val_train, obs_train, mask=mask_train,
+        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_train_bar_plots", y_hat_train, obs_train, mask=mask_train,
                             saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
-        plot_y_hat_bar_plot(checkpoint_dir+"test_obs_y_hat_bar_plots", y_hat_val_test, obs_test, mask=mask_test,
+        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_test_bar_plots", y_hat_test, obs_test, mask=mask_test,
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
-        if Dx == 2:
-            plot_fhn_results(checkpoint_dir, Xs_val_test)
-        if Dx == 3:
-            plot_lorenz_results(checkpoint_dir, Xs_val_test)
+        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_full_train_bar_plots",
+                            y_hat_full_train, mytrainer.obs_train, mask=mask_train,
+                            saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
+        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_full_test_bar_plots",
+                            y_hat_full_test, mytrainer.obs_test, mask=mask_test,
+                            saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
+
         testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
-        learned_model_dict = {"Xs_val_test": Xs_val_test,
-                              "y_hat_val_test": y_hat_val_test}
+        learned_model_dict = {"Xs_test": Xs_test,
+                              "y_hat_val_test": y_hat_test}
         if FLAGS.g_tran_type == "LDA":
+            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_train, FLAGS.clv_in_alr)
+            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_test, FLAGS.clv_in_alr)
             if FLAGS.beta_constant:
                 beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
                 learned_model_dict["topic"] = beta_val
-                plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_val_train)
-                plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_val_test)
                 plot_topic_bar_plot(checkpoint_dir, beta_val)
             else:
                 # batch_size, (time, n_particles, Dx+1, Dy-1)
-                beta_logs_train = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.train_feed_dict)
-                beta_logs_val = mytrainer.evaluate(log["beta_logs"], feed_dict_w_batches=mytrainer.test_feed_dict)
-                beta_train = []
-                saving_num = 10
-                for i in range(saving_num):
-                    beta_log = beta_logs_train[i]
-                    beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
-                    beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
-                    beta = softmax(beta_log, axis=-1) # (time, Dx+1, Dy)
-                    beta_train.append(beta)
-                    plot_topic_bar_plot_across_time(checkpoint_dir+"topic_contents", beta, name="train_{}".format(i))
-                beta_test = []
-                for i in range(saving_num):
-                    beta_log = beta_logs_val[i]
-                    beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
-                    beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
-                    beta = softmax(beta_log, axis=-1)  # (time, Dx+1, Dy)
-                    beta_test.append(beta)
-                    plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents", beta, name="test_{}".format(i))
+                beta_logs_train = mytrainer.evaluate(beta_logs, feed_dict_w_batches=mytrainer.train_feed_dict)
+                beta_logs_test = mytrainer.evaluate(beta_logs, feed_dict_w_batches=mytrainer.test_feed_dict)
+                plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents_train",
+                                                beta_logs_train, FLAGS.clv_in_alr)
+                plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents_test",
+                                                beta_logs_test, FLAGS.clv_in_alr)
 
+                A, g, Wv = mytrainer.sess.run([SSM_model.f_tran.A,
+                                               SSM_model.f_tran.g,
+                                               SSM_model.f_tran.Wv])
                 A_beta, g_beta, Wv_beta = mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
                                                               SSM_model.f_beta_tran.g_beta,
                                                               SSM_model.f_beta_tran.Wv_beta],
                                                              {SSM_model.training: False})
-                betas = {"beta_train": beta_train, "beta_test": beta_test,
+                with open(data_dir, "rb") as f:
+                    data = pickle.load(f)
+
+                A_truth = data["A"]
+                A_beta_truth = data["A_g"]
+                A_beta_truth = np.clip(A_beta_truth, -2, 2)
+                plot_interaction_matrix(checkpoint_dir + "interaction", A, A_beta, A_truth, A_beta_truth)
+
+                betas = {"beta_logs_train": beta_logs_train, "beta_logs_test": beta_logs_test,
+                         "A": A, "g": g, "Wv": Wv,
                          "A_beta": A_beta, "g_beta": g_beta, "Wv_beta": Wv_beta}
 
                 with open(checkpoint_dir + "beta.p", "wb") as f:
