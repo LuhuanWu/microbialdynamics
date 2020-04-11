@@ -39,17 +39,23 @@ class trainer:
         self.n_particles = self.FLAGS.n_particles
 
         self.beta_constant = FLAGS.beta_constant
+        self.use_regularization_loss = FLAGS.use_regularization_loss
+
         self.use_anchor = FLAGS.use_anchor
         self.in_group_anchor_x = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
         self.between_group_anchor_x = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
         self.in_group_anchor_p_base = FLAGS.in_group_anchor_p_base
         self.between_group_anchor_p_base = FLAGS.between_group_anchor_p_base
 
+        self.use_hard_selection = FLAGS.use_hard_selection
+        self.annealing_steps = FLAGS.annealing_steps
+        self.annealing_final_val = FLAGS.annealing_final_val
 
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
         self.use_mask = self.FLAGS.use_mask
         self.epochs = self.FLAGS.epochs
+        self.n_epochs = 0
         #self.interp_data = None
 
         self.MSE_steps = self.FLAGS.MSE_steps
@@ -72,6 +78,7 @@ class trainer:
         self.time_interval = self.model.time_interval
         self.extra_inputs = self.model.extra_inputs
         self.training = self.model.training
+        self.annealing = self.model.annealing
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -200,43 +207,44 @@ class trainer:
 
             assert not self.FLAGS.clv_in_alr
 
-            global_step = tf.Variable(0, name='global_step', trainable=False, dtype=tf.float32)
+            global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
 
-            # encourage large entropy for group proportion
-            # (batch_size, time, n_particles, Dx)
-            Xs_prev = self.log["Xs"]
-            group_ps = tf.nn.softmax(Xs_prev, axis=-1)
-            group_ps = tf.clip_by_value(group_ps, EPS, 1 - EPS)
-            group_ps_ent = -group_ps * tf.log(group_ps)
-            group_ent_loss = tf.reduce_mean(tf.reduce_sum(group_ps_ent, axis=(1, 3)))
-            loss += -100 * group_ent_loss * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+            if self.use_regularization_loss:
+                # encourage large entropy for group proportion
+                # (batch_size, time, n_particles, Dx)
+                Xs_prev = self.log["Xs"]
+                group_ps = tf.nn.softmax(Xs_prev, axis=-1)
+                group_ps = tf.clip_by_value(group_ps, EPS, 1 - EPS)
+                group_ps_ent = -group_ps * tf.log(group_ps)
+                group_ent_loss = tf.reduce_mean(tf.reduce_sum(group_ps_ent, axis=(1, 3)))
+                loss += -group_ent_loss * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
-            # encourage divergence between taxon proportions of different groups
-            # (batch_size, time, n_particles, Dx, Dy)
-            beta_logs_prev = self.log["beta_logs"]
-            beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
-            beta_ps = tf.clip_by_value(beta_ps, EPS, 1 - EPS)
-            divergences = 0
-            for i in range(self.Dx):
-                p = beta_ps[:, :, :, i, :]
-                for j in range(i + 1, self.Dx):
-                    q = beta_ps[:, :, :, j, :]
-                    divergence = 0.5 * (p * (tf.log(p) - tf.log(q)) + q * (tf.log(q) - tf.log(p)))
-                    divergence = tf.reduce_mean(tf.reduce_sum(divergence, axis=(1, 3)))
-                    divergences += divergence
-            loss += -100 * divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+                # encourage divergence between taxon proportions of different groups
+                # (batch_size, time, n_particles, Dx, Dy)
+                beta_logs_prev = self.log["beta_logs"]
+                beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
+                beta_ps = tf.clip_by_value(beta_ps, EPS, 1 - EPS)
+                divergences = 0
+                for i in range(self.Dx):
+                    p = beta_ps[:, :, :, i, :]
+                    for j in range(i + 1, self.Dx):
+                        q = beta_ps[:, :, :, j, :]
+                        divergence = 0.5 * (p * (tf.log(p) - tf.log(q)) + q * (tf.log(q) - tf.log(p)))
+                        divergence = tf.reduce_mean(tf.reduce_sum(divergence, axis=(1, 3)))
+                        divergences += divergence
+                loss += -divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
-            # L1 regularization
-            A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
-            A, g = self.model.f_tran.A, self.model.f_tran.g
-            L1 = tf.reduce_sum(tf.abs(A_beta)) + tf.reduce_sum(tf.abs(g_beta)) + \
-                 tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
-            loss += 100 * L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+                # L1 regularization
+                A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
+                A, g = self.model.f_tran.A, self.model.f_tran.g
+                L1 = tf.reduce_sum(tf.abs(A_beta)) + tf.reduce_sum(tf.abs(g_beta)) + \
+                     tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
+                loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self.lr_holder)
-            self.train_op = optimizer.minimize(loss)
+            self.train_op = optimizer.minimize(loss, global_step=global_step)
 
         init = tf.global_variables_initializer()
         self.sess = tf.Session()
@@ -299,15 +307,23 @@ class trainer:
         if self.save_res and self.save_tensorboard:
             self.writer.add_graph(self.sess.graph)
 
+        def set_feed_dict(ph, val):
+            self.train_feed_dict[ph] = [val] * self.saving_train_num
+            self.test_feed_dict[ph] = [val] * self.saving_test_num
+            self.train_all_feed_dict[ph] = [val] * len(self.obs_train)
+            self.test_all_feed_dict[ph] = [val] * len(self.obs_test)
+
         for i in range(epoch):
             if self.use_mask:
                 mask_weight = 0
             else:
                 mask_weight = 1
-            self.train_feed_dict[self.mask_weight] = [mask_weight] * self.saving_train_num
-            self.test_feed_dict[self.mask_weight] = [mask_weight] * self.saving_test_num
-            self.train_all_feed_dict[self.mask_weight] = [mask_weight] * len(self.obs_train)
-            self.test_all_feed_dict[self.mask_weight] = [mask_weight] * len(self.obs_test)
+            annealing_val = 1 - self.n_epochs * (1 - self.annealing_final_val) / self.annealing_steps
+            annealing_val = max(annealing_val, self.annealing_final_val)
+            self.n_epochs += 1
+
+            set_feed_dict(self.mask_weight, mask_weight)
+            set_feed_dict(self.annealing, annealing_val)
             start = time.time()
 
             if i == 0:
@@ -329,7 +345,8 @@ class trainer:
                                          self.time_interval: time_interval_train[j:j + self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
                                          self.lr_holder:     self.lr,
-                                         self.training:      True})
+                                         self.training:      True,
+                                         self.annealing:     annealing_val})
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -348,10 +365,12 @@ class trainer:
 
                     if not self.beta_constant:
                         A, g, Wv = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wv])
-                        A_beta, dropout_A_beta, g_beta, Wv_beta = self.sess.run([self.model.f_beta_tran.A_beta,
-                                                                                 self.model.f_beta_tran.dropout_A_beta,
-                                                                                 self.model.f_beta_tran.g_beta,
-                                                                                 self.model.f_beta_tran.Wv_beta])
+                        A_beta, dropout_A_beta, g_beta, Wv_beta = \
+                            self.sess.run([self.model.f_beta_tran.A_beta,
+                                           self.model.f_beta_tran.dropout_A_beta,
+                                           self.model.f_beta_tran.g_beta,
+                                           self.model.f_beta_tran.Wv_beta],
+                                          feed_dict={self.annealing: self.annealing_final_val})
                         interaction = {"A": A,
                                        "g": g,
                                        "Wv": Wv,
