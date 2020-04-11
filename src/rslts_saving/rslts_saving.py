@@ -456,7 +456,20 @@ def plot_x_bar_plot_while_training(axs, xs_val):
         sns.despine()
 
 
-def plot_interaction_matrix(RLT_DIR, A, A_beta, A_truth, A_beta_truth):
+def plot_interaction_matrix(RLT_DIR, inferred, truth):
+    A_truth = truth["A"]
+    A_beta_truth = truth["A_g"]
+    g_beta_truth = truth["g_g"]
+
+    A = inferred["A"]
+    A_beta = inferred["A_beta"]
+    theta = inferred["theta"]
+    g_beta = inferred["g_beta"]
+
+    A_beta = np.clip(A_beta, -2, 2)
+    A_beta_truth = np.clip(A_beta_truth, -2, 2)
+
+    # interaction
     Dx = A.shape[0]
     Dy = A_beta.shape[1]
     if not os.path.exists(RLT_DIR):
@@ -486,3 +499,22 @@ def plot_interaction_matrix(RLT_DIR, A, A_beta, A_truth, A_beta_truth):
         plt.tight_layout()
         plt.savefig(RLT_DIR + "/A_beta_truth_{}".format(i))
         plt.close()
+
+    # growth
+    sns.heatmap(np.concatenate([g_beta_truth[None, :], g_beta], axis=0),
+                cmap="seismic", center=0, square=True, linewidth=0.5)
+    ticks = ["truth"] + ["group {}".format(i) for i in range(Dx)]
+    plt.yticks(0.5 + np.arange(Dx + 1), ticks, rotation=0)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/g")
+    plt.close()
+
+    # theta
+    sns.heatmap(theta.T, cmap="seismic", center=0, square=True, linewidth=0.5)
+    yticks = ["taxon {}".format(i) for i in range(Dy)]
+    plt.yticks(0.5 + np.arange(Dy), yticks, rotation=0)
+    xticks = ["group {}".format(i) for i in range(Dx)]
+    plt.xticks(0.5 + np.arange(Dx), xticks, rotation=45)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/theta")
+    plt.close()
