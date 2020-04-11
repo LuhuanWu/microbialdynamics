@@ -13,6 +13,8 @@ EPSILON = 1e-8
 
 class ExpandedCLVTransformation(transformation):
     def __init__(self, Dx, Dev, Dy, training=True,
+                 use_hard_selection=False, annealing=1.0,
+                 regularization_func="relu",
                  use_variational_dropout=False, clip_alpha=8., threshold=3.,
                  use_anchor=False, anchor_x=[],
                  data_dir=None):
@@ -26,6 +28,13 @@ class ExpandedCLVTransformation(transformation):
         self.anchor_x = anchor_x
         if use_anchor:
             assert len(anchor_x) > 0
+
+        if regularization_func == "relu":
+            regu_func = tf.nn.relu
+        elif regularization_func == "softplus":
+            regu_func = tf.nn.softplus
+        else:
+            raise NotImplementedError
 
         # batch_matrices for beta. beta is (n_topis, n_words) = (Dx+1, Dy)
         # for each topic, there is a set of matrix
@@ -41,15 +50,29 @@ class ExpandedCLVTransformation(transformation):
             A_init_val = tf.zeros((self.Dx, self.Dy, self.Dy))
             g_init_val = tf.zeros((self.Dx, self.Dy))
             Wv_init_val = tf.zeros((self.Dx, self.Dev, self.Dy))
+
         self.A_var = tf.Variable(A_init_val)
         self.g_var = tf.Variable(g_init_val)
         self.Wv_var = tf.Variable(Wv_init_val)
 
-        self.A_beta = tf.nn.softplus(self.A_var)                          # off-diagonal elements should be positive
+        self.A_beta = regu_func(self.A_var)                              # off-diagonal elements should be positive
         self_interaction = tf.linalg.diag_part(self.A_beta)
         self.A_beta = tf.linalg.set_diag(self.A_beta, -self_interaction)  # self-interaction should be negative
-        self.g_beta = tf.nn.softplus(self.g_var)                          # growth should be positive
+        self.g_beta = regu_func(self.g_var)                              # growth should be positive
         self.Wv_beta = self.Wv_var
+
+        self.theta_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
+        self.theta = tf.nn.softmax(self.theta_var / annealing, axis=0)
+
+        if use_hard_selection:
+            self_interaction = tf.linalg.diag_part(self.A_beta)
+            self.A_beta *= self.theta[:, None, :]
+            self.A_beta *= self.theta[:, :, None]
+            self_interaction /= self.theta ** 2
+            self.A_beta = tf.linalg.set_diag(self.A_beta, self_interaction)
+
+            self.g_beta *= self.theta
+            self.Wv_beta *= self.theta[:, None, :]
 
         if use_variational_dropout:
             self.A_beta_log_sigma2 = tf.Variable(-10 * tf.ones((self.Dx, self.Dy, self.Dy)))
