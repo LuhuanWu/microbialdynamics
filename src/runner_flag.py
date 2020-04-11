@@ -26,28 +26,34 @@ print("\t tensorflow_probability version:", tfp.__version__)
 # --------------------- Training Hyperparameters --------------------- #
 Dx = 2                # dimension of hidden states
 Dy = 8                  # dimension of observations. for microbio data, Dy = 11
-Dv = 5                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 5                 # dimension of inputs.
+Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
+Dev = 0                 # dimension of inputs.
 n_particles = 16        # number of particles
 n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
-lr = 1e-2               # learning rate
-epochs = [1000] #[1000,1000,1000,1000,1000]  # 500*100 #100*200
+lr = 3e-4               # learning rate
+epochs = [200]
 seed = 0
 
 clv_in_alr = False
 beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
+regularization_func = "relu"
+use_regularization_loss = False
 f_beta_tran_type = "clv"          # currently, only support clv
 
-use_variational_dropout = True
+use_variational_dropout = False
 clip_alpha = 8
 alpha_valid_threshold = 0
 
+use_hard_selection = True
+annealing_steps = 150
+annealing_final_val = 1e-2
+
 use_anchor = True
-in_group_anchor_x = [0, 0]
-in_group_anchor_p_base = 0.1
-between_group_anchor_x = [0, 0]
-between_group_anchor_p_base = 0.1
+in_group_anchor_x = [0]
+in_group_anchor_p_base = 0.15
+between_group_anchor_x = [0]
+between_group_anchor_p_base = 0.15
 
 in_group_anchor_x = ",".join([str(x) for x in in_group_anchor_x])
 between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
@@ -55,15 +61,15 @@ between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
 # ------------------------------- Data ------------------------------- #
 
 # see options: utils/available_data.py
-data_type = "group_Dx_2_Dv_5_ntrain_300_Kvar_05"
+data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
 interpolation_type = "none"
 pseudo_count = 0
 initialize_w_true_params = True
 
 # choose samples from the data set for training. -1 indicates use default training set
-train_num = -1
+train_num = 100
 # choose samples from the test set for test. -1 indicates default test set
-test_num = -1
+test_num = 2
 
 # ------------------------ Networks parameters ----------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
@@ -149,7 +155,7 @@ update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1 # 100
+print_freq = 10  # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -164,7 +170,7 @@ MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 20
+saving_train_num = 10
 saving_test_num = 20
 
 # whether to save tensorboard
@@ -264,6 +270,11 @@ flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn
 # ------------------------ LDA training beta session ----------------------#
 flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as trainable constant, "
                                                      "or a trainable random variable")
+flags.DEFINE_string("regularization_func", regularization_func, "regularization function for clv and expanded_clv, """
+                                                                "currently only relu and softplus are supported.")
+flags.DEFINE_boolean("use_regularization_loss", use_regularization_loss,
+                     "add L1 and entropy regularization in loss")
+
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
 
 flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whether to use variational dropout to "
@@ -271,6 +282,10 @@ flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whethe
 flags.DEFINE_float("clip_alpha", clip_alpha, "clip value for alpha in variational dropout")
 flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold for dropping elements in interaction "
                    "matrix given alpha")
+
+flags.DEFINE_boolean("use_hard_selection", use_hard_selection, "use_hard_selection")
+flags.DEFINE_integer("annealing_steps", annealing_steps, "n epoches to anneal to final values")
+flags.DEFINE_float("annealing_final_val", annealing_final_val, "final annealing values")
 
 flags.DEFINE_boolean("use_anchor", use_anchor, "whether to use an anchor taxon as base for the hidden log space")
 flags.DEFINE_string("in_group_anchor_x", in_group_anchor_x, "anchor for in-group interaction in hidden space")

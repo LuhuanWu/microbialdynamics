@@ -79,9 +79,14 @@ class SSM(object):
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
         self.f_beta_tran_type          = FLAGS.f_beta_tran_type
+
+        self.regularization_func       = FLAGS.regularization_func
+        self.use_hard_selection        = FLAGS.use_hard_selection
+
         self.use_variational_dropout   = FLAGS.use_variational_dropout
         self.clip_alpha                = FLAGS.clip_alpha
         self.alpha_valid_threshold     = FLAGS.alpha_valid_threshold
+
         self.use_anchor                = FLAGS.use_anchor
         self.in_group_anchor_x         = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
         self.between_group_anchor_x    = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
@@ -112,6 +117,7 @@ class SSM(object):
         self.mask_weight = tf.placeholder(tf.float32, shape=(), name="mask_weight")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
+        self.annealing = tf.placeholder(tf.float32, shape=(), name="annealing")
         self.training = tf.placeholder(tf.bool, shape=(), name="training")
 
     def init_trans(self):
@@ -122,7 +128,9 @@ class SSM(object):
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
             self.f_tran = clv_transformation(self.Dx, self.Dev,
-                                             self.beta_constant, self.clv_in_alr,
+                                             beta_constant=self.beta_constant,
+                                             clv_in_alr=self.clv_in_alr,
+                                             regularization_func=self.regularization_func,
                                              use_anchor=self.use_anchor,
                                              anchor_x=self.between_group_anchor_x,
                                              data_dir=self.data_dir)
@@ -136,6 +144,9 @@ class SSM(object):
             elif self.f_beta_tran_type == "clv":
                 self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
                                                              self.training,
+                                                             use_hard_selection=self.use_hard_selection,
+                                                             regularization_func=self.regularization_func,
+                                                             annealing=self.annealing,
                                                              use_variational_dropout=self.use_variational_dropout,
                                                              clip_alpha=self.clip_alpha,
                                                              threshold=self.alpha_valid_threshold,

@@ -6,6 +6,7 @@ from src.transformation.base import transformation
 class clv_transformation(transformation):
     def __init__(self, Dx, Dev,
                  beta_constant=True, clv_in_alr=True,
+                 regularization_func="relu",
                  use_anchor=False, anchor_x=[],
                  data_dir=None):
         self.Dx = Dx
@@ -15,6 +16,13 @@ class clv_transformation(transformation):
         self.anchor_x = anchor_x
         if use_anchor:
             assert len(anchor_x) > 0
+
+        if regularization_func == "relu":
+            regu_func = tf.nn.relu
+        elif regularization_func == "softplus":
+            regu_func = tf.nn.softplus
+        else:
+            raise NotImplementedError
 
         if data_dir is not None:
             with open(data_dir, "rb") as f:
@@ -34,16 +42,16 @@ class clv_transformation(transformation):
 
         if not beta_constant:
             upper_triangle = tf.linalg.band_part(self.A_var, 0, -1)     # including diagonal
-            upper_triangle = -tf.nn.softplus(upper_triangle)
+            upper_triangle = -regu_func(upper_triangle)
             upper_triangle = tf.linalg.band_part(upper_triangle, 0, -1)
             lower_triangle = tf.linalg.band_part(self.A_var, -1, 0)     # including diagonal
-            diagonal = -tf.nn.softplus(tf.linalg.diag_part(self.A_var))
+            diagonal = -regu_func(tf.linalg.diag_part(self.A_var))
             A_tmp = upper_triangle + lower_triangle
             self.A = tf.linalg.set_diag(A_tmp, diagonal)
         else:
-            self_interaction = -tf.nn.softplus(tf.linalg.diag_part(self.A_var))
+            self_interaction = -regu_func(tf.linalg.diag_part(self.A_var))
             self.A = tf.linalg.set_diag(self.A_var, self_interaction)   # self-interaction should be negative
-        self.g = tf.nn.softplus(self.g_var)                             # growth should be positive
+        self.g = regu_func(self.g_var)                             # growth should be positive
         self.Wv = self.Wv_var
 
     def transform(self, Input):
