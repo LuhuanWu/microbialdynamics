@@ -188,21 +188,21 @@ def main(_):
                 A, g, Wv = mytrainer.sess.run([SSM_model.f_tran.A,
                                                SSM_model.f_tran.g,
                                                SSM_model.f_tran.Wv])
-                A_beta, g_beta, Wv_beta = mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
-                                                              SSM_model.f_beta_tran.g_beta,
-                                                              SSM_model.f_beta_tran.Wv_beta],
-                                                             {SSM_model.training: False})
+                A_beta, g_beta, Wv_beta, theta = \
+                    mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
+                                        SSM_model.f_beta_tran.g_beta,
+                                        SSM_model.f_beta_tran.Wv_beta,
+                                        SSM_model.f_beta_tran.theta],
+                                       {SSM_model.training: False,
+                                        SSM_model.annealing: FLAGS.annealing_final_val})
                 with open(data_dir, "rb") as f:
                     data = pickle.load(f)
 
-                A_truth = data["A"]
-                A_beta_truth = data["A_g"]
-                A_beta_truth = np.clip(A_beta_truth, -2, 2)
-                plot_interaction_matrix(checkpoint_dir + "interaction", A, A_beta, A_truth, A_beta_truth)
-
                 betas = {"beta_logs_train": beta_logs_train, "beta_logs_test": beta_logs_test,
                          "A": A, "g": g, "Wv": Wv,
-                         "A_beta": A_beta, "g_beta": g_beta, "Wv_beta": Wv_beta}
+                         "A_beta": A_beta, "g_beta": g_beta, "Wv_beta": Wv_beta, "theta": theta}
+
+                plot_interaction_matrix(checkpoint_dir + "interaction", betas, data)
 
                 with open(checkpoint_dir + "beta.p", "wb") as f:
                     pickle.dump(betas, f)
