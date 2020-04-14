@@ -14,7 +14,7 @@ EPSILON = 1e-8
 class ExpandedCLVTransformation(transformation):
     def __init__(self, Dx, Dev, Dy, training=True,
                  use_hard_selection=False, annealing=1.0,
-                 regularization_func="relu",
+                 regularization_func="softplus",
                  use_variational_dropout=False, clip_alpha=8., threshold=3.,
                  use_anchor=False, anchor_x=[],
                  data_dir=None):
@@ -29,9 +29,7 @@ class ExpandedCLVTransformation(transformation):
         if use_anchor:
             assert len(anchor_x) > 0
 
-        if regularization_func == "relu":
-            regu_func = tf.nn.relu
-        elif regularization_func == "softplus":
+        if regularization_func == "softplus":
             regu_func = tf.nn.softplus
         else:
             raise NotImplementedError
@@ -55,14 +53,16 @@ class ExpandedCLVTransformation(transformation):
         self.g_var = tf.Variable(g_init_val)
         self.Wv_var = tf.Variable(Wv_init_val)
 
-        self.A_beta = regu_func(self.A_var)                              # off-diagonal elements should be positive
-        self_interaction = tf.linalg.diag_part(self.A_beta)
+        self.A_beta = self.A_var
+        self_interaction = regu_func(tf.linalg.diag_part(self.A_beta))
+        self.A_beta = regu_func(self.A_beta)                              # off-diagonal elements should be positive
         self.A_beta = tf.linalg.set_diag(self.A_beta, -self_interaction)  # self-interaction should be negative
         self.g_beta = regu_func(self.g_var)                              # growth should be positive
         self.Wv_beta = self.Wv_var
 
         self.theta_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
         self.theta = tf.nn.softmax(self.theta_var / annealing, axis=0)
+        self.theta = tf.clip_by_value(self.theta, 1e-6, 1)
 
         if use_hard_selection:
             self_interaction = tf.linalg.diag_part(self.A_beta)

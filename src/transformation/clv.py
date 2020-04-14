@@ -6,7 +6,7 @@ from src.transformation.base import transformation
 class clv_transformation(transformation):
     def __init__(self, Dx, Dev,
                  beta_constant=True, clv_in_alr=True,
-                 regularization_func="relu",
+                 regularization_func="softplus",
                  use_anchor=False, anchor_x=[],
                  data_dir=None):
         self.Dx = Dx
@@ -17,9 +17,7 @@ class clv_transformation(transformation):
         if use_anchor:
             assert len(anchor_x) > 0
 
-        if regularization_func == "relu":
-            regu_func = tf.nn.relu
-        elif regularization_func == "softplus":
+        if regularization_func == "softplus":
             regu_func = tf.nn.softplus
         else:
             raise NotImplementedError

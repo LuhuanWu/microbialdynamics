@@ -37,8 +37,8 @@ seed = 0
 
 clv_in_alr = False
 beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
-regularization_func = "relu"
-use_regularization_loss = False
+regularization_func = "softplus"
+use_regularization_loss = True
 f_beta_tran_type = "clv"          # currently, only support clv
 
 use_variational_dropout = False
