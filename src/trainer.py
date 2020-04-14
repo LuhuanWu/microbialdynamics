@@ -236,10 +236,18 @@ class trainer:
 
                 # L1 regularization
                 A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
+                A_beta_diag = tf.linalg.diag_part(A_beta)
                 A, g = self.model.f_tran.A, self.model.f_tran.g
-                L1 = tf.reduce_sum(tf.abs(A_beta)) + tf.reduce_sum(tf.abs(g_beta)) + \
+                L1 = tf.reduce_sum(tf.abs(A_beta)) - tf.reduce_sum(tf.abs(A_beta_diag)) + \
+                     tf.reduce_sum(tf.abs(g_beta)) + \
                      tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
                 loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+
+            if self.use_hard_selection:
+                # minimize entropy of theta so that the assignment become diverse
+                theta = self.model.f_beta_tran.theta
+                theta_ent = tf.reduce_sum(-theta * tf.log(theta))
+                loss += theta_ent
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
