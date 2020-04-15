@@ -37,7 +37,7 @@ class ExpandedCLVTransformation(transformation):
         if assignment_func == "softmax":
             assignment_func = tf.nn.softmax
         elif assignment_func == "sparsemax":
-            assignment_func = tf.contrib.sparsemax
+            assignment_func = tf.contrib.sparsemax.sparsemax
         else:
             raise NotImplementedError
 
@@ -67,8 +67,9 @@ class ExpandedCLVTransformation(transformation):
         self.g_beta = regu_func(self.g_var)                              # growth should be positive
         self.Wv_beta = self.Wv_var
 
-        self.theta_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
-        self.theta = assignment_func(self.theta_var / annealing, axis=0)
+        self.theta_var = tf.Variable(tf.zeros((self.Dy, self.Dx)))
+        self.theta = assignment_func(self.theta_var / annealing)
+        self.theta = tf.transpose(self.theta)
         self.theta = tf.clip_by_value(self.theta, 1e-5, 1)
 
         if use_soft_assignment:
