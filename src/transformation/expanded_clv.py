@@ -13,7 +13,7 @@ EPSILON = 1e-8
 
 class ExpandedCLVTransformation(transformation):
     def __init__(self, Dx, Dev, Dy, training=True,
-                 use_hard_selection=False, annealing=1.0,
+                 use_soft_assignment=False, assignment_func="softmax", annealing=1.0,
                  regularization_func="softplus",
                  use_variational_dropout=False, clip_alpha=8., threshold=3.,
                  use_anchor=False, anchor_x=[],
@@ -31,6 +31,13 @@ class ExpandedCLVTransformation(transformation):
 
         if regularization_func == "softplus":
             regu_func = tf.nn.softplus
+        else:
+            raise NotImplementedError
+
+        if assignment_func == "softmax":
+            assignment_func = tf.nn.softmax
+        elif assignment_func == "sparsemax":
+            assignment_func = tf.contrib.sparsemax
         else:
             raise NotImplementedError
 
@@ -61,10 +68,10 @@ class ExpandedCLVTransformation(transformation):
         self.Wv_beta = self.Wv_var
 
         self.theta_var = tf.Variable(tf.zeros((self.Dx, self.Dy)))
-        self.theta = tf.nn.softmax(self.theta_var / annealing, axis=0)
-        self.theta = tf.clip_by_value(self.theta, 1e-6, 1)
+        self.theta = assignment_func(self.theta_var / annealing, axis=0)
+        self.theta = tf.clip_by_value(self.theta, 1e-5, 1)
 
-        if use_hard_selection:
+        if use_soft_assignment:
             self_interaction = tf.linalg.diag_part(self.A_beta)
             self.A_beta *= self.theta[:, None, :]
             self.A_beta *= self.theta[:, :, None]

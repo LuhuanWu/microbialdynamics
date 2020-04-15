@@ -47,7 +47,7 @@ class trainer:
         self.in_group_anchor_p_base = FLAGS.in_group_anchor_p_base
         self.between_group_anchor_p_base = FLAGS.between_group_anchor_p_base
 
-        self.use_hard_selection = FLAGS.use_hard_selection
+        self.use_soft_assignment = FLAGS.use_soft_assignment
         self.annealing_steps = FLAGS.annealing_steps
         self.annealing_final_val = FLAGS.annealing_final_val
 
@@ -243,7 +243,7 @@ class trainer:
                      tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
                 loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
-            if self.use_hard_selection:
+            if self.use_soft_assignment:
                 # minimize entropy of theta so that the assignment become diverse
                 theta = self.model.f_beta_tran.theta
                 theta_ent = tf.reduce_sum(-theta * tf.log(theta))

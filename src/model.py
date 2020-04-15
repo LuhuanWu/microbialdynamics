@@ -81,7 +81,8 @@ class SSM(object):
         self.f_beta_tran_type          = FLAGS.f_beta_tran_type
 
         self.regularization_func       = FLAGS.regularization_func
-        self.use_hard_selection        = FLAGS.use_hard_selection
+        self.use_soft_assignment       = FLAGS.use_soft_assignment
+        self.assignment_func           = FLAGS.assignment_func
 
         self.use_variational_dropout   = FLAGS.use_variational_dropout
         self.clip_alpha                = FLAGS.clip_alpha
@@ -144,7 +145,8 @@ class SSM(object):
             elif self.f_beta_tran_type == "clv":
                 self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
                                                              self.training,
-                                                             use_hard_selection=self.use_hard_selection,
+                                                             use_soft_assignment=self.use_soft_assignment,
+                                                             assignment_func=self.assignment_func,
                                                              regularization_func=self.regularization_func,
                                                              annealing=self.annealing,
                                                              use_variational_dropout=self.use_variational_dropout,

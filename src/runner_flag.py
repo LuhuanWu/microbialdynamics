@@ -37,17 +37,19 @@ seed = 0
 
 clv_in_alr = False
 beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
+f_beta_tran_type = "clv"          # currently, only support clv
+
 regularization_func = "softplus"
 use_regularization_loss = True
-f_beta_tran_type = "clv"          # currently, only support clv
+
+use_soft_assignment = True
+assignment_func = "softmax"
+annealing_steps = 150
+annealing_final_val = 1e-2
 
 use_variational_dropout = False
 clip_alpha = 8
 alpha_valid_threshold = 0
-
-use_hard_selection = True
-annealing_steps = 150
-annealing_final_val = 1e-2
 
 use_anchor = True
 in_group_anchor_x = [0]
@@ -283,7 +285,9 @@ flags.DEFINE_float("clip_alpha", clip_alpha, "clip value for alpha in variationa
 flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold for dropping elements in interaction "
                    "matrix given alpha")
 
-flags.DEFINE_boolean("use_hard_selection", use_hard_selection, "use_hard_selection")
+flags.DEFINE_boolean("use_soft_assignment", use_soft_assignment, "use_soft_assignment")
+flags.DEFINE_string("assignment_func", assignment_func, "assignment function for theta of in-group interactions.")
+
 flags.DEFINE_integer("annealing_steps", annealing_steps, "n epoches to anneal to final values")
 flags.DEFINE_float("annealing_final_val", annealing_final_val, "final annealing values")
 
