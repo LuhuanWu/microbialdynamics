@@ -23,35 +23,46 @@ print("\t tensorflow version:", tf.__version__)
 print("\t tensorflow_probability version:", tfp.__version__)
 
 
-# --------------------- Training Hyperparameters --------------------- #
-Dx = 2                # dimension of hidden states
-Dy = 8                  # dimension of observations. for microbio data, Dy = 11
-Dv = 0                 # dimension of inputs. for microbio data, Dv = 15
-Dev = 0                 # dimension of inputs.
-n_particles = 16        # number of particles
-n_bw_particles = 16  # number of subparticles sampled when augmenting the trajectory backwards
-batch_size = 1          # batch size
+# Dy and Dv need to match the data set
+Dy = 8                  # dimension of observations (num of taxa)
+Dv = 0                  # dimension of inputs (num of perturbations)
+
+# see options: utils/available_data.py
+data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
+
+Dx = 2                  # dimension of hidden states (num of groups/topics)
+
 lr = 3e-4               # learning rate
-epochs = [200]
+epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
+                        # and train for another 500 epochs and save results
+
+# You probably don't need to worry about the followings for the 1st time
+Dev = 0                 # dimension of inputs embedding
+n_particles = 16        # number of particles
+n_bw_particles = 16     # number of subparticles sampled when augmenting the trajectory backwards
+batch_size = 1          # batch size
+
 seed = 0
 
-clv_in_alr = False
-beta_constant = False  # if True, beta is treated as constant; if False, beta is treated as latent variable
-f_beta_tran_type = "clv"          # currently, only support clv
+clv_in_alr = False           # if clv equations are in additive log ratio space or log space
+beta_constant = False        # if True, use LDA emission; if False, use both between-group and in-group interactions
+f_beta_tran_type = "clv"     # in-group interaction transition type
 
-regularization_func = "softplus"
-use_regularization_loss = True
+regularization_func = "softplus"   # function to constrain interaction matrix
+use_regularization_loss = True     # use L1 and divergence regularization in loss
 
-use_soft_assignment = True
-assignment_func = "softmax"
-annealing_steps = 150
+use_soft_assignment = True         # if use theta as soft assignment of taxa to groups/topics
+assignment_func = "softmax"        # softmax/sparsemax as assignment function
+# theta = assignment_func(theta_variable / delta),
+# where delta annearl from 1 to annealing_final_val after annealing_steps epochs
+annealing_steps = 800
 annealing_final_val = 1e-2
 
-use_variational_dropout = False
+use_variational_dropout = False    # if use variational dropout to sparsify interaction matrix
 clip_alpha = 8
 alpha_valid_threshold = 0
 
-use_anchor = True
+use_anchor = True                  # if use anchor taxa to regularize interaction matrix
 in_group_anchor_x = [0]
 in_group_anchor_p_base = 0.15
 between_group_anchor_x = [0]
@@ -62,18 +73,43 @@ between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
 
 # ------------------------------- Data ------------------------------- #
 
-# see options: utils/available_data.py
-data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
-interpolation_type = "none"
+interpolation_type = "none"        # interpolation type for missing observations
 pseudo_count = 0
-initialize_w_true_params = True
+initialize_w_true_params = False
 
 # choose samples from the data set for training. -1 indicates use default training set
-train_num = 100
+train_num = -1
 # choose samples from the test set for test. -1 indicates default test set
-test_num = 2
+test_num = -1
 
-# ------------------------ Networks parameters ----------------------- #
+# ------------------------ State Space Model ------------------------- #
+use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
+
+f_tran_type = "clv"          # choose from MLP, linear, clv
+g_tran_type = "LDA"          # choose from MLP, LDA
+g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+
+emission_use_auxiliary = True  # use auxiliary hidden variable to mitigate overfitting to sequencing noise
+
+# ------------------- LDA training beta session --------------------- #
+# ------------------- not used by current model --------------------- #
+q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
+q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
+q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
+f_beta_layers = [16]         # target evolution
+
+q0_beta_sigma_init, q0_beta_sigma_min = 5, 1e-8
+q1_beta_sigma_init, q1_beta_sigma_min = 5, 1e-8
+q2_beta_sigma_init, q2_beta_sigma_min = 5, 1e-8
+f_beta_sigma_init, f_beta_sigma_min = 5, 1e-8
+
+q0_beta_layers = ",".join([str(x) for x in q0_beta_layers])
+q1_beta_layers = ",".join([str(x) for x in q1_beta_layers])
+q2_beta_layers = ",".join([str(x) for x in q2_beta_layers])
+f_beta_layers = ",".join([str(x) for x in f_beta_layers])
+
+# ----------------------- Networks parameters ----------------------- #
+# ------------------- not used by current model --------------------- #
 # Feed-Forward Networks (FFN), number of units in each hidden layer
 # For example, [64, 64] means 2 hidden layers, 64 units in each hidden layer
 q0_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
@@ -104,36 +140,10 @@ f_use_residual = False
 # check https://stackoverflow.com/a/50552539 for differences between them
 use_stack_rnn = True
 
-# ------------------------ State Space Model ------------------------- #
-use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
-
-f_tran_type = "clv"          # choose from MLP, linear, clv
-g_tran_type = "LDA"          # choose from MLP, LDA
-g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
-
-emission_use_auxiliary = True
-
-# ------------------- LDA training beta session --------------------- #
-
-q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_beta_layers = [16]         # target evolution
-
-q0_beta_sigma_init, q0_beta_sigma_min = 5, 1e-8
-q1_beta_sigma_init, q1_beta_sigma_min = 5, 1e-8
-q2_beta_sigma_init, q2_beta_sigma_min = 5, 1e-8
-f_beta_sigma_init, f_beta_sigma_min = 5, 1e-8
-
-q0_beta_layers = ",".join([str(x) for x in q0_beta_layers])
-q1_beta_layers = ",".join([str(x) for x in q1_beta_layers])
-q2_beta_layers = ",".join([str(x) for x in q2_beta_layers])
-f_beta_layers = ",".join([str(x) for x in f_beta_layers])
-
 # ------------------------- Inference Schemes ------------------------ #
 # Choose one of the following objectives
-PSVO = False      # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
-SVO = True      # Smoothing Variational Objective (use proposal based on bRNN)
+PSVO = False     # Particle Smoothing Variational Objective (use Forward Filtering Backward Simulation)
+SVO = True       # Smoothing Variational Objective (use proposal based on bRNN)
 AESMC = False    # Auto-Encoding Sequential Monte Carlo
 IWAE = False     # Importance Weighted Auto-Encoder
 
@@ -165,14 +175,14 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "clv/{}_{}_dx{}".format(data_type, g_tran_type, Dx)
+rslt_dir_name = "clv_group/{}_Dx{}".format(data_type, Dx)
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 10
+saving_train_num = 20
 saving_test_num = 20
 
 # whether to save tensorboard
