@@ -39,7 +39,10 @@ class trainer:
         self.n_particles = self.FLAGS.n_particles
 
         self.beta_constant = FLAGS.beta_constant
-        self.use_regularization_loss = FLAGS.use_regularization_loss
+        self.use_A_L1_loss = FLAGS.use_A_L1_loss
+        self.use_A_MSE_loss = FLAGS.use_A_MSE_loss
+        self.use_kl_loss = FLAGS.use_kl_loss
+        self.use_beta_L1_loss = FLAGS.use_beta_L1_loss
 
         self.use_anchor = FLAGS.use_anchor
         self.in_group_anchor_x = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
@@ -209,7 +212,7 @@ class trainer:
 
             global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
 
-            if self.use_regularization_loss:
+            if self.use_A_L1_loss:
                 # encourage large entropy for group proportion
                 # (batch_size, time, n_particles, Dx)
                 Xs_prev = self.log["Xs"]
@@ -219,6 +222,29 @@ class trainer:
                 group_ent_loss = tf.reduce_mean(tf.reduce_sum(group_ps_ent, axis=(1, 3)))
                 loss += -group_ent_loss * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
+                # L1 regularization
+                A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
+                A_beta_diag = tf.linalg.diag_part(A_beta)
+                A, g = self.model.f_tran.A, self.model.f_tran.g
+                L1 = tf.reduce_sum(tf.abs(A_beta)) - tf.reduce_sum(tf.abs(A_beta_diag)) + \
+                     tf.reduce_sum(tf.abs(g_beta)) + \
+                     tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
+                loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+
+            if self.use_A_MSE_loss:
+                # encourage divergence of A from different groups
+                A_beta = self.model.f_beta_tran.A_beta
+                A_beta_diag = tf.linalg.diag_part(A_beta)
+                A_beta = tf.linalg.set_diag(A_beta, tf.zeros_like(A_beta_diag))
+                A_MSE = 0
+                for i in range(self.Dx):
+                    A_i = A_beta[i, :, :]   # Dy x Dy
+                    for j in range(i + 1, self.Dx):
+                        A_j = A_beta[i, :, :]
+                        A_MSE += tf.reduce_sum((A_i - A_j) ** 2)
+                loss += -A_MSE * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+
+            if self.use_kl_loss:
                 # encourage divergence between taxon proportions of different groups
                 # (batch_size, time, n_particles, Dx, Dy)
                 beta_logs_prev = self.log["beta_logs"]
@@ -234,20 +260,19 @@ class trainer:
                         divergences += divergence
                 loss += -divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
-                # L1 regularization
-                A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
-                A_beta_diag = tf.linalg.diag_part(A_beta)
-                A, g = self.model.f_tran.A, self.model.f_tran.g
-                L1 = tf.reduce_sum(tf.abs(A_beta)) - tf.reduce_sum(tf.abs(A_beta_diag)) + \
-                     tf.reduce_sum(tf.abs(g_beta)) + \
-                     tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
-                loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+            if self.use_beta_L1_loss:
+                # encourage divergence between taxon proportions of different groups
+                # (batch_size, time, n_particles, Dx, Dy)
+                beta_logs_prev = self.log["beta_logs"]
+                beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
+                beta_L1 = tf.reduce_sum(beta_ps)
+                loss += beta_L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
             if self.use_soft_assignment:
                 # minimize entropy of theta so that the assignment become diverse
                 theta = self.model.f_beta_tran.theta
                 theta_ent = tf.reduce_sum(-theta * tf.log(theta))
-                loss += theta_ent
+                loss += theta_ent * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")

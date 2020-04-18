@@ -49,7 +49,10 @@ beta_constant = False        # if True, use LDA emission; if False, use both bet
 f_beta_tran_type = "clv"     # in-group interaction transition type
 
 regularization_func = "softplus"   # function to constrain interaction matrix
-use_regularization_loss = True     # use L1 and divergence regularization in loss
+use_A_L1_loss = True
+use_A_MSE_loss = False
+use_kl_loss = False
+use_beta_L1_loss = False
 
 use_soft_assignment = True         # if use theta as soft assignment of taxa to groups/topics
 assignment_func = "softmax"        # softmax/sparsemax as assignment function
@@ -284,8 +287,11 @@ flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as tra
                                                      "or a trainable random variable")
 flags.DEFINE_string("regularization_func", regularization_func, "regularization function for clv and expanded_clv, """
                                                                 "currently only relu and softplus are supported.")
-flags.DEFINE_boolean("use_regularization_loss", use_regularization_loss,
-                     "add L1 and entropy regularization in loss")
+
+flags.DEFINE_boolean("use_A_L1_loss", use_A_L1_loss, "add L1 loss for interaction matrix and growth rate")
+flags.DEFINE_boolean("use_A_MSE_loss", use_A_MSE_loss, "encourage difference between A in loss")
+flags.DEFINE_boolean("use_kl_loss", use_kl_loss, "add L1 and entropy regularization in loss")
+flags.DEFINE_boolean("use_beta_L1_loss", use_beta_L1_loss, "add L1 for beta in loss")
 
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
 
