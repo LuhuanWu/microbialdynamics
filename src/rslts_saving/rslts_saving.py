@@ -457,17 +457,12 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
 
 def plot_interaction_matrix(RLT_DIR, inferred, truth):
-    A_truth = truth["A"]
-    A_beta_truth = truth["A_g"]
-    g_beta_truth = truth["g_g"]
-
     A = inferred["A"]
     A_beta = inferred["A_beta"]
     theta = inferred["theta"]
     g_beta = inferred["g_beta"]
 
     A_beta = np.clip(A_beta, -2, 2)
-    A_beta_truth = np.clip(A_beta_truth, -2, 2)
 
     # interaction
     Dx = A.shape[0]
@@ -487,27 +482,34 @@ def plot_interaction_matrix(RLT_DIR, inferred, truth):
         plt.savefig(RLT_DIR + "/A_beta_{}".format(i))
         plt.close()
 
-    sns.heatmap(A_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
-    plt.plot([0, Dx], [0, Dx], "k")
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/A_truth")
-    plt.close()
-
-    for i, A_group in enumerate(A_beta_truth):
-        sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
-        plt.plot([0, Dy], [0, Dy], "k")
+    if "A" in truth:
+        A_truth = truth["A"]
+        sns.heatmap(A_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.plot([0, Dx], [0, Dx], "k")
         plt.tight_layout()
-        plt.savefig(RLT_DIR + "/A_beta_truth_{}".format(i))
+        plt.savefig(RLT_DIR + "/A_truth")
         plt.close()
 
+    if "A_g" in truth:
+        A_beta_truth = truth["A_g"]
+        A_beta_truth = np.clip(A_beta_truth, -2, 2)
+        for i, A_group in enumerate(A_beta_truth):
+            sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
+            plt.plot([0, Dy], [0, Dy], "k")
+            plt.tight_layout()
+            plt.savefig(RLT_DIR + "/A_beta_truth_{}".format(i))
+            plt.close()
+
     # growth
-    sns.heatmap(np.concatenate([g_beta_truth[None, :], g_beta], axis=0),
-                cmap="seismic", center=0, square=True, linewidth=0.5)
-    ticks = ["truth"] + ["group {}".format(i) for i in range(Dx)]
-    plt.yticks(0.5 + np.arange(Dx + 1), ticks, rotation=0)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/g")
-    plt.close()
+    if "g_g" in truth:
+        g_beta_truth = truth["g_g"]
+        sns.heatmap(np.concatenate([g_beta_truth[None, :], g_beta], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth"] + ["group {}".format(i) for i in range(Dx)]
+        plt.yticks(0.5 + np.arange(Dx + 1), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/g")
+        plt.close()
 
     # theta
     sns.heatmap(theta.T, cmap="seismic", center=0, square=True, linewidth=0.5)
