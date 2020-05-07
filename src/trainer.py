@@ -42,7 +42,7 @@ class trainer:
         self.use_A_L1_loss = FLAGS.use_A_L1_loss
         self.use_A_MSE_loss = FLAGS.use_A_MSE_loss
         self.use_kl_loss = FLAGS.use_kl_loss
-        self.use_beta_L1_loss = FLAGS.use_beta_L1_loss
+        self.use_beta_entropy_loss = FLAGS.use_beta_entropy_loss
 
         self.use_anchor = FLAGS.use_anchor
         self.in_group_anchor_x = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
@@ -260,13 +260,14 @@ class trainer:
                         divergences += divergence
                 loss += -divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
-            if self.use_beta_L1_loss:
+            if self.use_beta_entropy_loss:
                 # encourage divergence between taxon proportions of different groups
                 # (batch_size, time, n_particles, Dx, Dy)
                 beta_logs_prev = self.log["beta_logs"]
                 beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
-                beta_L1 = tf.reduce_sum(beta_ps)
-                loss += beta_L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
+                beta_ps /= tf.reduce_sum(beta_ps, axis=-2, keepdims=True)
+                beta_ent = -tf.reduce_mean(tf.reduce_sum(beta_ps * tf.log(beta_ps), axis=(1, 3, 4)))
+                loss += beta_ent * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
 
             if self.use_soft_assignment:
                 # minimize entropy of theta so that the assignment become diverse

@@ -24,22 +24,22 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # Dy and Dv need to match the data set
-Dy = 8                  # dimension of observations (num of taxa)
+Dy = 9                  # dimension of observations (num of taxa)
 Dv = 0                  # dimension of inputs (num of perturbations)
 
 # see options: utils/available_data.py
-data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
+data_type = "group_Dx_3_Dv_0_comp"
 
-Dx = 2                  # dimension of hidden states (num of groups/topics)
+Dx = 3                  # dimension of hidden states (num of groups/topics)
 
-lr = 3e-4               # learning rate
-epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
+lr = 1e-2               # learning rate
+epochs = [20, 20]         # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
 Dev = 0                 # dimension of inputs embedding
-n_particles = 16        # number of particles
-n_bw_particles = 16     # number of subparticles sampled when augmenting the trajectory backwards
+n_particles = 8         # number of particles
+n_bw_particles = 8      # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 
 seed = 0
@@ -48,13 +48,13 @@ clv_in_alr = False           # if clv equations are in additive log ratio space 
 beta_constant = False        # if True, use LDA emission; if False, use both between-group and in-group interactions
 f_beta_tran_type = "clv"     # in-group interaction transition type
 
-regularization_func = "softplus"   # function to constrain interaction matrix
+regularization_func = "linear"   # function to constrain interaction matrix
 use_A_L1_loss = True
 use_A_MSE_loss = False
-use_kl_loss = False
-use_beta_L1_loss = False
+use_kl_loss = True
+use_beta_entropy_loss = True
 
-use_soft_assignment = True         # if use theta as soft assignment of taxa to groups/topics
+use_soft_assignment = False         # if use theta as soft assignment of taxa to groups/topics
 assignment_func = "softmax"        # softmax/sparsemax as assignment function
 # theta = assignment_func(theta_variable / delta),
 # where delta annearl from 1 to annealing_final_val after annealing_steps epochs
@@ -65,11 +65,11 @@ use_variational_dropout = False    # if use variational dropout to sparsify inte
 clip_alpha = 8
 alpha_valid_threshold = 0
 
-use_anchor = True                  # if use anchor taxa to regularize interaction matrix
+use_anchor = False                  # if use anchor taxa to regularize interaction matrix
 in_group_anchor_x = [0]
-in_group_anchor_p_base = 0.15
+in_group_anchor_p_base = 0.1
 between_group_anchor_x = [0]
-between_group_anchor_p_base = 0.15
+between_group_anchor_p_base = 0.1
 
 in_group_anchor_x = ",".join([str(x) for x in in_group_anchor_x])
 between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
@@ -185,8 +185,8 @@ MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 20
-saving_test_num = 20
+saving_train_num = 5
+saving_test_num = 5
 
 # whether to save tensorboard
 save_tensorboard = False
@@ -291,7 +291,7 @@ flags.DEFINE_string("regularization_func", regularization_func, "regularization 
 flags.DEFINE_boolean("use_A_L1_loss", use_A_L1_loss, "add L1 loss for interaction matrix and growth rate")
 flags.DEFINE_boolean("use_A_MSE_loss", use_A_MSE_loss, "encourage difference between A in loss")
 flags.DEFINE_boolean("use_kl_loss", use_kl_loss, "add L1 and entropy regularization in loss")
-flags.DEFINE_boolean("use_beta_L1_loss", use_beta_L1_loss, "add L1 for beta in loss")
+flags.DEFINE_boolean("use_beta_entropy_loss", use_beta_entropy_loss, "add entropy regularization for beta in loss")
 
 flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
 
