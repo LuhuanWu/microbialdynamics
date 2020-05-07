@@ -2,8 +2,6 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense
 
 from src.transformation.MLP import MLP_transformation
-from src.transformation.expanded_MLP import ExpandedMLPTransformation, ExpandedMLPTransformation_v2
-from src.transformation.expanded_clv import ExpandedCLVTransformation
 from src.transformation.linear import tf_linear_transformation
 from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
@@ -28,7 +26,7 @@ class SSM(object):
     keeps q, f, g and obs smoother
     """
 
-    def __init__(self, FLAGS, data_dir):
+    def __init__(self, FLAGS):
         assert FLAGS.g_dist_type in SUPPORTED_EMISSION.keys(), "g_dist_type must be one of " +\
                                                                str(SUPPORTED_EMISSION.keys())
 
@@ -36,9 +34,6 @@ class SSM(object):
         self.Dy = FLAGS.Dy
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
         self.Dev = FLAGS.Dev
-
-        self.beta_constant = FLAGS.beta_constant
-        self.clv_in_alr = FLAGS.clv_in_alr
 
         self.batch_size = FLAGS.batch_size
 
@@ -49,16 +44,6 @@ class SSM(object):
         self.f_layers  = [int(x) for x in FLAGS.f_layers.split(",") if x != '']
         self.h_layers  = [int(x) for x in FLAGS.h_layers.split(",") if x != '']
         self.g_layers  = [int(x) for x in FLAGS.g_layers.split(",") if x != '']
-
-        if not self.beta_constant:
-            self.q0_beta_layers = [int(x) for x in FLAGS.q0_beta_layers.split(",") if x != '']
-            self.q1_beta_layers = [int(x) for x in FLAGS.q1_beta_layers.split(",") if x != '']
-            self.q2_beta_layers = [int(x) for x in FLAGS.q2_beta_layers.split(",") if x != '']
-            self.f_beta_layers = [int(x) for x in FLAGS.f_beta_layers.split(",") if x != '']
-            self.q0_beta_sigma_init, self.q0_beta_sigma_min = FLAGS.q0_beta_sigma_init, FLAGS.q0_beta_sigma_min
-            self.q1_beta_sigma_init, self.q1_beta_sigma_min = FLAGS.q1_beta_sigma_init, FLAGS.q1_beta_sigma_min
-            self.q2_beta_sigma_init, self.q2_beta_sigma_min = FLAGS.q2_beta_sigma_init, FLAGS.q2_beta_sigma_min
-            self.f_beta_sigma_init, self.f_beta_sigma_min = FLAGS.f_beta_sigma_init, FLAGS.f_beta_sigma_min
 
         self.q0_sigma_init, self.q0_sigma_min = FLAGS.q0_sigma_init, FLAGS.q0_sigma_min
         self.q1_sigma_init, self.q1_sigma_min = FLAGS.q1_sigma_init, FLAGS.q1_sigma_min
@@ -78,27 +63,12 @@ class SSM(object):
         self.f_tran_type               = FLAGS.f_tran_type
         self.g_tran_type               = FLAGS.g_tran_type
         self.g_dist_type               = FLAGS.g_dist_type
-        self.f_beta_tran_type          = FLAGS.f_beta_tran_type
-
-        self.regularization_func       = FLAGS.regularization_func
-        self.use_soft_assignment       = FLAGS.use_soft_assignment
-        self.assignment_func           = FLAGS.assignment_func
-
-        self.use_variational_dropout   = FLAGS.use_variational_dropout
-        self.clip_alpha                = FLAGS.clip_alpha
-        self.alpha_valid_threshold     = FLAGS.alpha_valid_threshold
-
-        self.use_anchor                = FLAGS.use_anchor
-        self.in_group_anchor_x         = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
-        self.between_group_anchor_x    = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
 
         self.f_use_residual            = FLAGS.f_use_residual
         self.use_stack_rnn             = FLAGS.use_stack_rnn
 
         self.PSVO                      = FLAGS.PSVO
         self.SVO                       = FLAGS.SVO
-
-        self.data_dir = data_dir if FLAGS.initialize_w_true_params else None
 
         self.init_placeholder()
         self.init_trans()
@@ -107,18 +77,13 @@ class SSM(object):
         self.init_input_embedding()
 
     def init_placeholder(self):
-        if not self.beta_constant and self.f_beta_tran_type == "clv" and self.use_anchor:
-            anchor_dim = len(self.between_group_anchor_x) + len(self.in_group_anchor_x)
-            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy + anchor_dim), name="obs")
-        else:
-            self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
+        self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
         self.input = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dv), name="input")
         self.time = tf.placeholder(tf.int32, shape=(), name="time")
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
         self.mask_weight = tf.placeholder(tf.float32, shape=(), name="mask_weight")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
         self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
-        self.annealing = tf.placeholder(tf.float32, shape=(), name="annealing")
         self.training = tf.placeholder(tf.bool, shape=(), name="training")
 
     def init_trans(self):
@@ -128,63 +93,14 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev,
-                                             beta_constant=self.beta_constant,
-                                             clv_in_alr=self.clv_in_alr,
-                                             regularization_func=self.regularization_func,
-                                             use_anchor=self.use_anchor,
-                                             anchor_x=self.between_group_anchor_x,
-                                             data_dir=self.data_dir)
+            self.f_tran = clv_transformation(self.Dx, self.Dev)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
-
-        if not self.beta_constant:
-            if self.f_beta_tran_type == "MLP":
-                self.f_beta_tran = ExpandedMLPTransformation(batch_size=self.Dx+1,
-                                                             Dhs=self.f_beta_layers, Dout=self.Dy-1, name='f_beta_tran')
-            elif self.f_beta_tran_type == "clv":
-                self.f_beta_tran = ExpandedCLVTransformation(self.Dx, self.Dev, self.Dy,
-                                                             self.training,
-                                                             use_soft_assignment=self.use_soft_assignment,
-                                                             assignment_func=self.assignment_func,
-                                                             regularization_func=self.regularization_func,
-                                                             annealing=self.annealing,
-                                                             use_variational_dropout=self.use_variational_dropout,
-                                                             clip_alpha=self.clip_alpha,
-                                                             threshold=self.alpha_valid_threshold,
-                                                             use_anchor=self.use_anchor,
-                                                             anchor_x=self.in_group_anchor_x,
-                                                             data_dir=self.data_dir)
-            else:
-                raise ValueError("Invalid value for f_beta transformation. Must choose from MLP, linear and clv")
-
-            if self.clv_in_alr:
-                beta_batch_size = self.Dx + 1
-                beta_Dout = self.Dy - 1
-            else:
-                beta_batch_size = self.Dx
-                beta_Dout = self.Dy
-
-            self.q0_beta_tran = ExpandedMLPTransformation_v2(batch_size=beta_batch_size,
-                                                             Dhs=self.q0_beta_layers,
-                                                             Dout=beta_Dout,
-                                                             name='q0_beta_tran')
-            self.q2_beta_tran = ExpandedMLPTransformation_v2(batch_size=beta_batch_size,
-                                                             Dhs=self.q2_beta_layers,
-                                                             Dout=beta_Dout,
-                                                             name='q2_beta_tran')
-            # by default, use bootstrap for beta proposal
-            self.q1_beta_tran = self.f_beta_tran
 
         if self.g_tran_type == "MLP":
             self.g_tran = MLP_transformation(self.g_layers, self.Dy, name="g_tran")
         elif self.g_tran_type == "LDA":
-            self.g_tran = LDA_transformation(self.Dx, self.Dy,
-                                             beta_constant=self.beta_constant,
-                                             clv_in_alr=self.clv_in_alr,
-                                             use_anchor=self.use_anchor,
-                                             in_group_anchor_x=self.in_group_anchor_x,
-                                             between_group_anchor_x=self.between_group_anchor_x)
+            self.g_tran = LDA_transformation(self.Dx, self.Dy)
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
         else:
@@ -272,17 +188,6 @@ class SSM(object):
         self.h_dist = tf_mvn(self.h_tran, name="h_dist",
                              sigma_init=self.h_sigma_init,
                              sigma_min=self.h_sigma_min)
-
-        if not self.beta_constant:
-            # TODO: check distribution shape
-            self.q0_beta_dist = tf_mvn(transformation=self.q0_beta_tran, name='q0_beta_dist',
-                                       sigma_init=self.q0_beta_sigma_init, sigma_min=self.q0_beta_sigma_min, rank=2)
-            self.q1_beta_dist = tf_mvn(transformation=self.q1_beta_tran, name='q1_beta_dist',
-                                       sigma_init=self.q1_beta_sigma_init, sigma_min=self.q1_beta_sigma_min, rank=2)
-            self.q2_beta_dist = tf_mvn(transformation=self.q2_beta_tran, name='q2_beta_dist',
-                                       sigma_init=self.q2_beta_sigma_init, sigma_min=self.q2_beta_sigma_min, rank=2)
-            self.f_beta_dist = tf_mvn(transformation=self.f_beta_tran, name='f_beta_dist',
-                                      sigma_init=self.f_beta_sigma_init, sigma_min=self.f_beta_sigma_min, rank=2)
 
     def init_RNNs(self):
         if self.SVO or self.PSVO:

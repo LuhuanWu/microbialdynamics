@@ -38,22 +38,6 @@ class trainer:
         self.Dv = self.FLAGS.Dv
         self.n_particles = self.FLAGS.n_particles
 
-        self.beta_constant = FLAGS.beta_constant
-        self.use_A_L1_loss = FLAGS.use_A_L1_loss
-        self.use_A_MSE_loss = FLAGS.use_A_MSE_loss
-        self.use_kl_loss = FLAGS.use_kl_loss
-        self.use_beta_entropy_loss = FLAGS.use_beta_entropy_loss
-
-        self.use_anchor = FLAGS.use_anchor
-        self.in_group_anchor_x = [float(x) for x in FLAGS.in_group_anchor_x.split(",") if x != '']
-        self.between_group_anchor_x = [float(x) for x in FLAGS.between_group_anchor_x.split(",") if x != '']
-        self.in_group_anchor_p_base = FLAGS.in_group_anchor_p_base
-        self.between_group_anchor_p_base = FLAGS.between_group_anchor_p_base
-
-        self.use_soft_assignment = FLAGS.use_soft_assignment
-        self.annealing_steps = FLAGS.annealing_steps
-        self.annealing_final_val = FLAGS.annealing_final_val
-
         self.update_interp_while_train = self.FLAGS.update_interp_while_train
         self.update_interp_interval = self.FLAGS.update_interp_interval
         self.use_mask = self.FLAGS.use_mask
@@ -81,7 +65,6 @@ class trainer:
         self.time_interval = self.model.time_interval
         self.extra_inputs = self.model.extra_inputs
         self.training = self.model.training
-        self.annealing = self.model.annealing
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -145,28 +128,6 @@ class trainer:
     def init_train(self, hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                    mask_train, mask_test, time_interval_train, time_interval_test,
                    extra_inputs_train, extra_inputs_test):
-        self.D_anchor = 1
-        if self.use_anchor:
-            self.D_anchor = len(self.in_group_anchor_x) + len(self.between_group_anchor_x)
-            in_group_anchor_p = np.exp(self.in_group_anchor_x) * self.in_group_anchor_p_base
-            between_group_anchor_p = np.exp(self.between_group_anchor_x) * self.between_group_anchor_p_base
-            total_anchor_p = np.sum(in_group_anchor_p) + np.sum(between_group_anchor_p)
-            assert total_anchor_p < 1
-
-            # set data
-            def add_anchor_to_obs(obses):
-                obses_w_anchor = []
-                for obs in obses:
-                    depth = np.sum(obs, axis=-1, keepdims=True)
-                    in_group_anchor = (depth / (1 - total_anchor_p) * in_group_anchor_p).astype(int)
-                    between_group_anchor = (depth / (1 - total_anchor_p) * between_group_anchor_p).astype(int)
-                    obs_w_anchor = np.concatenate([obs, in_group_anchor, between_group_anchor], axis=-1)
-                    obses_w_anchor.append(obs_w_anchor)
-                return obses_w_anchor
-
-            obs_train, obs_test = add_anchor_to_obs(obs_train), add_anchor_to_obs(obs_test)
-            extra_inputs_train = [np.sum(obs, axis=-1) for obs in obs_train]
-            extra_inputs_test = [np.sum(obs, axis=-1) for obs in obs_test]
 
         self.hidden_train = [softmax(hidden, axis=-1) for hidden in hidden_train]
         self.hidden_test = [softmax(hidden, axis=-1) for hidden in hidden_test]
@@ -186,95 +147,16 @@ class trainer:
 
         self.Xs = self.log["Xs_resampled"]
         self.particles = [self.Xs]
-        if not self.beta_constant:
-            self.beta_logs = self.log["beta_logs_resampled"]
-            self.particles.append(self.beta_logs)
-        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy, \
-            self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy = \
+        self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.particles,
-                                self.obs, self.input_embedding, self.mask, self.extra_inputs,
-                                self.use_anchor, self.D_anchor)
+                                self.obs, self.input_embedding, self.mask, self.extra_inputs)
         self.log["y_hat"] = self.y_hat_N_BxTxDy
-        self.log["y_hat_full"] = self.y_hat_full_N_BxTxDy
 
         # set up feed_dict
         self.set_feed_dict()
 
         loss = -self.log_ZSMC
-        if not self.beta_constant:
-            if self.model.f_beta_tran_type == "clv" and self.model.use_variational_dropout:
-                dkl = self.model.f_beta_tran.variational_dropout_dkl_loss()
-                step = tf.cast(tf.train.get_or_create_global_step(), tf.float32)
-                reg_scalar = tf.minimum(step / (100.0 * len(obs_train) / self.batch_size), 1.0)
-                loss += dkl * reg_scalar
-
-            assert not self.FLAGS.clv_in_alr
-
-            global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
-
-            if self.use_A_L1_loss:
-                # encourage large entropy for group proportion
-                # (batch_size, time, n_particles, Dx)
-                Xs_prev = self.log["Xs"]
-                group_ps = tf.nn.softmax(Xs_prev, axis=-1)
-                group_ps = tf.clip_by_value(group_ps, EPS, 1 - EPS)
-                group_ps_ent = -group_ps * tf.log(group_ps)
-                group_ent_loss = tf.reduce_mean(tf.reduce_sum(group_ps_ent, axis=(1, 3)))
-                loss += -group_ent_loss * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
-                # L1 regularization
-                A_beta, g_beta = self.model.f_beta_tran.A_beta, self.model.f_beta_tran.g_beta
-                A_beta_diag = tf.linalg.diag_part(A_beta)
-                A, g = self.model.f_tran.A, self.model.f_tran.g
-                L1 = tf.reduce_sum(tf.abs(A_beta)) - tf.reduce_sum(tf.abs(A_beta_diag)) + \
-                     tf.reduce_sum(tf.abs(g_beta)) + \
-                     tf.reduce_sum(tf.abs(A)) + tf.reduce_sum(tf.abs(g))
-                loss += L1 * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
-            if self.use_A_MSE_loss:
-                # encourage divergence of A from different groups
-                A_beta = self.model.f_beta_tran.A_beta
-                A_beta_diag = tf.linalg.diag_part(A_beta)
-                A_beta = tf.linalg.set_diag(A_beta, tf.zeros_like(A_beta_diag))
-                A_MSE = 0
-                for i in range(self.Dx):
-                    A_i = A_beta[i, :, :]   # Dy x Dy
-                    for j in range(i + 1, self.Dx):
-                        A_j = A_beta[i, :, :]
-                        A_MSE += tf.reduce_sum((A_i - A_j) ** 2)
-                loss += -A_MSE * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
-            if self.use_kl_loss:
-                # encourage divergence between taxon proportions of different groups
-                # (batch_size, time, n_particles, Dx, Dy)
-                beta_logs_prev = self.log["beta_logs"]
-                beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
-                beta_ps = tf.clip_by_value(beta_ps, EPS, 1 - EPS)
-                divergences = 0
-                for i in range(self.Dx):
-                    p = beta_ps[:, :, :, i, :]
-                    for j in range(i + 1, self.Dx):
-                        q = beta_ps[:, :, :, j, :]
-                        divergence = 0.5 * (p * (tf.log(p) - tf.log(q)) + q * (tf.log(q) - tf.log(p)))
-                        divergence = tf.reduce_mean(tf.reduce_sum(divergence, axis=(1, 3)))
-                        divergences += divergence
-                loss += -divergences * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
-            if self.use_beta_entropy_loss:
-                # encourage divergence between taxon proportions of different groups
-                # (batch_size, time, n_particles, Dx, Dy)
-                beta_logs_prev = self.log["beta_logs"]
-                beta_ps = tf.nn.softmax(beta_logs_prev, axis=-1)
-                beta_ps /= tf.reduce_sum(beta_ps, axis=-2, keepdims=True)
-                beta_ent = -tf.reduce_mean(tf.reduce_sum(beta_ps * tf.log(beta_ps), axis=(1, 3, 4)))
-                loss += beta_ent * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
-            if self.use_soft_assignment:
-                # minimize entropy of theta so that the assignment become diverse
-                theta = self.model.f_beta_tran.theta
-                theta_ent = tf.reduce_sum(-theta * tf.log(theta))
-                loss += theta_ent * tf.minimum(global_step / float(len(obs_train)) * 10, 1)
-
+        global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self.lr_holder)
@@ -294,11 +176,7 @@ class trainer:
         self.unmasked_y_train = []
         self.unmasked_y_test = []
 
-        if self.use_anchor:
-            obs_train = [obs[:, :-self.D_anchor] for obs in self.obs_train]
-            obs_test = [obs[:, :-self.D_anchor] for obs in self.obs_test]
-        else:
-            obs_train, obs_test = self.obs_train, self.obs_test
+        obs_train, obs_test = self.obs_train, self.obs_test
         for k in range(self.MSE_steps + 1):
             self.unmasked_y_train.append([obs[k:][None, ] for obs in obs_train])
             self.unmasked_y_test.append([obs[k:][None, ] for obs in obs_test])
@@ -352,12 +230,9 @@ class trainer:
                 mask_weight = 0
             else:
                 mask_weight = 1
-            annealing_val = 1 - self.n_epochs * (1 - self.annealing_final_val) / self.annealing_steps
-            annealing_val = max(annealing_val, self.annealing_final_val)
             self.n_epochs += 1
 
             set_feed_dict(self.mask_weight, mask_weight)
-            set_feed_dict(self.annealing, annealing_val)
             start = time.time()
 
             if i == 0:
@@ -379,8 +254,7 @@ class trainer:
                                          self.time_interval: time_interval_train[j:j + self.batch_size],
                                          self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
                                          self.lr_holder:     self.lr,
-                                         self.training:      True,
-                                         self.annealing:     annealing_val})
+                                         self.training:      True,})
                 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -391,27 +265,16 @@ class trainer:
 
                 if self.save_res:
                     if self.model.g_tran_type == 'LDA':
-                        if self.beta_constant:
-                            beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-                            plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
-                            with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
-                                pickle.dump(beta_val, f)
+                        beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
+                        plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
+                        with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
+                            pickle.dump(beta_val, f)
 
-                    if not self.beta_constant:
+                    if self.model.g_tran_type == 'clv':
                         A, g, Wv = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wv])
-                        A_beta, dropout_A_beta, g_beta, Wv_beta = \
-                            self.sess.run([self.model.f_beta_tran.A_beta,
-                                           self.model.f_beta_tran.dropout_A_beta,
-                                           self.model.f_beta_tran.g_beta,
-                                           self.model.f_beta_tran.Wv_beta],
-                                          feed_dict={self.annealing: self.annealing_final_val})
                         interaction = {"A": A,
                                        "g": g,
-                                       "Wv": Wv,
-                                       "A_beta": A_beta,
-                                       "dropout_A_beta": dropout_A_beta,
-                                       "g_beta": g_beta,
-                                       "Wv_beta": Wv_beta,}
+                                       "Wv": Wv,}
                         with open(self.epoch_data_DIR + "interaction_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(interaction, f)
 
@@ -495,24 +358,12 @@ class trainer:
 
     def evaluate_and_save_metrics(self, iter_num):
 
-        [log_ZSMC_train,
-         y_hat_train, y_train, unmasked_y_hat_train,
-         y_hat_full_train, y_full_train, unmasked_y_hat_full_train,
-         Xs_train] = \
-            self.evaluate([self.log_ZSMC,
-                           self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy,
-                           self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy,
-                           self.Xs],
+        [log_ZSMC_train, y_hat_train, y_train] = \
+            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy],
                           feed_dict_w_batches=self.train_all_feed_dict)
 
-        [log_ZSMC_test,
-         y_hat_test, y_test, unmasked_y_hat_test,
-         y_hat_full_test, y_full_test, unmasked_y_hat_full_test,
-         Xs_test] = \
-            self.evaluate([self.log_ZSMC,
-                           self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy,
-                           self.y_hat_full_N_BxTxDy, self.y_full_N_BxTxDy, self.unmasked_y_hat_full_N_BxTxDy,
-                           self.Xs],
+        [log_ZSMC_test, y_hat_test, y_test] = \
+            self.evaluate([self.log_ZSMC, self.y_hat_N_BxTxDy, self.y_N_BxTxDy],
                           feed_dict_w_batches=self.test_all_feed_dict)
 
         log_ZSMC_train, log_ZSMC_test = np.mean(log_ZSMC_train), np.mean(log_ZSMC_test)
@@ -528,78 +379,6 @@ class trainer:
 
         print("Train, Valid k-step Rsq (original space):\n", R_square_original_train, "\n", R_square_original_test)
         print("Train, Valid k-step Rsq (percent space):\n", R_square_percentage_train, "\n", R_square_percentage_test)
-        # print("Train, Valid k-step Rsq (log percent space):\n", R_square_logp_train, "\n", R_square_logp_test)
-
-        # unmasked_R_square_original_train, unmasked_R_square_percentage_train, unmasked_R_square_logp_train = \
-        #     self.evaluate_R_square(unmasked_y_hat_train, self.unmasked_y_train)
-        # unmasked_R_square_original_test, unmasked_R_square_percentage_test, unmasked_R_square_logp_test = \
-        #     self.evaluate_R_square(unmasked_y_hat_test, self.unmasked_y_test)
-        # print()
-        # print("Unmasked Train, Valid k-step Rsq (original space):\n", unmasked_R_square_original_train, "\n",
-        #       unmasked_R_square_original_test)
-        # print("Unmasked Train, Valid k-step Rsq (percent space):\n", unmasked_R_square_percentage_train, "\n",
-        #       unmasked_R_square_percentage_test)
-        # print("Unmasked Train, Valid k-step Rsq (log percent space):\n", unmasked_R_square_logp_train, "\n",
-        #       unmasked_R_square_logp_test)
-
-        R_square_full_original_train, R_square_full_percentage_train, R_square_full_logp_train = \
-            self.evaluate_R_square(y_hat_full_train, y_full_train)
-        R_square_full_original_test, R_square_full_percentage_test, R_square_full_logp_test = \
-            self.evaluate_R_square(y_hat_full_test, y_full_test)
-        print()
-        print("Full Train, Valid k-step Rsq (original space):\n", R_square_full_original_train, "\n",
-              R_square_full_original_test)
-        print("Full Train, Valid k-step Rsq (percent space):\n", R_square_full_percentage_train, "\n",
-              R_square_full_percentage_test)
-        # print("Full Train, Valid k-step Rsq (log percent space):\n", R_square_full_logp_train, "\n",
-        #       R_square_full_logp_test)
-
-        if self.use_anchor:
-            assert not self.FLAGS.clv_in_alr
-            assert len(Xs_train) == len(self.hidden_train)
-            assert len(Xs_test) == len(self.hidden_test)
-            Xs_train = [softmax(np.mean(x_traj, axis=1), axis=-1) for x_traj in Xs_train]
-            Xs_test = [softmax(np.mean(x_traj, axis=1), axis=-1) for x_traj in Xs_test]
-
-            Xs_train = np.concatenate(Xs_train, axis=0)
-            Xs_test = np.concatenate(Xs_test, axis=0)
-            hidden_train = np.concatenate(self.hidden_train, axis=0)
-            hidden_test = np.concatenate(self.hidden_test, axis=0)
-
-            assert Xs_train.shape == hidden_train.shape
-
-            permutation_counter = {}
-            for x, h in zip(Xs_train, hidden_train):
-                permutation = np.zeros_like(x)
-                x_arg = np.argsort(x)
-                h_arg = np.argsort(h)
-                for x_idx, h_idx in zip(x_arg, h_arg):
-                    permutation[x_idx] = h_idx
-                permutation = permutation.astype(int)
-                permutation_key = ",".join([str(ele) for ele in permutation])
-                permutation_counter[permutation_key] = permutation_counter.get(permutation_key, 0) + 1
-            max_permutation_key, max_count = None, 0
-            for permutation, count in permutation_counter.items():
-                if count > max_count:
-                    max_permutation_key = permutation
-            assert max_permutation_key is not None
-            max_permutation = np.array([int(ele) for ele in max_permutation_key.split(",")])
-
-            Xs_train_permuted = np.stack([Xs_train[:, i] for i in max_permutation], axis=-1)
-            Xs_test_permuted = np.stack([Xs_test[:, i] for i in max_permutation], axis=-1)
-
-            def R_square(pred, truth):
-                MSE = np.sum((pred - truth) ** 2)
-                truth_mean = np.mean(truth, axis=0, keepdims=True)
-                truth_var = np.sum((truth - truth_mean) ** 2)
-                return 1 - MSE / truth_var
-
-            Xs_train_R_sq = R_square(Xs_train_permuted, hidden_train)
-            Xs_test_R_sq = R_square(Xs_test_permuted, hidden_test)
-
-            print()
-            print("permutation:", max_permutation_key)
-            print("Train, Valid k-step Rsq:\n", Xs_train_R_sq, "\n", Xs_test_R_sq)
 
         if not math.isfinite(log_ZSMC_train):
             print("Nan in log_ZSMC, stop training")
