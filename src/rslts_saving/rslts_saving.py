@@ -318,7 +318,7 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, original_obs, mask, saving_num=20, 
             plt.close()
 
 
-def plot_x_bar_plot(RLT_DIR, xs_val, clv_in_alr=False, saving_num=20):
+def plot_x_bar_plot(RLT_DIR, xs_val, saving_num=20):
     # ys_hat_val, a list, a list of length K+1, each item is a list of k-step prediction for #n_test,
     # each of which is an array (T-k, Dy)
     if not os.path.exists(RLT_DIR):
@@ -333,8 +333,6 @@ def plot_x_bar_plot(RLT_DIR, xs_val, clv_in_alr=False, saving_num=20):
     for i in range(saving_num):
         x_traj = xs_val[i]
         time = x_traj.shape[0]
-        if clv_in_alr:
-            x_traj = np.concatenate((x_traj, np.zeros((time, 1))), axis=-1)  # (n_days, Dy+1)
         percentage = softmax(x_traj, axis=-1)
 
         plt.figure(figsize=(15, 5))
@@ -373,7 +371,7 @@ def plot_topic_bar_plot(RLT_DIR, beta, epoch=None):
     plt.close()
 
 
-def plot_topic_bar_plot_across_time(RLT_DIR, beta_logs, clv_in_alr=False, saving_num=20):
+def plot_topic_bar_plot_across_time(RLT_DIR, beta_logs, saving_num=20):
 
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
@@ -383,8 +381,6 @@ def plot_topic_bar_plot_across_time(RLT_DIR, beta_logs, clv_in_alr=False, saving
     for i in range(saving_num):
         beta_log = beta_logs[i]
         beta_log = np.mean(beta_log, axis=1)  # (time, Dx+1, Dy-1)
-        if clv_in_alr:
-            beta_log = np.concatenate([beta_log, np.zeros_like(beta_log[..., 0:1])], axis=-1)
         beta = softmax(beta_log, axis=-1)  # (time, Dx+1, Dy)
 
         time, n_topics, n_taxa = beta.shape

@@ -4,52 +4,21 @@ import pickle
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev,
-                 beta_constant=True, clv_in_alr=True,
-                 regularization_func="softplus",
-                 use_anchor=False, anchor_x=[],
-                 data_dir=None):
+    def __init__(self, Dx, Dev):
         self.Dx = Dx
         self.Dev = Dev
-        self.clv_in_alr = clv_in_alr
-        self.use_anchor = use_anchor
-        self.anchor_x = anchor_x
-        if use_anchor:
-            assert len(anchor_x) > 0
 
-        if regularization_func == "softplus":
-            regu_func = tf.nn.softplus
-        else:
-            raise NotImplementedError
+        hidden_dim = Dx
 
-        if data_dir is not None:
-            with open(data_dir, "rb") as f:
-                d = pickle.load(f)
-            A_init_val = tf.constant(d['A'], dtype=tf.float32)
-            g_init_val = tf.constant(d['g'], dtype=tf.float32)
-            Wv_init_val = tf.constant(d['Wv'].T, dtype=tf.float32)
-
-        hidden_dim = self.Dx + 1 if clv_in_alr else self.Dx
-        if data_dir is None or d['A'].shape[0] != hidden_dim:
-            A_init_val = tf.zeros((hidden_dim, hidden_dim))
-            g_init_val = tf.zeros((hidden_dim,))
-            Wv_init_val = tf.zeros((self.Dev, hidden_dim))
+        A_init_val = tf.zeros((hidden_dim, hidden_dim))
+        g_init_val = tf.zeros((hidden_dim,))
+        Wv_init_val = tf.zeros((self.Dev, hidden_dim))
         self.A_var = tf.Variable(A_init_val)
         self.g_var = tf.Variable(g_init_val)
         self.Wv_var = tf.Variable(Wv_init_val)
 
-        if not beta_constant:
-            upper_triangle = tf.linalg.band_part(self.A_var, 0, -1)     # including diagonal
-            upper_triangle = -regu_func(upper_triangle)
-            upper_triangle = tf.linalg.band_part(upper_triangle, 0, -1)
-            lower_triangle = tf.linalg.band_part(self.A_var, -1, 0)     # including diagonal
-            diagonal = -regu_func(tf.linalg.diag_part(self.A_var))
-            A_tmp = upper_triangle + lower_triangle
-            self.A = tf.linalg.set_diag(A_tmp, diagonal)
-        else:
-            self_interaction = -regu_func(tf.linalg.diag_part(self.A_var))
-            self.A = tf.linalg.set_diag(self.A_var, self_interaction)   # self-interaction should be negative
-        self.g = regu_func(self.g_var)                             # growth should be positive
+        self.A = self.A_var
+        self.g = self.g_var
         self.Wv = self.Wv_var
 
     def transform(self, Input):
@@ -76,21 +45,8 @@ class clv_transformation(transformation):
         v = Input[0, 0:1, Dx:]  # (1, Dev)
         v_size = v.shape[-1]
 
-        if self.clv_in_alr:
-            zeros = tf.zeros_like(x[..., 0:1])
-            x = tf.concat([x, zeros], axis=-1)
-
         x_ = x
-
-        if self.use_anchor:
-            ones = tf.ones_like(x_[..., 0:1])
-            anchors = [ones * x_val for x_val in self.anchor_x]
-            x_ = tf.concat([x_] + anchors, axis=-1)
-
         p = tf.nn.softmax(x_, axis=-1)  # (n_particles, batch_size, Dx + 1)
-
-        if self.use_anchor:
-            p = p[..., :-len(self.anchor_x)]
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
         pA = tf.reduce_sum(p[..., None] * A, axis=-2) # (..., Dx)
@@ -100,9 +56,6 @@ class clv_transformation(transformation):
             output = x + g + Wvv + pA
         else:
             output = x + g + pA
-
-        if self.clv_in_alr:
-            output = output[..., :-1] - output[..., -1:]
 
         return output
 

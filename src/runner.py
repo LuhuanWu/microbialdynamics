@@ -41,17 +41,12 @@ def main(_):
 
     FLAGS.epochs = [int(epoch) for epoch in FLAGS.epochs.split(",")]
 
-    if FLAGS.beta_constant or FLAGS.f_beta_tran_type != "clv" or FLAGS.g_tran_type != "LDA":
-        FLAGS.use_anchor = False
-
     tf.set_random_seed(FLAGS.seed)
     np.random.seed(FLAGS.seed)
 
     # ============================================= dataset part ============================================= #
     # generate data from simulation
     repo_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    # repo = git.Repo('.', search_parent_directories=True)
-    # repo_dir = repo.working_tree_dir  # microbialdynamics
 
     data_dir = DATA_DIR_DICT[FLAGS.data_type]
     data_dir = os.path.join(repo_dir, data_dir)
@@ -88,7 +83,7 @@ def main(_):
     print("finished preparing dataset")
 
     # ============================================== model part ============================================== #
-    SSM_model = SSM(FLAGS, data_dir)
+    SSM_model = SSM(FLAGS)
 
     # at most one of them can be set to True
     assert FLAGS.PSVO + FLAGS.SVO + FLAGS.AESMC + FLAGS.IWAE < 2
@@ -143,69 +138,29 @@ def main(_):
         with open(checkpoint_dir + "history.json", "w") as f:
             json.dump(history, f, indent=4, cls=NumpyEncoder)
 
-        Xs, beta_logs = log["Xs_resampled"], log["beta_logs_resampled"]
-        y_hat, y_hat_full = log["y_hat"], log["y_hat_full"]
-        Xs_train = mytrainer.evaluate(Xs, mytrainer.train_feed_dict)
-        Xs_test = mytrainer.evaluate(Xs, mytrainer.test_feed_dict)
+        Xs, y_hat = log["Xs_resampled"], log["y_hat"]
+        Xs_train, y_hat_train = mytrainer.evaluate([Xs, y_hat], mytrainer.train_feed_dict)
+        Xs_test, y_hat_test = mytrainer.evaluate([Xs, y_hat], mytrainer.test_feed_dict)
 
-        y_hat_train, y_hat_full_train = mytrainer.evaluate([y_hat, y_hat_full], mytrainer.train_feed_dict)
-        y_hat_test, y_hat_full_test = mytrainer.evaluate([y_hat, y_hat_full], mytrainer.test_feed_dict)
-
-        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_train_bar_plots", y_hat_train, obs_train, mask=mask_train,
+        plot_y_hat_bar_plot(checkpoint_dir + "y_hat_train_bar_plots", y_hat_train, obs_train, mask=mask_train,
                             saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
-        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_test_bar_plots", y_hat_test, obs_test, mask=mask_test,
-                            saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
-
-        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_full_train_bar_plots",
-                            y_hat_full_train, mytrainer.obs_train, mask=mask_train,
-                            saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
-        plot_y_hat_bar_plot(checkpoint_dir+"y_hat_full_test_bar_plots",
-                            y_hat_full_test, mytrainer.obs_test, mask=mask_test,
+        plot_y_hat_bar_plot(checkpoint_dir + "y_hat_test_bar_plots", y_hat_test, obs_test, mask=mask_test,
                             saving_num=FLAGS.saving_test_num, to_normalize=y_hat_bar_plot_to_normalize)
 
         testing_data_dict = {"hidden_test": hidden_test[0:FLAGS.saving_test_num],
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
-        learned_model_dict = {"Xs_test": Xs_test,
-                              "y_hat_val_test": y_hat_test}
+        learned_model_dict = {"Xs_test": Xs_test, "y_hat_val_test": y_hat_test}
+
         if FLAGS.g_tran_type == "LDA":
-            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_train, FLAGS.clv_in_alr)
-            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_test, FLAGS.clv_in_alr)
-            if FLAGS.beta_constant:
-                beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
-                learned_model_dict["topic"] = beta_val
-                plot_topic_bar_plot(checkpoint_dir, beta_val)
-            else:
-                # batch_size, (time, n_particles, Dx+1, Dy-1)
-                beta_logs_train = mytrainer.evaluate(beta_logs, feed_dict_w_batches=mytrainer.train_feed_dict)
-                beta_logs_test = mytrainer.evaluate(beta_logs, feed_dict_w_batches=mytrainer.test_feed_dict)
-                plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents_train",
-                                                beta_logs_train, FLAGS.clv_in_alr)
-                plot_topic_bar_plot_across_time(checkpoint_dir + "topic_contents_test",
-                                                beta_logs_test, FLAGS.clv_in_alr)
+            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_train)
+            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_test)
 
-                A, g, Wv = mytrainer.sess.run([SSM_model.f_tran.A,
-                                               SSM_model.f_tran.g,
-                                               SSM_model.f_tran.Wv])
-                A_beta, g_beta, Wv_beta, theta = \
-                    mytrainer.sess.run([SSM_model.f_beta_tran.A_beta,
-                                        SSM_model.f_beta_tran.g_beta,
-                                        SSM_model.f_beta_tran.Wv_beta,
-                                        SSM_model.f_beta_tran.theta],
-                                       {SSM_model.training: False,
-                                        SSM_model.annealing: FLAGS.annealing_final_val})
-                with open(data_dir, "rb") as f:
-                    data = pickle.load(f)
+            beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
+            learned_model_dict["topic"] = beta_val
+            plot_topic_bar_plot(checkpoint_dir, beta_val)
 
-                betas = {"beta_logs_train": beta_logs_train, "beta_logs_test": beta_logs_test,
-                         "A": A, "g": g, "Wv": Wv,
-                         "A_beta": A_beta, "g_beta": g_beta, "Wv_beta": Wv_beta, "theta": theta}
-
-                plot_interaction_matrix(checkpoint_dir + "interaction", betas, data)
-
-                with open(checkpoint_dir + "beta.p", "wb") as f:
-                    pickle.dump(betas, f)
         data_dict = {"testing_data_dict": testing_data_dict,
                      "learned_model_dict": learned_model_dict}
 

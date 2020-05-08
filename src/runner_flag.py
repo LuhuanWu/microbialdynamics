@@ -24,66 +24,34 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # Dy and Dv need to match the data set
+Dx = 2                  # dimension of hidden states (num of groups/topics)
 Dy = 8                  # dimension of observations (num of taxa)
 Dv = 0                  # dimension of inputs (num of perturbations)
 
 # see options: utils/available_data.py
 data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
 
-Dx = 2                  # dimension of hidden states (num of groups/topics)
-
-lr = 3e-4               # learning rate
-epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
+lr = 1e-2               # learning rate
+epochs = [3, 3]       # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
 Dev = 0                 # dimension of inputs embedding
-n_particles = 16        # number of particles
-n_bw_particles = 16     # number of subparticles sampled when augmenting the trajectory backwards
+n_particles = 8         # number of particles
+n_bw_particles = 8      # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
 
 seed = 0
-
-clv_in_alr = False           # if clv equations are in additive log ratio space or log space
-beta_constant = False        # if True, use LDA emission; if False, use both between-group and in-group interactions
-f_beta_tran_type = "clv"     # in-group interaction transition type
-
-regularization_func = "softplus"   # function to constrain interaction matrix
-use_A_L1_loss = True
-use_A_MSE_loss = False
-use_kl_loss = False
-use_beta_L1_loss = False
-
-use_soft_assignment = True         # if use theta as soft assignment of taxa to groups/topics
-assignment_func = "softmax"        # softmax/sparsemax as assignment function
-# theta = assignment_func(theta_variable / delta),
-# where delta annearl from 1 to annealing_final_val after annealing_steps epochs
-annealing_steps = 800
-annealing_final_val = 1e-2
-
-use_variational_dropout = False    # if use variational dropout to sparsify interaction matrix
-clip_alpha = 8
-alpha_valid_threshold = 0
-
-use_anchor = True                  # if use anchor taxa to regularize interaction matrix
-in_group_anchor_x = [0]
-in_group_anchor_p_base = 0.15
-between_group_anchor_x = [0]
-between_group_anchor_p_base = 0.15
-
-in_group_anchor_x = ",".join([str(x) for x in in_group_anchor_x])
-between_group_anchor_x = ",".join([str(x) for x in between_group_anchor_x])
 
 # ------------------------------- Data ------------------------------- #
 
 interpolation_type = "none"        # interpolation type for missing observations
 pseudo_count = 0
-initialize_w_true_params = False
 
 # choose samples from the data set for training. -1 indicates use default training set
-train_num = -1
+train_num = 10
 # choose samples from the test set for test. -1 indicates default test set
-test_num = -1
+test_num = 5
 
 # ------------------------ State Space Model ------------------------- #
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
@@ -94,22 +62,6 @@ g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and m
 
 emission_use_auxiliary = True  # use auxiliary hidden variable to mitigate overfitting to sequencing noise
 
-# ------------------- LDA training beta session --------------------- #
-# ------------------- not used by current model --------------------- #
-q0_beta_layers = [16]        # q(x_1|y_1) or q(x_1|y_1:T)
-q1_beta_layers = [16]        # q(x_t|x_{t-1}), including backward evolution term q(x_{t-1}|x_t)
-q2_beta_layers = [16]        # q(x_t|y_t) or q(x_t|y_1:T)
-f_beta_layers = [16]         # target evolution
-
-q0_beta_sigma_init, q0_beta_sigma_min = 5, 1e-8
-q1_beta_sigma_init, q1_beta_sigma_min = 5, 1e-8
-q2_beta_sigma_init, q2_beta_sigma_min = 5, 1e-8
-f_beta_sigma_init, f_beta_sigma_min = 5, 1e-8
-
-q0_beta_layers = ",".join([str(x) for x in q0_beta_layers])
-q1_beta_layers = ",".join([str(x) for x in q1_beta_layers])
-q2_beta_layers = ",".join([str(x) for x in q2_beta_layers])
-f_beta_layers = ",".join([str(x) for x in f_beta_layers])
 
 # ----------------------- Networks parameters ----------------------- #
 # ------------------- not used by current model --------------------- #
@@ -170,7 +122,7 @@ update_interp_interval = 1  # 100 epochs
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 10  # 100
+print_freq = 1  # 100
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -185,8 +137,8 @@ MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 20
-saving_test_num = 20
+saving_train_num = 5
+saving_test_num = 5
 
 # whether to save tensorboard
 save_tensorboard = False
@@ -232,9 +184,6 @@ flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, 
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
                                                               "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
 flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the observations")
-
-flags.DEFINE_boolean("initialize_w_true_params", initialize_w_true_params, "whether to initialize clv with "
-                     "ground truth parameters")
 
 flags.DEFINE_integer("train_num", train_num, "number of samples from the dataset for training")
 flags.DEFINE_integer("test_num", test_num, "number of samples from the dataset for testing")
@@ -282,66 +231,12 @@ flags.DEFINE_boolean("f_use_residual", f_use_residual, "whether use batch normal
 flags.DEFINE_boolean("use_stack_rnn", use_stack_rnn, "whether use tf.contrib.rnn.stack_bidirectional_dynamic_rnn "
                                                      "or tf.nn.bidirectional_dynamic_rnn")
 
-# ------------------------ LDA training beta session ----------------------#
-flags.DEFINE_boolean("beta_constant", beta_constant, "whether to set beta as trainable constant, "
-                                                     "or a trainable random variable")
-flags.DEFINE_string("regularization_func", regularization_func, "regularization function for clv and expanded_clv, """
-                                                                "currently only relu and softplus are supported.")
-
-flags.DEFINE_boolean("use_A_L1_loss", use_A_L1_loss, "add L1 loss for interaction matrix and growth rate")
-flags.DEFINE_boolean("use_A_MSE_loss", use_A_MSE_loss, "encourage difference between A in loss")
-flags.DEFINE_boolean("use_kl_loss", use_kl_loss, "add L1 and entropy regularization in loss")
-flags.DEFINE_boolean("use_beta_L1_loss", use_beta_L1_loss, "add L1 for beta in loss")
-
-flags.DEFINE_string("f_beta_tran_type", f_beta_tran_type, "type of f_betra transformation.")
-
-flags.DEFINE_boolean("use_variational_dropout", use_variational_dropout, "whether to use variational dropout to "
-                     "sparsify in-group interaction matrix")
-flags.DEFINE_float("clip_alpha", clip_alpha, "clip value for alpha in variational dropout")
-flags.DEFINE_float("alpha_valid_threshold", alpha_valid_threshold, "threshold for dropping elements in interaction "
-                   "matrix given alpha")
-
-flags.DEFINE_boolean("use_soft_assignment", use_soft_assignment, "use_soft_assignment")
-flags.DEFINE_string("assignment_func", assignment_func, "assignment function for theta of in-group interactions.")
-
-flags.DEFINE_integer("annealing_steps", annealing_steps, "n epoches to anneal to final values")
-flags.DEFINE_float("annealing_final_val", annealing_final_val, "final annealing values")
-
-flags.DEFINE_boolean("use_anchor", use_anchor, "whether to use an anchor taxon as base for the hidden log space")
-flags.DEFINE_string("in_group_anchor_x", in_group_anchor_x, "anchor for in-group interaction in hidden space")
-flags.DEFINE_float("in_group_anchor_p_base", in_group_anchor_p_base,
-                   "anchor for in-group interaction in relative abundance")
-flags.DEFINE_string("between_group_anchor_x", between_group_anchor_x,
-                    "anchor for between-group interaction in hidden space")
-flags.DEFINE_float("between_group_anchor_p_base", between_group_anchor_p_base,
-                   "anchor for between-group interaction in relative abundance")
-
-flags.DEFINE_string("q0_beta_layers", q0_beta_layers, "architecture for q0_beta network, int separated by comma, "
-                    "for example: '50,50' ")
-flags.DEFINE_string("q1_beta_layers", q1_beta_layers, "architecture for q1_beta network, int separated by comma, "
-                    "for example: '50,50' ")
-flags.DEFINE_string("q2_beta_layers", q2_beta_layers, "architecture for q2_beta network, int separated by comma, "
-                    "for example: '50,50' ")
-flags.DEFINE_string("f_beta_layers",  f_beta_layers,  "architecture for f_eta network, int separated by comma, "
-                    "for example: '50,50' ")
-flags.DEFINE_float("q0_beta_sigma_init", q0_beta_sigma_init, "initial value of q0_beta_sigma")
-flags.DEFINE_float("q1_beta_sigma_init", q1_beta_sigma_init, "initial value of q1_beta_sigma")
-flags.DEFINE_float("q2_beta_sigma_init", q2_beta_sigma_init, "initial value of q2_beta_sigma")
-flags.DEFINE_float("f_beta_sigma_init",  f_beta_sigma_init,  "initial value of f_beta_sigma")
-
-flags.DEFINE_float("q0_beta_sigma_min", q0_beta_sigma_min, "minimal value of q0_beta_sigma")
-flags.DEFINE_float("q1_beta_sigma_min", q1_beta_sigma_min, "minimal value of q1_beta_sigma")
-flags.DEFINE_float("q2_beta_sigma_min", q2_beta_sigma_min, "minimal value of q2_beta_sigma")
-flags.DEFINE_float("f_beta_sigma_min",  f_beta_sigma_min,  "minimal value of f_beta_sigma")
-
 # ------------------------ State Space Model ------------------------- #
 flags.DEFINE_boolean("use_mask", use_mask, "whether to use mask for missing observations")
 
 flags.DEFINE_string("f_tran_type", f_tran_type, "type of f transformation, choose from MLP, linear, clv and clv_original")
 flags.DEFINE_string("g_tran_type", g_tran_type, "type of g transformation, choose from MLP and LDA")
 flags.DEFINE_string("g_dist_type", g_dist_type, "type of g distribution, chosen from dirichlet, poisson, mvn and multinomial")
-
-flags.DEFINE_boolean("clv_in_alr", clv_in_alr, "whether hidden space is in alr space")
 
 flags.DEFINE_boolean("emission_use_auxiliary", emission_use_auxiliary, "whether to use auxiliary variables in emission")
 
