@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 
 
-def load_data(path, Dx, train_num=-1, test_num=-1):
+def load_data(path, train_num=-1, test_num=-1):
     with open(path, "rb") as handle:
         data = pickle.load(handle)
 
@@ -11,6 +11,10 @@ def load_data(path, Dx, train_num=-1, test_num=-1):
     input_train = data["Vtrain"]
     input_test = data["Vtest"]
 
+    theta = None
+    if "theta" in data:
+        theta = data["theta"]
+
     if "Xtrain" in data and "Xtest" in data:
         hidden_train = data["Xtrain"]
         hidden_test = data["Xtest"]
@@ -18,28 +22,29 @@ def load_data(path, Dx, train_num=-1, test_num=-1):
         hidden_train = [None for _ in obs_train]
         hidden_test = [None for _ in obs_test]
 
-    if "counts_train" in data and "counts_test" in data:
-        extra_inputs_train = data["counts_train"]
-        extra_inputs_test = data["counts_test"]
+    if "depth_train" in data and "depth_test" in data:
+        depth_train = data["depth_train"]
+        depth_test = data["depth_test"]
     else:
-        extra_inputs_train = [None for _ in range(len(obs_train))]
-        extra_inputs_test = [None for _ in range(len(obs_test))]
+        depth_train = [obs[:, 1:].sum(axis=-1) for obs in obs_train]
+        depth_test = [obs[:, 1:].sum(axis=-1) for obs in obs_test]
+
+    params = None
+    if "b" in data and "g" in data and "A" in data and "W" in data:
+        b, g, A, W = data["b"], data["g"], data["A"], data["W"]
+        params = (b, g, A, W)
 
     if train_num > 0:
-        obs_train = [np.array(obs) for obs in obs_train[:train_num]]
-        input_train = [np.array(input) for input in input_train[:train_num]]
-        if hidden_train[0] is not None:
-            hidden_train = [np.array(hidden) for hidden in hidden_train[:train_num]]
-        if extra_inputs_train[0] is not None:
-            extra_inputs_train = [np.array(extra_inputs) for extra_inputs in extra_inputs_train[:train_num]]
+        obs_train = obs_train[:train_num]
+        input_train = input_train[:train_num]
+        hidden_train = hidden_train[:train_num]
+        depth_train = depth_train[:train_num]
 
     if test_num > 0:
-        obs_test = [np.array(obs) for obs in obs_test[:test_num]]
-        input_test = [np.array(input) for input in input_test[:test_num]]
-        if hidden_test[0] is not None:
-            hidden_test = [np.array(hidden) for hidden in hidden_test[:test_num]]
-        if extra_inputs_test[0] is not None:
-            extra_inputs_test = [np.array(extra_inputs) for extra_inputs in extra_inputs_test[:test_num]]
+        obs_test = obs_test[:test_num]
+        input_test = input_test[:test_num]
+        hidden_test = hidden_test[:test_num]
+        depth_test = depth_test[:test_num]
 
-    return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        extra_inputs_train, extra_inputs_test
+    return hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, depth_train, depth_test, \
+           theta, params
