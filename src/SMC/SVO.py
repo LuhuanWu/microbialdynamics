@@ -1,6 +1,7 @@
 import numpy as np
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
+from src.transformation.ilr_clv_utils import ilr_transform
 
 
 class SVO:
@@ -30,7 +31,7 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, input, time, mask, time_interval, extra_inputs, mask_weight):
+    def get_log_ZSMC(self, obs, input, time, mask, time_interval, depth, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
@@ -39,7 +40,7 @@ class SVO:
             time.shape = ()
             mask.shape = (batch_size, time) | batch_size=1
             time_interval:
-            extra_inputs.shape = (batch_size, time) -- count data
+            depth.shape = (batch_size, time) -- count data
         Output:
             log_ZSMC: shape = scalar
             log: stuff to debug
@@ -53,7 +54,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
+            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, depth, mask_weight)
 
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
 
@@ -65,14 +66,15 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, obs, input, mask, time_interval, extra_inputs, mask_weight, q_cov=1.0):
+    def SMC(self, obs, input, mask, time_interval, depth, mask_weight, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
-        Dy = self.model.Dy
 
         # preprocessing obs
         if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
             # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
+            if self.model.f_tran_type == "ilr_clv":
+                obs_4_proposal = ilr_transform(obs_4_proposal, self.model.theta)
         else:
             obs_4_proposal = obs
         self.preprocessed_X0, self.preprocessed_obs = self.preprocess_obs(obs_4_proposal, time_interval)
@@ -94,10 +96,11 @@ class SVO:
         else:
             g_input = X_0
             qh_0_log_prob = h_0_log_prob = 0
-        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], extra_inputs=extra_inputs[:, 0])
+        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], depth=depth[:, 0])
+        g_0_log_prob += h_0_log_prob - qh_0_log_prob
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
-        log_alpha_0 = f_0_log_prob + h_0_log_prob + g_0_log_prob - q_0_log_prob - qh_0_log_prob
+        log_alpha_0 = f_0_log_prob + g_0_log_prob - q_0_log_prob
 
         log_W_0 = tf.add(log_alpha_0, - tf.log(tf.constant(n_particles, dtype=tf.float32)),
                          name="log_W_0")  # (n_particles, batch_size)
@@ -105,14 +108,10 @@ class SVO:
         X_ancestor_0 = self.resample_X(X_0, log_W_0, sample_size=n_particles,
                                        resample_particles=self.resample_particles)
         if self.resample_particles:
-            log_normalized_W_0 = tf.negative(tf.log(tf.constant(n_particles, dtype=tf.float32,
-                                                                shape=(n_particles, batch_size))),
-                                              name="log_normalized_W_0")
-
+            log_normalized_W_0 = -tf.log(tf.constant(n_particles, dtype=tf.float32, shape=(n_particles, batch_size)),
+                                         name="log_normalized_W_0")
         else:
-            log_normalized_W_0 = tf.add(log_W_0, - tf.reduce_logsumexp(log_W_0, axis=0),
-                                        name="log_normalized_W_{}".format(0))
-
+            log_normalized_W_0 = tf.add(log_W_0, -tf.reduce_logsumexp(log_W_0, axis=0), name="log_normalized_W_0")
 
         # -------------------------------------- t = 1, ..., T - 1 -------------------------------------- #
         Xs_ta = tf.TensorArray(tf.float32, size=time, name="Xs_ta")
@@ -156,10 +155,11 @@ class SVO:
                 qh_t_log_prob = h_t_log_prob = 0
 
             # emission log probability and log weights
-            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], depth=depth[:, t])
+            g_t_log_prob += h_t_log_prob - qh_t_log_prob
             g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
-            log_alpha_t = f_t_log_prob + h_t_log_prob + g_t_log_prob - q_t_log_prob - qh_t_log_prob
+            log_alpha_t = f_t_log_prob + g_t_log_prob - q_t_log_prob
 
             log_W_t = log_alpha_t + log_normalized_W_tm1
 
@@ -167,7 +167,9 @@ class SVO:
                                            resample_particles=self.resample_particles)
 
             if self.resample_particles:
-                log_normalized_W_t = -tf.log(tf.constant(n_particles, dtype=tf.float32, shape=(n_particles, batch_size)))
+                log_normalized_W_t = -tf.log(tf.constant(n_particles,
+                                                         shape=(n_particles, batch_size),
+                                                         dtype=tf.float32))
             else:
                 log_normalized_W_t = log_W_t - tf.reduce_logsumexp(log_W_t, axis=0)
 
@@ -372,7 +374,7 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, particles, obs, input, mask, extra_inputs):
+    def n_step_MSE(self, n_steps, particles, obs, input, mask, depth):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -380,7 +382,7 @@ class SVO:
         :param obs: (batch_size, time, Dy)
         :param input: (batch_size, time, Dv)
         :param mask: (batch_size, time)
-        :param extra_inputs: (batch_size, time)
+        :param depth: (batch_size, time)
         :return:
         """
 
@@ -402,7 +404,7 @@ class SVO:
 
             for k in range(n_steps):
                 g_input = particle_BxTmkxDz[0]
-                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, k:])
+                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, depth=depth[:, k:])
                 # (batch_size, time - k, Dy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
 
@@ -419,7 +421,7 @@ class SVO:
                 particle_BxTmkxDz = [x_BxTmkxDz]
 
             g_input = particle_BxTmkxDz[0]
-            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, extra_inputs=extra_inputs[:, n_steps:])  # (batch_size, T - N, Dy)
+            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, depth=depth[:, n_steps:])  # (batch_size, T - N, Dy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
 
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
