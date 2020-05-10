@@ -4,8 +4,6 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 
 # for data saving stuff
-import joblib
-# import git
 
 # import from files
 from src.model import SSM
@@ -19,8 +17,7 @@ from src.rslts_saving.rslts_saving import *
 from src.rslts_saving.fhn_rslts_saving import *
 from src.rslts_saving.lorenz_rslts_saving import *
 
-from src.utils.data_generator import generate_dataset
-from src.utils.available_data import DATA_DIR_DICT, PERCENTAGE_DATA_DICT, COUNT_DATA_DICT, INTERPOLATION_DATA_DICT
+from src.utils.available_data import DATA_DIR_DICT, COUNT_DATA_DICT
 from src.utils.data_loader import load_data
 from src.utils.data_interpolation import interpolate_data
 
@@ -32,9 +29,7 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    if FLAGS.g_dist_type == "dirichlet":
-        y_hat_bar_plot_to_normalize = False
-    elif FLAGS.g_dist_type == "poisson" or FLAGS.g_dist_type == "multinomial":
+    if FLAGS.g_dist_type == "poisson" or FLAGS.g_dist_type == "multinomial":
         y_hat_bar_plot_to_normalize = True
     else:
         raise ValueError("Unsupported emission!")
@@ -53,24 +48,19 @@ def main(_):
     if FLAGS.interpolation_type == 'none':
         FLAGS.interpolation_type = None
 
-    if FLAGS.data_type in PERCENTAGE_DATA_DICT or FLAGS.data_type in COUNT_DATA_DICT:
-        hidden_train, hidden_test, obs_train, obs_test, \
-            input_train, input_test, \
-            extra_inputs_train, extra_inputs_test = \
-            load_data(data_dir, Dx, train_num=FLAGS.train_num, test_num=FLAGS.test_num)
-        n_train, n_test = len(obs_train), len(obs_test)
-        FLAGS.n_train, FLAGS.n_test = n_train, n_test
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, depth_train, depth_test, theta, params = \
+        load_data(data_dir, train_num=FLAGS.train_num, test_num=FLAGS.test_num)
 
-        hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-            mask_train, mask_test, time_interval_train, time_interval_test, extra_inputs_train, extra_inputs_test = \
-            interpolate_data(hidden_train, hidden_test,
-                             obs_train, obs_test,
-                             input_train, input_test,
-                             extra_inputs_train, extra_inputs_test,
-                             interpolation_type=FLAGS.interpolation_type,
-                             pseudo_count=FLAGS.pseudo_count)
-    else:
-        raise ValueError("Data type must be one of available data types.")
+    FLAGS.n_train, FLAGS.n_test = n_train, n_test = len(obs_train), len(obs_test)
+
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
+        mask_train, mask_test, time_interval_train, time_interval_test, depth_train, depth_test = \
+        interpolate_data(hidden_train, hidden_test,
+                         obs_train, obs_test,
+                         input_train, input_test,
+                         depth_train, depth_test,
+                         interpolation_type=FLAGS.interpolation_type,
+                         pseudo_count=FLAGS.pseudo_count)
 
     # clip saving_test_num to avoid it > n_train or n_test
     min_time_train = min([obs.shape[0] for obs in obs_train])
@@ -83,7 +73,7 @@ def main(_):
     print("finished preparing dataset")
 
     # ============================================== model part ============================================== #
-    SSM_model = SSM(FLAGS)
+    SSM_model = SSM(FLAGS, theta)
 
     # at most one of them can be set to True
     assert FLAGS.PSVO + FLAGS.SVO + FLAGS.AESMC + FLAGS.IWAE < 2
@@ -119,7 +109,7 @@ def main(_):
     mytrainer.set_data_saving()
     mytrainer.init_train(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                          mask_train, mask_test, time_interval_train, time_interval_test,
-                         extra_inputs_train, extra_inputs_test)
+                         depth_train, depth_test)
 
     plot_start_idx = 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):
@@ -142,6 +132,8 @@ def main(_):
         Xs_train, y_hat_train = mytrainer.evaluate([Xs, y_hat], mytrainer.train_feed_dict)
         Xs_test, y_hat_test = mytrainer.evaluate([Xs, y_hat], mytrainer.test_feed_dict)
 
+        learned_model_dict = {"Xs_test": Xs_test, "y_hat_val_test": y_hat_test.copy()}
+
         plot_y_hat_bar_plot(checkpoint_dir + "y_hat_train_bar_plots", y_hat_train, obs_train, mask=mask_train,
                             saving_num=FLAGS.saving_train_num, to_normalize=y_hat_bar_plot_to_normalize)
         plot_y_hat_bar_plot(checkpoint_dir + "y_hat_test_bar_plots", y_hat_test, obs_test, mask=mask_test,
@@ -151,15 +143,11 @@ def main(_):
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
-        learned_model_dict = {"Xs_test": Xs_test, "y_hat_val_test": y_hat_test}
-
-        if FLAGS.g_tran_type == "LDA":
-            plot_x_bar_plot(checkpoint_dir + "x_train_bar_plots", Xs_train)
-            plot_x_bar_plot(checkpoint_dir + "x_test_bar_plots", Xs_test)
-
-            beta_val = mytrainer.sess.run(SSM_model.g_tran.beta, {SSM_model.training: False})
-            learned_model_dict["topic"] = beta_val
-            plot_topic_bar_plot(checkpoint_dir, beta_val)
+        if FLAGS.f_tran_type == "ilr_clv":
+            f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params, {SSM_model.training: False})
+            with open(data_dir, "rb") as f:
+                data = pickle.load(f)
+            plot_interaction_matrix(checkpoint_dir + "interaction", f_tran_params, data)
 
         data_dict = {"testing_data_dict": testing_data_dict,
                      "learned_model_dict": learned_model_dict}

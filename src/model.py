@@ -5,8 +5,10 @@ from src.transformation.MLP import MLP_transformation
 from src.transformation.linear import tf_linear_transformation
 from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
+from src.transformation.ilr_clv import ilr_clv_transformation
 from src.transformation.identity import identity_transformation
 from src.transformation.inv_alr import inv_alr_transformation
+from src.transformation.inv_ilr import inv_ilr_transformation
 from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
@@ -26,7 +28,7 @@ class SSM(object):
     keeps q, f, g and obs smoother
     """
 
-    def __init__(self, FLAGS):
+    def __init__(self, FLAGS, theta):
         assert FLAGS.g_dist_type in SUPPORTED_EMISSION.keys(), "g_dist_type must be one of " +\
                                                                str(SUPPORTED_EMISSION.keys())
 
@@ -34,6 +36,8 @@ class SSM(object):
         self.Dy = FLAGS.Dy
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
         self.Dev = FLAGS.Dev
+
+        self.theta = theta
 
         self.batch_size = FLAGS.batch_size
 
@@ -83,7 +87,7 @@ class SSM(object):
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
         self.mask_weight = tf.placeholder(tf.float32, shape=(), name="mask_weight")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
-        self.extra_inputs = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="extra_inputs")
+        self.depth = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="depth")
         self.training = tf.placeholder(tf.bool, shape=(), name="training")
 
     def init_trans(self):
@@ -94,6 +98,10 @@ class SSM(object):
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
             self.f_tran = clv_transformation(self.Dx, self.Dev)
+        elif self.f_tran_type == "ilr_clv":
+            assert self.Dx == self.Dy - 1
+            assert self.theta.shape == (self.Dy - 1, self.Dy)
+            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.training)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
@@ -103,6 +111,8 @@ class SSM(object):
             self.g_tran = LDA_transformation(self.Dx, self.Dy)
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
+        elif self.g_tran_type == "inv_ilr":
+            self.g_tran = inv_ilr_transformation(self.theta)
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 

@@ -24,15 +24,15 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # Dy and Dv need to match the data set
-Dx = 2                  # dimension of hidden states (num of groups/topics)
-Dy = 8                  # dimension of observations (num of taxa)
-Dv = 0                  # dimension of inputs (num of perturbations)
+Dy = 6             # dimension of observations (num of taxa)
+Dv = 0             # dimension of inputs (num of perturbations)
+Dx = 5             # dimension of hidden states (num of groups/topics)
 
 # see options: utils/available_data.py
-data_type = "group_Dx_2_Dv_0_ntrain_300_Kvar_05"
+data_type = "tree_6_taxa"
 
-lr = 1e-2               # learning rate
-epochs = [3, 3]       # num of epochs, [500, 500] will train for 500 epochs, save results,
+lr = 3e-4               # learning rate
+epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
@@ -49,16 +49,16 @@ interpolation_type = "none"        # interpolation type for missing observations
 pseudo_count = 0
 
 # choose samples from the data set for training. -1 indicates use default training set
-train_num = 10
+train_num = -1
 # choose samples from the test set for test. -1 indicates default test set
-test_num = 5
+test_num = -1
 
 # ------------------------ State Space Model ------------------------- #
 use_mask = True  # whether to use mask in log_ZSMC. note that mask will always be used in R_square
 
-f_tran_type = "clv"          # choose from MLP, linear, clv
-g_tran_type = "LDA"          # choose from MLP, LDA
-g_dist_type = "multinomial"  # choose from dirichlet, poisson, multinomial and mvn
+f_tran_type = "ilr_clv"          # choose from MLP, linear, clv
+g_tran_type = "inv_ilr"          # choose from MLP, LDA
+g_dist_type = "multinomial"      # choose from dirichlet, poisson, multinomial and mvn
 
 emission_use_auxiliary = True  # use auxiliary hidden variable to mitigate overfitting to sequencing noise
 
@@ -116,13 +116,9 @@ lr_reduce_factor = 1 / np.sqrt(2)
 # minimum lr
 min_lr = lr / 100
 
-# some interpolation and learning schemes
-update_interp_while_train = False
-update_interp_interval = 1  # 100 epochs
-
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 1  # 100
+print_freq = 10
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -130,15 +126,15 @@ save_y_hat_train = False
 save_y_hat_test = False
 
 # dir to save all results
-rslt_dir_name = "clv_group/{}_Dx{}".format(data_type, Dx)
+rslt_dir_name = "ilr_clv/{}_Dx{}".format(data_type, Dx)
 
 # number of steps to predict y-hat and calculate R_square
 MSE_steps = 5
 
 # number of testing data used to save hidden trajectories, y-hat, gradient and etc
 # will be clipped by number of testing data
-saving_train_num = 5
-saving_test_num = 5
+saving_train_num = 10
+saving_test_num = 10
 
 # whether to save tensorboard
 save_tensorboard = False
@@ -261,11 +257,6 @@ flags.DEFINE_integer("lr_reduce_patience", lr_reduce_patience,
 flags.DEFINE_float("lr_reduce_factor", lr_reduce_factor,
                    "the factor to reduce learning rate, new_lr = old_lr * lr_reduce_factor")
 flags.DEFINE_float("min_lr", min_lr, "minimum learning rate")
-
-flags.DEFINE_boolean("update_interp_while_train", update_interp_while_train,
-                     "whether to update the interpolation data while training")
-flags.DEFINE_integer("update_interp_interval", update_interp_interval, "the interval (number of epochs) of updating "
-                                                                       "the interpolation")
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 

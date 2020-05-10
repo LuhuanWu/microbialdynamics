@@ -453,66 +453,60 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
 
 def plot_interaction_matrix(RLT_DIR, inferred, truth):
+    b = inferred["b"]
+    g = inferred["g"]
     A = inferred["A"]
-    A_beta = inferred["A_beta"]
-    theta = inferred["theta"]
-    g_beta = inferred["g_beta"]
+    Wv = inferred["Wv"]
 
-    A_beta = np.clip(A_beta, -2, 2)
-
-    # interaction
-    Dx = A.shape[0]
-    Dy = A_beta.shape[1]
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
+
+    if "b" in truth:
+        b_truth = truth["b"]
+    else:
+        b_truth = np.zeros_like(b)
+    sns.heatmap(np.stack([b_truth, b], axis=0),
+                cmap="seismic", center=0, square=True, linewidth=0.5)
+    ticks = ["truth", "inferred"]
+    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/b")
+    plt.close()
+
+    # interaction
     sns.heatmap(A, cmap="seismic", center=0, square=True, linewidth=0.5)
-    plt.plot([0, Dx], [0, Dx], "k")
     plt.tight_layout()
     plt.savefig(RLT_DIR + "/A")
     plt.close()
 
-    for i, A_group in enumerate(A_beta):
-        sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
-        plt.plot([0, Dy], [0, Dy], "k")
-        plt.tight_layout()
-        plt.savefig(RLT_DIR + "/A_beta_{}".format(i))
-        plt.close()
-
-    if "A" in truth:
-        A_truth = truth["A"]
+    if "masked_A" in truth:
+        A_truth = truth["masked_A"]
         sns.heatmap(A_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
-        plt.plot([0, Dx], [0, Dx], "k")
         plt.tight_layout()
         plt.savefig(RLT_DIR + "/A_truth")
         plt.close()
 
-    if "A_g" in truth:
-        A_beta_truth = truth["A_g"]
-        A_beta_truth = np.clip(A_beta_truth, -2, 2)
-        for i, A_group in enumerate(A_beta_truth):
-            sns.heatmap(A_group, cmap="seismic", center=0, square=True, linewidth=0.5)
-            plt.plot([0, Dy], [0, Dy], "k")
-            plt.tight_layout()
-            plt.savefig(RLT_DIR + "/A_beta_truth_{}".format(i))
-            plt.close()
-
     # growth
-    if "g_g" in truth:
-        g_beta_truth = truth["g_g"]
-        sns.heatmap(np.concatenate([g_beta_truth[None, :], g_beta], axis=0),
+    if "masked_g" in truth:
+        g_truth = truth["masked_g"]
+        sns.heatmap(np.stack([g_truth, g], axis=0),
                     cmap="seismic", center=0, square=True, linewidth=0.5)
-        ticks = ["truth"] + ["group {}".format(i) for i in range(Dx)]
-        plt.yticks(0.5 + np.arange(Dx + 1), ticks, rotation=0)
+        ticks = ["truth", "inferred"]
+        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
         plt.tight_layout()
         plt.savefig(RLT_DIR + "/g")
         plt.close()
 
-    # theta
-    sns.heatmap(theta.T, cmap="seismic", center=0, square=True, linewidth=0.5)
-    yticks = ["taxon {}".format(i) for i in range(Dy)]
-    plt.yticks(0.5 + np.arange(Dy), yticks, rotation=0)
-    xticks = ["group {}".format(i) for i in range(Dx)]
-    plt.xticks(0.5 + np.arange(Dx), xticks, rotation=45)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/theta")
-    plt.close()
+    # perturbation
+    if Wv.shape[1] > 0:
+        sns.heatmap(Wv, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/W")
+        plt.close()
+
+        if "W" in truth:
+            W_truth = truth["W"]
+            sns.heatmap(W_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+            plt.tight_layout()
+            plt.savefig(RLT_DIR + "/W_truth")
+            plt.close()

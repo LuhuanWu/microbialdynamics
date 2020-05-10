@@ -38,23 +38,18 @@ class trainer:
         self.Dv = self.FLAGS.Dv
         self.n_particles = self.FLAGS.n_particles
 
-        self.update_interp_while_train = self.FLAGS.update_interp_while_train
-        self.update_interp_interval = self.FLAGS.update_interp_interval
         self.use_mask = self.FLAGS.use_mask
         self.epochs = self.FLAGS.epochs
         self.n_epochs = 0
-        #self.interp_data = None
 
         self.MSE_steps = self.FLAGS.MSE_steps
 
         # useful for simulating training dynamics
         self.save_res = False
-        self.draw_quiver_during_training = False
 
         self.init_placeholder()
         self.init_training_param()
         self.input_embedding = model.input_embedding
-        self.init_quiver_plotting()
 
     def init_placeholder(self):
         self.obs = self.model.obs
@@ -63,7 +58,7 @@ class trainer:
         self.mask = self.model.mask
         self.mask_weight = self.model.mask_weight
         self.time_interval = self.model.time_interval
-        self.extra_inputs = self.model.extra_inputs
+        self.depth = self.model.depth
         self.training = self.model.training
 
     def init_training_param(self):
@@ -121,35 +116,28 @@ class trainer:
         if self.save_tensorboard:
             self.writer = tf.summary.FileWriter(self.checkpoint_dir)
 
-    def init_quiver_plotting(self):
-        if self.Dx == 2 or self.Dx == 3:
-            self.draw_quiver_during_training = True
-
     def init_train(self, hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
                    mask_train, mask_test, time_interval_train, time_interval_test,
-                   extra_inputs_train, extra_inputs_test):
+                   depth_train, depth_test):
 
         self.hidden_train = [softmax(hidden, axis=-1) for hidden in hidden_train]
         self.hidden_test = [softmax(hidden, axis=-1) for hidden in hidden_test]
         self.obs_train, self.obs_test = obs_train, obs_test
-        self.extra_inputs_train, self.extra_inputs_test = extra_inputs_train, extra_inputs_test
+        self.depth_train, self.depth_test = depth_train, depth_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
 
-        # set up unmasked data
-        self.set_interp_val()
-
         # define objective
         self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.input_embedding, self.time,
-                                                        self.mask, self.time_interval, self.extra_inputs,
+                                                        self.mask, self.time_interval, self.depth,
                                                         self.mask_weight)
 
         self.Xs = self.log["Xs_resampled"]
         self.particles = [self.Xs]
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.particles,
-                                self.obs, self.input_embedding, self.mask, self.extra_inputs)
+                                self.obs, self.input_embedding, self.mask, self.depth)
         self.log["y_hat"] = self.y_hat_N_BxTxDy
 
         # set up feed_dict
@@ -157,6 +145,12 @@ class trainer:
 
         loss = -self.log_ZSMC
         global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
+
+        # regularization
+        if self.model.f_tran_type == "ilr_clv":
+            reg = self.model.f_tran.regularization_loss()
+            loss += reg * tf.minimum(global_step / (len(obs_train) * 20.0), 1.0)
+
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self.lr_holder)
@@ -169,18 +163,6 @@ class trainer:
         self.sess.run(init)
         self.total_epoch_count = 0
 
-    def set_interp_val(self):
-        """
-        :return: a list of length MSE_steps, each is a list of length training_size or test_size
-        """
-        self.unmasked_y_train = []
-        self.unmasked_y_test = []
-
-        obs_train, obs_test = self.obs_train, self.obs_test
-        for k in range(self.MSE_steps + 1):
-            self.unmasked_y_train.append([obs[k:][None, ] for obs in obs_train])
-            self.unmasked_y_test.append([obs[k:][None, ] for obs in obs_test])
-
     def set_feed_dict(self):
         # data up to saving_num
         self.train_feed_dict = {self.obs: self.obs_train[0:self.saving_train_num],
@@ -188,7 +170,7 @@ class trainer:
                                 self.time: [obs.shape[0] for obs in self.obs_train[0: self.saving_train_num]],
                                 self.mask: self.mask_train[0: self.saving_train_num],
                                 self.time_interval: self.time_interval_train[0:self.saving_train_num],
-                                self.extra_inputs: self.extra_inputs_train[0: self.saving_train_num],
+                                self.depth: self.depth_train[0: self.saving_train_num],
                                 self.training: [False] * self.saving_train_num}
 
         self.test_feed_dict = {self.obs: self.obs_test[0:self.saving_test_num],
@@ -196,7 +178,7 @@ class trainer:
                                self.time: [obs.shape[0] for obs in self.obs_test[0: self.saving_test_num]],
                                self.mask: self.mask_test[0:self.saving_test_num],
                                self.time_interval: self.time_interval_test[0:self.saving_test_num],
-                               self.extra_inputs: self.extra_inputs_test[0:self.saving_test_num],
+                               self.depth: self.depth_test[0:self.saving_test_num],
                                self.training: [False] * self.saving_test_num}
         # all data
         self.train_all_feed_dict = {self.obs: self.obs_train,
@@ -204,7 +186,7 @@ class trainer:
                                     self.time: [obs.shape[0] for obs in self.obs_train],
                                     self.mask: self.mask_train,
                                     self.time_interval: self.time_interval_train,
-                                    self.extra_inputs: self.extra_inputs_train,
+                                    self.depth: self.depth_train,
                                     self.training: [False] * len(self.obs_train)}
 
         self.test_all_feed_dict = {self.obs: self.obs_test,
@@ -212,7 +194,7 @@ class trainer:
                                    self.time: [obs.shape[0] for obs in self.obs_test],
                                    self.mask: self.mask_test,
                                    self.time_interval: self.time_interval_test,
-                                   self.extra_inputs: self.extra_inputs_test,
+                                   self.depth: self.depth_test,
                                    self.training: [False] * len(self.obs_test)}
 
     def train(self, print_freq, epoch):
@@ -239,9 +221,9 @@ class trainer:
                 self.evaluate_and_save_metrics(self.total_epoch_count)
 
             # training
-            obs_train, input_train, mask_train, time_interval_train, extra_inputs_train = \
+            obs_train, input_train, mask_train, time_interval_train, depth_train = \
                 shuffle(self.obs_train, self.input_train, self.mask_train,
-                        self.time_interval_train, self.extra_inputs_train)
+                        self.time_interval_train, self.depth_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
@@ -252,10 +234,10 @@ class trainer:
                                          self.mask:          mask_train[j:j + self.batch_size],
                                          self.mask_weight:   mask_weight,
                                          self.time_interval: time_interval_train[j:j + self.batch_size],
-                                         self.extra_inputs:  extra_inputs_train[j:j + self.batch_size],
+                                         self.depth:  depth_train[j:j + self.batch_size],
                                          self.lr_holder:     self.lr,
-                                         self.training:      True,})
-                
+                                         self.training:      True})
+
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
                     self.evaluate_and_save_metrics(self.total_epoch_count)
@@ -264,21 +246,7 @@ class trainer:
                     break
 
                 if self.save_res:
-                    if self.model.g_tran_type == 'LDA':
-                        beta_val = self.sess.run(self.model.g_tran.beta_mean, {self.model.training: False})
-                        plot_topic_bar_plot(self.checkpoint_dir + "/beta", beta_val, i)
-                        with open(self.epoch_data_DIR + "beta_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(beta_val, f)
-
-                    if self.model.g_tran_type == 'clv':
-                        A, g, Wv = self.sess.run([self.model.f_tran.A, self.model.f_tran.g, self.model.f_tran.Wv])
-                        interaction = {"A": A,
-                                       "g": g,
-                                       "Wv": Wv,}
-                        with open(self.epoch_data_DIR + "interaction_{}.p".format(i + 1), "wb") as f:
-                            pickle.dump(interaction, f)
-
-                    if self.save_trajectory or self.draw_quiver_during_training:
+                    if self.save_trajectory:
                         Xs_val = self.evaluate(self.Xs, self.test_feed_dict, average=False)
 
                     if self.save_trajectory:
@@ -297,44 +265,6 @@ class trainer:
                         y_hat_test_dict = {"y_hat_test": y_hat_val_test}
                         with open(self.epoch_data_DIR + "y_hat_test_{}.p".format(i + 1), "wb") as f:
                             pickle.dump(y_hat_test_dict, f)
-
-                    if self.draw_quiver_during_training:
-                        if self.Dx == 2:
-                            self.draw_2D_quiver_plot(Xs_val, i + 1)
-                        elif self.Dx == 3:
-                            self.draw_3D_quiver_plot(Xs_val, i + 1)
-
-            if self.update_interp_while_train and i % self.update_interp_interval == 0 and i != 0:
-                interp_train_feed_dict = {self.obs: self.obs_train,
-                                          self.input: self.input_train,
-                                          self.time: [obs.shape[0] for obs in self.obs_train],
-                                          self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_train],
-                                          self.mask_weight: [mask_weight] * len(self.obs_train),
-                                          self.time_interval: self.time_interval_train,
-                                          self.extra_inputs: self.extra_inputs_train,
-                                          self.training: [False] * len(self.obs_train)}
-                # without maksng interpolation data, and make predictions
-                y_hat_val_train = self.evaluate([self.y_hat_N_BxTxDy], interp_train_feed_dict, average=False)[0]
-
-                self.obs_train, self.extra_inputs_train = \
-                    trainer_interpolation_helper(data=self.obs_train, y_hat_vals=y_hat_val_train[0], masks=self.mask_train)
-
-                interp_test_feed_dict = {self.obs: self.obs_test,
-                                         self.input: self.input_test,
-                                         self.time: [obs.shape[0] for obs in self.obs_test],
-                                         self.mask: [np.ones_like(m_t, dtype=m_t.dtype) for m_t in self.mask_test],
-                                         self.mask_weight: [mask_weight] * len(self.obs_test),
-                                         self.time_interval: self.time_interval_test,
-                                         self.extra_inputs: self.extra_inputs_test,
-                                         self.training: [False] * len(self.obs_test)}
-                y_hat_val_test = self.evaluate([self.y_hat_N_BxTxDy], interp_test_feed_dict, average=False)[0]
-
-                self.obs_test, self.extra_inputs_test = \
-                    trainer_interpolation_helper(data=self.obs_test, y_hat_vals=y_hat_val_test[0], masks=self.mask_test)
-                # update unmasked data and k-step data
-                self.set_interp_val()
-                # update the feed dict using new interpolated data
-                self.set_feed_dict()
 
             self.total_epoch_count += 1
 
