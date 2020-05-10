@@ -2,7 +2,6 @@ import numpy as np
 import tensorflow as tf
 
 from src.transformation.base import transformation
-from src.transformation.clv import batch_matmul
 
 class linear_transformation(transformation):
     def transform(self, Input, **kwargs):
@@ -23,6 +22,6 @@ class tf_linear_transformation(transformation):
 
     def transform(self, Input):
         # Input shape: (n_particles, batch_size, Dx + Dev)
-        output = batch_matmul(Input, self.A) + self.b
+        output = tf.reduce_sum(Input[..., None] * self.A, axis=-2) + self.b
 
         return output

@@ -28,9 +28,10 @@ class LDA_transformation(transformation):
         self.beta_mean = tf.nn.softmax(self.beta_log)
 
     def transform(self, x):
-        x = tf.nn.softmax(x, axis=-1)  # (..., Dx+1)
+        x = tf.nn.softmax(x, axis=-1)  # (..., Dx)
 
-        # (..., Dx+1, 1) * (Dx+1, Dy)
+        # (..., Dx, 1) * (Dx, Dy)
         output = tf.reduce_sum(x[..., None] * self.beta, axis=-2)  # (..., Dy)
+        output = tf.log(output)
 
         return output
