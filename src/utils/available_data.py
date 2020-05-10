@@ -66,8 +66,8 @@ clv_gp_w_input_sparse_3_ntrain_600_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5
 
 
 # ----------------------------------------- ilr + clv data ----------------------------------------- #
-tree_6_taxa_dir = "data/ilr_clv/six_taxa.p"
-tree_8_taxa_dir = "data/ilr_clv/eight_taxa.p"
+six_taxa_in_group_False_dir = "data/ilr_clv/6_taxa_in_group_False.p"
+six_taxa_in_group_True_dir = "data/ilr_clv/6_taxa_in_group_True.p"
 
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
@@ -78,8 +78,8 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        count_k6=count_data_k6_dir,
                        count_k8=count_data_k8_dir,
                        count_small=count_small_dir,
-                       tree_6_taxa=tree_6_taxa_dir,
-                       tree_8_taxa=tree_8_taxa_dir,
+                       six_taxa_in_group_False=six_taxa_in_group_False_dir,
+                       six_taxa_in_group_True=six_taxa_in_group_True_dir,
                        clv_lda=clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir,
                        )
 
