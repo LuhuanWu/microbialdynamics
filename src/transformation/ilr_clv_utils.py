@@ -80,6 +80,8 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
 
     return child
 
+# ------------------------------------------ between-group interaction ------------------------------------------ #
+
 
 def get_p_i(n_inode, root):
     p_i = [0 for _ in range(n_inode)]
@@ -98,14 +100,14 @@ def get_p_i_helper(p_i, node, p_ancestors_break):
     get_p_i_helper(p_i, node.right, p_ancestors_break)
 
 
-def get_p_j_given_i(n_node, n_inode, root):
+def get_between_group_p_j_given_i(n_node, n_inode, root):
     p_j_given_i = [0 for _ in range(n_inode)]
-    get_p_j_given_i_helper(p_j_given_i, n_node, root, root)
+    get_between_group_p_j_given_i_helper(p_j_given_i, n_node, root, root)
     p_j_given_i = tf.stack(p_j_given_i, axis=0)
     return p_j_given_i
 
 
-def get_p_j_given_i_helper(p_j_given_i, n_node, root, node):
+def get_between_group_p_j_given_i_helper(p_j_given_i, n_node, root, node):
     # node: inode i
     if node.is_taxon():
         return
@@ -113,9 +115,9 @@ def get_p_j_given_i_helper(p_j_given_i, n_node, root, node):
     node.b = 1.0
 
     p_j_given_inode = [0 for _ in range(n_node)]
-    get_p_j_given_inode_helper(p_j_given_inode, root, 1)
-    get_p_j_given_i_helper(p_j_given_i, n_node, root, node.left)
-    get_p_j_given_i_helper(p_j_given_i, n_node, root, node.right)
+    get_between_group_p_j_given_inode_helper(p_j_given_inode, root, 1)
+    get_between_group_p_j_given_i_helper(p_j_given_i, n_node, root, node.left)
+    get_between_group_p_j_given_i_helper(p_j_given_i, n_node, root, node.right)
     p_j_given_inode = tf.stack(p_j_given_inode, axis=0)
 
     inode_idx = node.inode_idx
@@ -123,13 +125,76 @@ def get_p_j_given_i_helper(p_j_given_i, n_node, root, node):
     node.b = b_copy
 
 
-def get_p_j_given_inode_helper(p_j_given_inode, node, p_ancestors_break):
+def get_between_group_p_j_given_inode_helper(p_j_given_inode, node, p_ancestors_break):
     if node is None:
         return
     node_idx = node.node_idx
     p_j_given_inode[node_idx] = p_ancestors_break * (1.0 - node.b)
-    get_p_j_given_inode_helper(p_j_given_inode, node.left, p_ancestors_break * node.b)
-    get_p_j_given_inode_helper(p_j_given_inode, node.right, p_ancestors_break * node.b)
+    get_between_group_p_j_given_inode_helper(p_j_given_inode, node.left, p_ancestors_break * node.b)
+    get_between_group_p_j_given_inode_helper(p_j_given_inode, node.right, p_ancestors_break * node.b)
+
+
+# --------------------------------------------- in-group interaction -------------------------------------------- #
+
+
+def get_in_group_p_j_given_i(n_node, n_inode, root):
+    p_j_given_i = [0 for _ in range(n_inode)]
+    get_in_group_p_j_given_i_initialization(root)
+    get_in_group_p_j_given_i_helper(p_j_given_i, n_node, root, root)
+    get_in_group_p_j_given_i_clean(root)
+    p_j_given_i = tf.stack(p_j_given_i, axis=0)
+    return p_j_given_i
+
+
+def get_in_group_p_j_given_i_initialization(root):
+    def helper(node):
+        node.is_ancestor_of_i = False
+        if not node.is_taxon():
+            helper(node.left)
+            helper(node.right)
+    helper(root)
+
+
+def get_in_group_p_j_given_i_clean(root):
+    def helper(node):
+        del node.is_ancestor_of_i
+        if not node.is_taxon():
+            helper(node.left)
+            helper(node.right)
+    helper(root)
+
+
+def get_in_group_p_j_given_i_helper(p_j_given_i, n_node, root, node):
+    # node: inode i
+    if node.is_taxon():
+        return
+
+    node.is_ancestor_of_i = True  # tmp value
+    p_j_given_inode = [0 for _ in range(n_node)]
+    get_in_group_p_j_given_inode_helper(p_j_given_inode, root, 1)
+    p_j_given_inode = tf.stack(p_j_given_inode, axis=0)
+    inode_idx = node.inode_idx
+    p_j_given_i[inode_idx] = p_j_given_inode
+
+    get_in_group_p_j_given_i_helper(p_j_given_i, n_node, root, node.left)
+    get_in_group_p_j_given_i_helper(p_j_given_i, n_node, root, node.right)
+
+    node.is_ancestor_of_i = False
+
+
+def get_in_group_p_j_given_inode_helper(p_j_given_inode, node, p_common_ancestors_break):
+    node_idx = node.node_idx
+    if node.is_taxon():
+        p_j_given_inode[node_idx] = 1.0 - p_common_ancestors_break
+    else:
+        p_j_given_inode[node_idx] = 0.0
+        if node.is_ancestor_of_i:
+            p_common_ancestors_break *= node.b
+        get_in_group_p_j_given_inode_helper(p_j_given_inode, node.left, p_common_ancestors_break)
+        get_in_group_p_j_given_inode_helper(p_j_given_inode, node.right, p_common_ancestors_break)
+
+
+# --------------------------------------------------- dynamics -------------------------------------------------- #
 
 
 def get_inode_relative_abundance(root, x_t, n_inode):
@@ -148,6 +213,9 @@ def get_inode_relative_abundance_helper(r_t_inode, node, x_t):
     inode_r_t = left_r_t + right_r_t
     r_t_inode[inode_idx] = inode_r_t
     return inode_r_t
+
+
+# -------------------------------------------- ilr and inverse ilr ---------------------------------------------- #
 
 
 def get_n_plus_and_n_minus(theta):

@@ -454,9 +454,12 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
 def plot_interaction_matrix(RLT_DIR, inferred, truth):
     b = inferred["b"]
-    g = inferred["g"]
-    A = inferred["A"]
-    Wv = inferred["Wv"]
+    g_in = inferred["g_in"]
+    A_in = inferred["A_in"]
+    Wv_in = inferred["Wv_in"]
+    g_between = inferred["g_between"]
+    A_between = inferred["A_between"]
+    Wv_between = inferred["Wv_between"]
 
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
@@ -474,34 +477,65 @@ def plot_interaction_matrix(RLT_DIR, inferred, truth):
     plt.close()
 
     # interaction
-    sns.heatmap(A, cmap="seismic", center=0, square=True, linewidth=0.5)
+    sns.heatmap(A_in, cmap="seismic", center=0, square=True, linewidth=0.5)
     plt.tight_layout()
-    plt.savefig(RLT_DIR + "/A")
+    plt.savefig(RLT_DIR + "/A_in")
     plt.close()
 
-    if "masked_A" in truth:
-        A_truth = truth["masked_A"]
-        sns.heatmap(A_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+    if "masked_A_in" in truth:
+        A_in_truth = truth["masked_A_in"]
+        sns.heatmap(A_in_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
         plt.tight_layout()
-        plt.savefig(RLT_DIR + "/A_truth")
+        plt.savefig(RLT_DIR + "/A_in_truth")
+        plt.close()
+
+    sns.heatmap(A_between, cmap="seismic", center=0, square=True, linewidth=0.5)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/A_between")
+    plt.close()
+
+    if "masked_A_between" in truth:
+        A_between_truth = truth["masked_A_between"]
+        sns.heatmap(A_between_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_between_truth")
         plt.close()
 
     # growth
-    if "masked_g" in truth:
-        g_truth = truth["masked_g"]
-        sns.heatmap(np.stack([g_truth, g], axis=0),
-                    cmap="seismic", center=0, square=True, linewidth=0.5)
-        ticks = ["truth", "inferred"]
-        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
-        plt.tight_layout()
-        plt.savefig(RLT_DIR + "/g")
-        plt.close()
+    if "masked_g_in" in truth:
+        g_in_truth = truth["masked_g_in"]
+    else:
+        g_in_truth = np.zeros_like(g_in)
+    sns.heatmap(np.stack([g_in_truth, g_in], axis=0),
+                cmap="seismic", center=0, square=True, linewidth=0.5)
+    ticks = ["truth", "inferred"]
+    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/g_in")
+    plt.close()
+
+    if "masked_g_between" in truth:
+        g_between_truth = truth["masked_g_between"]
+    else:
+        g_between_truth = np.zeros_like(g_between)
+    sns.heatmap(np.stack([g_between_truth, g_between], axis=0),
+                cmap="seismic", center=0, square=True, linewidth=0.5)
+    ticks = ["truth", "inferred"]
+    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/g_between")
+    plt.close()
 
     # perturbation
-    if Wv.shape[1] > 0:
-        sns.heatmap(Wv, cmap="seismic", center=0, square=True, linewidth=0.5)
+    if Wv_in.shape[1] > 0:
+        sns.heatmap(Wv_in, cmap="seismic", center=0, square=True, linewidth=0.5)
         plt.tight_layout()
-        plt.savefig(RLT_DIR + "/W")
+        plt.savefig(RLT_DIR + "/Wv_in")
+        plt.close()
+
+        sns.heatmap(Wv_between, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/Wv_between")
         plt.close()
 
         if "W" in truth:

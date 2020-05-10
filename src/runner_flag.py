@@ -29,9 +29,9 @@ Dv = 0             # dimension of inputs (num of perturbations)
 Dx = 5             # dimension of hidden states (num of groups/topics)
 
 # see options: utils/available_data.py
-data_type = "tree_6_taxa"
+data_type = "six_taxa_in_group_True"
 
-lr = 3e-4               # learning rate
+lr = 1e-3               # learning rate
 epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
@@ -42,6 +42,8 @@ n_bw_particles = 8      # number of subparticles sampled when augmenting the tra
 batch_size = 1          # batch size
 
 seed = 0
+
+exist_in_group_dynamics = True
 
 # ------------------------------- Data ------------------------------- #
 
@@ -173,6 +175,7 @@ flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
+flags.DEFINE_boolean("exist_in_group_dynamics", exist_in_group_dynamics, "whether exists in-group interaction")
 
 # ------------------------------- Data ------------------------------- #
 
