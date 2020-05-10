@@ -17,7 +17,7 @@ class PSVO(SVO):
         self.BSim_q_init = model.Bsim_q_init_dist
         self.BSim_q2 = model.BSim_q2_dist
 
-    def get_log_ZSMC(self, obs, input, time, mask, time_interval, extra_inputs, mask_weight):
+    def get_log_ZSMC(self, obs, input, time, mask, time_interval, depth, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders
@@ -39,10 +39,10 @@ class PSVO(SVO):
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, _, log_Ws = self.SMC(obs, input, mask, time_interval, extra_inputs, mask_weight)
+            X_prevs, _, log_Ws = self.SMC(obs, input, mask, time_interval, depth, mask_weight)
             bw_Xs, f_log_probs, g_log_probs, bw_log_Omega = \
                 self.backward_simulation_w_proposal(X_prevs, log_Ws, obs, input,
-                                                    mask, time_interval, extra_inputs, mask_weight)
+                                                    mask, time_interval, depth, mask_weight)
 
             log_ZSMC = self.compute_log_ZSMC(f_log_probs, g_log_probs, bw_log_Omega)
             Xs = bw_Xs
@@ -71,7 +71,7 @@ class PSVO(SVO):
 
         return log_ZSMC
 
-    def backward_simulation_w_proposal(self, Xs, log_Ws, obs, input, mask, time_interval, extra_inputs, mask_weight):
+    def backward_simulation_w_proposal(self, Xs, log_Ws, obs, input, mask, time_interval, depth, mask_weight):
         Dx, time, n_particles, batch_size = self.Dx, self.time, self.n_particles, self.batch_size
 
         assert batch_size == 1
@@ -111,7 +111,7 @@ class PSVO(SVO):
         else:
             g_input = bw_X_Tm1
             qh_Tm1_log_prob = h_Tm1_log_prob = 0
-        g_Tm1_log_prob = self.g.log_prob(g_input, obs[:, time - 1], extra_inputs=extra_inputs[:, time - 1])  # (M, n_particles, batch_size)
+        g_Tm1_log_prob = self.g.log_prob(g_input, obs[:, time - 1], depth=depth[:, time - 1])  # (M, n_particles, batch_size)
         g_Tm1_log_prob = tf.where(mask[0][0], g_Tm1_log_prob, g_Tm1_log_prob * mask_weight)
         g_Tm1_log_prob += h_Tm1_log_prob - qh_Tm1_log_prob
 
@@ -166,7 +166,7 @@ class PSVO(SVO):
             else:
                 g_input = bw_X_t
                 qh_t_log_prob = h_t_log_prob = 0
-            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], extra_inputs=extra_inputs[:, t])  # (M, n_particles, batch_size)
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], depth=depth[:, t])  # (M, n_particles, batch_size)
             g_t_log_prob = tf.where(mask[0][0], g_t_log_prob, g_t_log_prob * mask_weight)
             g_t_log_prob += h_t_log_prob - qh_t_log_prob
 
@@ -205,7 +205,7 @@ class PSVO(SVO):
                         (M, n_particles, 1, 1))  # (M, n_particles, batch_size, Dev)
         f_0_feed = tf.concat((bw_X_0, Input), axis=-1)
         f_0_log_prob = self.f.log_prob(f_0_feed, bw_X_1, Dx=self.Dx)  # (M, n_particles, batch_size)
-        g_0_log_prob = self.g.log_prob(bw_X_0, obs[:, 0], extra_inputs=extra_inputs[:, 0])  # (M, n_particles, batch_size)
+        g_0_log_prob = self.g.log_prob(bw_X_0, obs[:, 0], depth=depth[:, 0])  # (M, n_particles, batch_size)
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight)
 
         # self.preprocessed_X0_f is cached in self.SMC()

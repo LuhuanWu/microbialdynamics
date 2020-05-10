@@ -12,7 +12,7 @@ class tf_multinomial(distribution):
     def __init__(self, transformation, name='tf_multinomial'):
         super(tf_multinomial, self).__init__(transformation, name)
 
-    def get_multinomial(self, Input, extra_inputs):
+    def get_multinomial(self, Input, depth):
         """
         :param Input: (T, Dx)
         :param external_inputs:  total counts, (T, )
@@ -20,18 +20,18 @@ class tf_multinomial(distribution):
         """
         with tf.variable_scope(self.name):
             logits = self.transformation.transform(Input)
-            multinomial = tfd.Multinomial(total_count=extra_inputs,
+            multinomial = tfd.Multinomial(total_count=depth,
                                           logits=logits,
                                           validate_args=True,
                                           allow_nan_stats=False)
             return multinomial
 
-    def log_prob(self, Input, output, extra_inputs=None, name=None):
-        multinomial = self.get_multinomial(Input, extra_inputs)
+    def log_prob(self, Input, output, depth=None, name=None):
+        multinomial = self.get_multinomial(Input, depth)
         with tf.variable_scope(name or self.name):
             return multinomial.log_prob(output)
 
-    def mean(self, Input, extra_inputs, name=None):
-        multinomial = self.get_multinomial(Input, extra_inputs)
+    def mean(self, Input, depth, name=None):
+        multinomial = self.get_multinomial(Input, depth)
         with tf.variable_scope(name or self.name):
             return multinomial.mean()

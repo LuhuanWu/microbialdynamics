@@ -30,7 +30,7 @@ class tf_poisson(distribution):
         super(tf_poisson, self).__init__(transformation, name)
 
 
-    def get_poisson(self, Input, extra_inputs=None):
+    def get_poisson(self, Input, depth=None):
         """
         :param Input: (T, Dx)
         :param external_inputs:  total counts, (T, )
@@ -40,18 +40,18 @@ class tf_poisson(distribution):
             lambdas = self.transformation.transform(Input)
             lambdas = tf.nn.softplus(lambdas) + 1e-6  # (T, Dy)
             lambdas = lambdas / tf.reduce_sum(lambdas, axis=-1, keepdims=True)
-            lambdas = lambdas * extra_inputs[..., None]  # (bs, T, Dy)
+            lambdas = lambdas * depth[..., None]  # (bs, T, Dy)
             poisson = tfd.Poisson(rate=lambdas,
                                   validate_args=True,
                                   allow_nan_stats=False)
             return poisson
 
-    def log_prob(self, Input, output, extra_inputs=None, name=None):
-        poisson = self.get_poisson(Input, extra_inputs)
+    def log_prob(self, Input, output, depth=None, name=None):
+        poisson = self.get_poisson(Input, depth)
         with tf.variable_scope(name or self.name):
             return tf.reduce_sum(poisson.log_prob(output), axis=-1)
 
-    def mean(self, Input, extra_inputs, name=None):
-        poisson = self.get_poisson(Input, extra_inputs)
+    def mean(self, Input, depth, name=None):
+        poisson = self.get_poisson(Input, depth)
         with tf.variable_scope(name or self.name):
             return poisson.mean()
