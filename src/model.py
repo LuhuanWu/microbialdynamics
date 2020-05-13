@@ -39,6 +39,7 @@ class SSM(object):
 
         self.theta = theta
         self.exist_in_group_dynamics = FLAGS.exist_in_group_dynamics
+        self.use_L0 = FLAGS.use_L0
 
         self.batch_size = FLAGS.batch_size
 
@@ -102,7 +103,8 @@ class SSM(object):
         elif self.f_tran_type == "ilr_clv":
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
-            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.exist_in_group_dynamics, self.training)
+            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.exist_in_group_dynamics, self.training,
+                                                 self.use_L0)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 

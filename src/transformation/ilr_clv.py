@@ -11,9 +11,11 @@ EPS = 1e-6
 
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dev,
-                 exist_in_group_dynamics=False, training=False, b_dropout_rate=0.5):
+                 exist_in_group_dynamics=False, training=False,
+                 use_L0=True, b_dropout_rate=0.5):
         self.Dx, self.Dy = theta.shape
         self.Dev = Dev
+        self.use_L0 = use_L0
 
         # init variable
         self.A_in = tf.Variable(tf.zeros((self.Dx, self.Dx + self.Dy)))
@@ -29,11 +31,14 @@ class ilr_clv_transformation(transformation):
         self.psi = get_psi(theta)
 
         # L0 regularization for break score
-        log_alpha_init = tf.log(b_dropout_rate / (1 - b_dropout_rate))
-        self.log_alpha = tf.Variable(log_alpha_init * tf.ones(self.Dx, dtype=tf.float32))
-        b_noises = tf.cond(training,
-                           lambda: hard_concrete_sample(self.log_alpha),
-                           lambda: hard_concrete_mean(self.log_alpha))
+        if use_L0:
+            log_alpha_init = tf.log(b_dropout_rate / (1 - b_dropout_rate))
+            self.log_alpha = tf.Variable(log_alpha_init * tf.ones(self.Dx, dtype=tf.float32))
+            b_noises = tf.cond(training,
+                               lambda: hard_concrete_sample(self.log_alpha),
+                               lambda: hard_concrete_mean(self.log_alpha))
+        else:
+            b_noises = tf.ones(self.Dx, dtype=tf.float32)
 
         b = []
         b_before_gated = []
@@ -64,12 +69,15 @@ class ilr_clv_transformation(transformation):
                        "between_group_p_j_given_i": self.between_group_p_j_given_i}
 
     def regularization_loss(self):
-        L0 = l0_norm(self.log_alpha)
-        L2 = tf.reduce_sum(self.A_in ** 2) + tf.reduce_sum(self.g_in ** 2) + tf.reduce_sum(self.Wv_in ** 2) + \
-             tf.reduce_sum(self.A_between ** 2) + tf.reduce_sum(self.g_between ** 2) + \
-             tf.reduce_sum(self.Wv_between ** 2)
+        if self.use_L0:
+            L0 = l0_norm(self.log_alpha)
+        else:
+            L0 = 0.0
+        L1 = tf.reduce_sum(tf.abs(self.A_in)) + tf.reduce_sum(tf.abs(self.g_in)) + tf.reduce_sum(tf.abs(self.Wv_in)) + \
+             tf.reduce_sum(tf.abs(self.A_between)) + tf.reduce_sum(tf.abs(self.g_between)) + \
+             tf.reduce_sum(tf.abs(self.Wv_between))
         b_regularization = tf.log(1 - (2 * self.b_before_gated - 1) ** 2 + EPS)
-        return L0 + L2 + b_regularization
+        return L0 + L1 + b_regularization
 
     def transform(self, Input):
         """

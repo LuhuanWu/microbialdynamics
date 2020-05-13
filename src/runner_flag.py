@@ -44,6 +44,7 @@ batch_size = 1          # batch size
 seed = 0
 
 exist_in_group_dynamics = True
+use_L0 = False
 
 # ------------------------------- Data ------------------------------- #
 
@@ -176,6 +177,7 @@ flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 flags.DEFINE_boolean("exist_in_group_dynamics", exist_in_group_dynamics, "whether exists in-group interaction")
+flags.DEFINE_boolean("use_L0", use_L0, "whether use L0 regularization for break score in irl_clv transformation")
 
 # ------------------------------- Data ------------------------------- #
 
