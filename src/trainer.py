@@ -149,7 +149,7 @@ class trainer:
         # regularization
         if self.model.f_tran_type == "ilr_clv":
             reg = self.model.f_tran.regularization_loss()
-            loss += reg * tf.minimum(global_step / (len(obs_train) * 20.0), 1.0)
+            loss += reg * tf.minimum(global_step / (len(obs_train) * 200.0), 1.0)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
