@@ -30,35 +30,34 @@ class ilr_clv_transformation(transformation):
         self.root, self.reference = convert_theta_to_tree(theta)
         self.psi = get_psi(theta)
 
-        # L0 regularization for interaction coefficients
+        # L0 regularization for break score
         if use_L0:
             log_alpha_init = tf.log(b_dropout_rate / (1 - b_dropout_rate))
-            self.A_in_log_alpha = tf.Variable(log_alpha_init * tf.ones_like(self.A_in_var, dtype=tf.float32))
-            self.A_between_log_alpha = tf.Variable(log_alpha_init * tf.ones_like(self.A_between_var, dtype=tf.float32))
-            A_in_noises = tf.cond(training,
-                                  lambda: hard_concrete_sample(self.A_in_log_alpha),
-                                  lambda: hard_concrete_mean(self.A_in_log_alpha))
-            A_between_noises = tf.cond(training,
-                                       lambda: hard_concrete_sample(self.A_between_log_alpha),
-                                       lambda: hard_concrete_mean(self.A_between_log_alpha))
+            self.log_alpha = tf.Variable(log_alpha_init * tf.ones(self.Dx, dtype=tf.float32))
+            b_noises = tf.cond(training,
+                               lambda: hard_concrete_sample(self.log_alpha),
+                               lambda: hard_concrete_mean(self.log_alpha))
         else:
-            A_in_noises = tf.ones_like(self.A_in_var, dtype=tf.float32)
-            A_between_noises = tf.ones_like(self.A_between_var, dtype=tf.float32)
+            b_noises = tf.ones(self.Dx, dtype=tf.float32)
 
         b = []
-        for inode in self.reference[:self.Dx]:
+        b_before_gated = []
+        for inode, b_noise in zip(self.reference[:self.Dx], tf.unstack(b_noises)):
+            b_before_gated.append(inode.b)
+            inode.b = inode.b * b_noise
             b.append(inode.b)
+        self.b_before_gated = tf.stack(b_before_gated)
         self.b = tf.stack(b)
 
         self.p_i = get_p_i(self.Dx, self.root)
         self.in_group_p_j_given_i = get_in_group_p_j_given_i(self.Dx + self.Dy, self.Dx, self.root)
         self.between_group_p_j_given_i = get_between_group_p_j_given_i(self.Dx + self.Dy, self.Dx, self.root)
 
-        self.A_in = self.A_in_var * A_in_noises * self.in_group_p_j_given_i * exist_in_group_dynamics
+        self.A_in = self.A_in_var * self.in_group_p_j_given_i * exist_in_group_dynamics
         self.g_in = self.g_in_var * (1.0 - self.p_i) * exist_in_group_dynamics
         self.Wv_in = self.Wv_in_var * (1.0 - self.p_i[:, None]) * exist_in_group_dynamics
 
-        self.A_between = self.A_between_var * A_between_noises * self.p_i[:, None] * self.between_group_p_j_given_i
+        self.A_between = self.A_between_var * self.p_i[:, None] * self.between_group_p_j_given_i
         self.g_between = self.g_between_var * self.p_i
         self.Wv_between = self.Wv_between_var * self.p_i[:, None]
 
@@ -70,19 +69,16 @@ class ilr_clv_transformation(transformation):
                        "between_group_p_j_given_i": self.between_group_p_j_given_i}
 
     def regularization_loss(self):
-        L2 = tf.reduce_sum(self.g_in_var ** 2) + tf.reduce_sum(self.Wv_in_var ** 2) + \
-             tf.reduce_sum(self.g_between_var ** 2) + tf.reduce_sum(self.Wv_between_var ** 2)
         if self.use_L0:
-            A_in_l0_norm = l0_norm(self.A_in_log_alpha)
-            A_between_l0_norm = l0_norm(self.A_between_log_alpha)
-            L0 = A_in_l0_norm + A_between_l0_norm
-            L2 += tf.stop_gradient(A_in_l0_norm) * tf.reduce_sum(self.A_in_var ** 2) + \
-                  tf.stop_gradient(A_between_l0_norm) * tf.reduce_sum(self.A_between_var ** 2)
+            L0 = l0_norm(self.log_alpha)
         else:
             L0 = 0.0
-            L2 += tf.reduce_sum(self.A_in_var ** 2) + tf.reduce_sum(self.A_between_var ** 2)
-        b_regularization = tf.log(1 - (2 * self.b - 1) ** 2 + EPS)
-        return L0 + L2 + b_regularization
+        L2 = tf.reduce_sum(self.A_in_var ** 2) + tf.reduce_sum(self.g_in_var ** 2) + \
+             tf.reduce_sum(self.Wv_in_var ** 2) + \
+             tf.reduce_sum(self.A_between_var ** 2) + tf.reduce_sum(self.g_between_var ** 2) + \
+             tf.reduce_sum(self.Wv_between_var ** 2)
+        b_regularization = tf.log(1 - (2 * self.b_before_gated - 1) ** 2 + EPS)
+        return L0 + L2 * 1e-2 + b_regularization
 
     def transform(self, Input):
         """
