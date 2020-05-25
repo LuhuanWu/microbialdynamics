@@ -71,11 +71,14 @@ six_taxa_in_group_True_dir = "data/ilr_clv/6_taxa_in_group_True.p"
 eight_taxa_in_group_False_dir = "data/ilr_clv/8_taxa_in_group_False.p"
 eight_taxa_in_group_True_dir = "data/ilr_clv/8_taxa_in_group_True.p"
 
-ten_taxa_in_group_00_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.0.p"
-ten_taxa_in_group_01_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.1.p"
-ten_taxa_in_group_02_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.2.p"
-ten_taxa_in_group_05_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.5.p"
-ten_taxa_in_group_10_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_1.0.p"
+ten_taxa_in_group_000_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.00.p"
+ten_taxa_in_group_005_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.05.p"
+ten_taxa_in_group_010_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.10.p"
+ten_taxa_in_group_015_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.15.p"
+ten_taxa_in_group_020_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.20.p"
+ten_taxa_in_group_025_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.25.p"
+ten_taxa_in_group_030_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.30.p"
+ten_taxa_in_group_050_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.50.p"
 
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
@@ -91,11 +94,14 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        eight_taxa_in_group_False=eight_taxa_in_group_False_dir,
                        eight_taxa_in_group_True=eight_taxa_in_group_True_dir,
                        clv_lda=clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir,
-                       ten_taxa_in_group_00=ten_taxa_in_group_00_dir,
-                       ten_taxa_in_group_01=ten_taxa_in_group_01_dir,
-                       ten_taxa_in_group_02=ten_taxa_in_group_02_dir,
-                       ten_taxa_in_group_05=ten_taxa_in_group_05_dir,
-                       ten_taxa_in_group_10=ten_taxa_in_group_10_dir,
+                       ten_taxa_in_group_000=ten_taxa_in_group_000_dir,
+                       ten_taxa_in_group_005=ten_taxa_in_group_005_dir,
+                       ten_taxa_in_group_010=ten_taxa_in_group_010_dir,
+                       ten_taxa_in_group_015=ten_taxa_in_group_015_dir,
+                       ten_taxa_in_group_020=ten_taxa_in_group_020_dir,
+                       ten_taxa_in_group_025=ten_taxa_in_group_025_dir,
+                       ten_taxa_in_group_030=ten_taxa_in_group_030_dir,
+                       ten_taxa_in_group_050=ten_taxa_in_group_050_dir,
                        )
 
 
