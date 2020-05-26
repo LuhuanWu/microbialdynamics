@@ -116,12 +116,10 @@ class trainer:
         if self.save_tensorboard:
             self.writer = tf.summary.FileWriter(self.checkpoint_dir)
 
-    def init_train(self, hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
+    def init_train(self, obs_train, obs_test, input_train, input_test,
                    mask_train, mask_test, time_interval_train, time_interval_test,
                    depth_train, depth_test):
 
-        self.hidden_train = [softmax(hidden, axis=-1) for hidden in hidden_train]
-        self.hidden_test = [softmax(hidden, axis=-1) for hidden in hidden_test]
         self.obs_train, self.obs_test = obs_train, obs_test
         self.depth_train, self.depth_test = depth_train, depth_test
         self.input_train, self.input_test = input_train, input_test

@@ -2,16 +2,13 @@
 toy_data_dir = "data/fhn_with_inputs_dirichlet"
 
 # --------------------------------------------- real data --------------------------------------------- #
-percentage_data_dir = "data/microbio.p"
 count_data_dir = "data/count_microbio.p"
-
-# k6
 count_data_k2_dir = "data/count_microbio_k2.p"
 count_data_k6_dir = "data/count_microbio_k6.p"
 count_data_k8_dir = "data/count_microbio_k8.p"
-
-percentage_small_dir = "data/microbio_small.p"
 count_small_dir = "data/count_microbio_small.p"
+
+oral_medium_dir = "data/oral/oral_medium.p"
 
 # ---------------------------------------- clv + gp + lda data ---------------------------------------- #
 clv_gp_Dx_5_Dy_10_ntrain_50_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_50_obp_10_ls_1.p"
@@ -102,6 +99,7 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        ten_taxa_in_group_025=ten_taxa_in_group_025_dir,
                        ten_taxa_in_group_030=ten_taxa_in_group_030_dir,
                        ten_taxa_in_group_050=ten_taxa_in_group_050_dir,
+                       oral_medium=oral_medium_dir
                        )
 
 
