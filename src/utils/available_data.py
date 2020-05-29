@@ -65,17 +65,36 @@ clv_gp_w_input_sparse_3_ntrain_600_dir = "data/clv_gp/sparse_w_input/clv_gp_Dx_5
 # ----------------------------------------- ilr + clv data ----------------------------------------- #
 six_taxa_in_group_False_dir = "data/ilr_clv/6_taxa_in_group_False.p"
 six_taxa_in_group_True_dir = "data/ilr_clv/6_taxa_in_group_True.p"
-eight_taxa_in_group_False_dir = "data/ilr_clv/8_taxa_in_group_False.p"
-eight_taxa_in_group_True_dir = "data/ilr_clv/8_taxa_in_group_True.p"
 
-ten_taxa_in_group_000_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.00.p"
-ten_taxa_in_group_005_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.05.p"
-ten_taxa_in_group_010_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.10.p"
-ten_taxa_in_group_015_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.15.p"
-ten_taxa_in_group_020_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.20.p"
-ten_taxa_in_group_025_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.25.p"
-ten_taxa_in_group_030_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.30.p"
-ten_taxa_in_group_050_dir = "data/ilr_clv/in_group_check/10_taxa_in_group_0.50.p"
+in_group_mag_000_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_000.p"
+in_group_mag_010_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_010.p"
+in_group_mag_020_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_020.p"
+in_group_mag_030_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_030.p"
+in_group_mag_040_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_040.p"
+in_group_mag_050_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_050.p"
+in_group_mag_100_dir = "data/ilr_clv/vary_magnitude/16_taxa_mag_100.p"
+
+in_group_balance_0_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_0_mag_20.p"
+in_group_balance_0_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_0_mag_30.p"
+in_group_balance_1_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_1_mag_20.p"
+in_group_balance_1_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_1_mag_30.p"
+in_group_balance_2_mag_20_dir = "data/ilr_clv/vary_balance/18_taxa_balance_2_mag_20.p"
+in_group_balance_2_mag_30_dir = "data/ilr_clv/vary_balance/18_taxa_balance_2_mag_30.p"
+in_group_balance_3_mag_20_dir = "data/ilr_clv/vary_balance/14_taxa_balance_3_mag_20.p"
+in_group_balance_3_mag_30_dir = "data/ilr_clv/vary_balance/14_taxa_balance_3_mag_30.p"
+in_group_balance_4_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_4_mag_20.p"
+in_group_balance_4_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_4_mag_30.p"
+in_group_balance_5_mag_20_dir = "data/ilr_clv/vary_balance/14_taxa_balance_5_mag_20.p"
+in_group_balance_5_mag_30_dir = "data/ilr_clv/vary_balance/14_taxa_balance_5_mag_30.p"
+in_group_balance_6_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_6_mag_20.p"
+in_group_balance_6_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_6_mag_30.p"
+
+in_group_gran_1_mag_20_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_1_mag_20.p"
+in_group_gran_1_mag_30_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_1_mag_30.p"
+in_group_gran_2_mag_20_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_2_mag_20.p"
+in_group_gran_2_mag_30_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_2_mag_30.p"
+in_group_gran_3_mag_20_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_3_mag_20.p"
+in_group_gran_3_mag_30_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_3_mag_30.p"
 
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
@@ -86,19 +105,36 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        count_k6=count_data_k6_dir,
                        count_k8=count_data_k8_dir,
                        count_small=count_small_dir,
+                       clv_lda=clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir,
                        six_taxa_in_group_False=six_taxa_in_group_False_dir,
                        six_taxa_in_group_True=six_taxa_in_group_True_dir,
-                       eight_taxa_in_group_False=eight_taxa_in_group_False_dir,
-                       eight_taxa_in_group_True=eight_taxa_in_group_True_dir,
-                       clv_lda=clv_gp_Dx_5_Dy_10_ntrain_100_ls_1_dir,
-                       ten_taxa_in_group_000=ten_taxa_in_group_000_dir,
-                       ten_taxa_in_group_005=ten_taxa_in_group_005_dir,
-                       ten_taxa_in_group_010=ten_taxa_in_group_010_dir,
-                       ten_taxa_in_group_015=ten_taxa_in_group_015_dir,
-                       ten_taxa_in_group_020=ten_taxa_in_group_020_dir,
-                       ten_taxa_in_group_025=ten_taxa_in_group_025_dir,
-                       ten_taxa_in_group_030=ten_taxa_in_group_030_dir,
-                       ten_taxa_in_group_050=ten_taxa_in_group_050_dir,
+                       in_group_mag_000=in_group_mag_000_dir,
+                       in_group_mag_010=in_group_mag_010_dir,
+                       in_group_mag_020=in_group_mag_020_dir,
+                       in_group_mag_030=in_group_mag_030_dir,
+                       in_group_mag_040=in_group_mag_040_dir,
+                       in_group_mag_050=in_group_mag_050_dir,
+                       in_group_mag_100=in_group_mag_100_dir,
+                       in_group_balance_0_mag_20_16_taxa=in_group_balance_0_mag_20_dir,
+                       in_group_balance_0_mag_30_16_taxa=in_group_balance_0_mag_30_dir,
+                       in_group_balance_1_mag_20_16_taxa=in_group_balance_1_mag_20_dir,
+                       in_group_balance_1_mag_30_16_taxa=in_group_balance_1_mag_30_dir,
+                       in_group_balance_2_mag_20_18_taxa=in_group_balance_2_mag_20_dir,
+                       in_group_balance_2_mag_30_18_taxa=in_group_balance_2_mag_30_dir,
+                       in_group_balance_3_mag_20_14_taxa=in_group_balance_3_mag_20_dir,
+                       in_group_balance_3_mag_30_14_taxa=in_group_balance_3_mag_30_dir,
+                       in_group_balance_4_mag_20_16_taxa=in_group_balance_4_mag_20_dir,
+                       in_group_balance_4_mag_30_16_taxa=in_group_balance_4_mag_30_dir,
+                       in_group_balance_5_mag_20_14_taxa=in_group_balance_5_mag_20_dir,
+                       in_group_balance_5_mag_30_14_taxa=in_group_balance_5_mag_30_dir,
+                       in_group_balance_6_mag_20_16_taxa=in_group_balance_6_mag_20_dir,
+                       in_group_balance_6_mag_30_16_taxa=in_group_balance_6_mag_30_dir,
+                       in_group_gran_1_mag_20=in_group_gran_1_mag_20_dir,
+                       in_group_gran_1_mag_30=in_group_gran_1_mag_30_dir,
+                       in_group_gran_2_mag_20=in_group_gran_2_mag_20_dir,
+                       in_group_gran_2_mag_30=in_group_gran_2_mag_30_dir,
+                       in_group_gran_3_mag_20=in_group_gran_3_mag_20_dir,
+                       in_group_gran_3_mag_30=in_group_gran_3_mag_30_dir,
                        oral_medium=oral_medium_dir
                        )
 
