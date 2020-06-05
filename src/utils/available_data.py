@@ -8,7 +8,9 @@ count_data_k6_dir = "data/count_microbio_k6.p"
 count_data_k8_dir = "data/count_microbio_k8.p"
 count_small_dir = "data/count_microbio_small.p"
 
-oral_medium_dir = "data/oral/oral_medium.p"
+oral_21_taxa_dir = "data/oral/oral_21_taxa.p"
+oral_16_taxa_dir = "data/oral/oral_16_taxa.p"
+oral_11_taxa_dir = "data/oral/oral_11_taxa.p"
 
 # ---------------------------------------- clv + gp + lda data ---------------------------------------- #
 clv_gp_Dx_5_Dy_10_ntrain_50_ls_1_dir = "data/clv_gp/data/clv_gp_Dx_5_Dy_10_Dv_0_ntrain_50_obp_10_ls_1.p"
@@ -135,7 +137,9 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        in_group_gran_2_mag_30=in_group_gran_2_mag_30_dir,
                        in_group_gran_3_mag_20=in_group_gran_3_mag_20_dir,
                        in_group_gran_3_mag_30=in_group_gran_3_mag_30_dir,
-                       oral_medium=oral_medium_dir
+                       oral_21_taxa=oral_21_taxa_dir,
+                       oral_16_taxa=oral_16_taxa_dir,
+                       oral_11_taxa=oral_11_taxa_dir
                        )
 
 
