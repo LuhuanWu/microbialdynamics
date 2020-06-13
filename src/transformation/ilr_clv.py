@@ -1,3 +1,4 @@
+import numpy as np
 import tensorflow as tf
 
 from src.transformation.base import transformation
@@ -12,7 +13,7 @@ EPS = 1e-6
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dev,
                  exist_in_group_dynamics=False, training=False,
-                 use_L0=True, b_dropout_rate=0.5):
+                 use_L0=True, b_dropout_rate=0.5, annealing_frac=1.0):
         self.Dx, self.Dy = theta.shape
         self.Dev = Dev
         self.use_L0 = use_L0
@@ -30,10 +31,16 @@ class ilr_clv_transformation(transformation):
         self.root, self.reference = convert_theta_to_tree(theta)
         self.psi = get_psi(theta)
 
+        inode_depth = []
+        for inode in self.reference[:self.Dx]:
+            inode_depth.append(inode.depth)
+        training_mask = (np.array(inode_depth) / (np.max(inode_depth) + 1.0)) < annealing_frac
+
         # L0 regularization for break score
         if use_L0:
             log_alpha_init = tf.log(b_dropout_rate / (1 - b_dropout_rate))
             self.log_alpha = tf.Variable(log_alpha_init * tf.ones(self.Dx, dtype=tf.float32))
+            self.log_alpha = tf.where(training_mask, self.log_alpha, tf.stop_gradient(self.log_alpha))
             b_noises = tf.cond(training,
                                lambda: hard_concrete_sample(self.log_alpha),
                                lambda: hard_concrete_mean(self.log_alpha))
@@ -42,8 +49,9 @@ class ilr_clv_transformation(transformation):
 
         b = []
         b_before_gated = []
-        for inode, b_noise in zip(self.reference[:self.Dx], tf.unstack(b_noises)):
+        for inode, b_noise, mask in zip(self.reference[:self.Dx], tf.unstack(b_noises), tf.unstack(training_mask)):
             b_before_gated.append(inode.b)
+            inode.b = tf.where(mask, inode.b, tf.stop_gradient(inode.b))
             inode.b = inode.b * b_noise
             b.append(inode.b)
         self.b_before_gated = tf.stack(b_before_gated)
@@ -78,7 +86,7 @@ class ilr_clv_transformation(transformation):
              tf.reduce_sum(self.A_between_var ** 2) + tf.reduce_sum(self.g_between_var ** 2) + \
              tf.reduce_sum(self.Wv_between_var ** 2)
         b_regularization = tf.log(1 - (2 * self.b_before_gated - 1) ** 2 + EPS)
-        return L0 + L2 * 1e-2 + b_regularization
+        return L0 * 0.2 + L2 * 1e-2 + b_regularization
 
     def transform(self, Input):
         """

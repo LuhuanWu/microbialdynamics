@@ -4,7 +4,9 @@ import tensorflow as tf
 EPS = 1e-6
 
 class Tree(object):
-    def __init__(self, parent=None, left=None, right=None, node_idx=None, inode_idx=None, taxon_idx=None, b=0.0):
+    def __init__(self, parent=None, left=None, right=None,
+                 node_idx=None, inode_idx=None, taxon_idx=None,
+                 b=0.0, depth=0):
         self.left = left
         self.right = right
         self.parent = parent
@@ -17,6 +19,7 @@ class Tree(object):
             self.b = b
         else:
             raise ValueError("the node must either be an inode or a leaf (taxon)")
+        self.depth = depth
 
     def is_taxon(self):
         return self.left is None and self.right is None
@@ -58,11 +61,13 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
         else:
             node_taxa = np.where(theta_node == -1)[0]
 
+    depth = 0 if parent is None else parent.depth + 1
     if len(node_taxa) == 1:
         taxon_idx = node_taxa[0]
         n_inode = theta.shape[0]
         node_idx = n_inode + taxon_idx
-        child = Tree(parent=parent, taxon_idx=taxon_idx, node_idx=node_idx, b=0.0)  # taxon nodes cannot break
+        child = Tree(parent=parent, taxon_idx=taxon_idx, node_idx=node_idx,
+                     b=0.0, depth=depth)  # taxon nodes cannot break
         node_reference[node_idx] = child
     else:
         inode_idx = -1
@@ -73,7 +78,7 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
                 break
         assert inode_idx != -1, "cannot find the child whose leaves should be {}".format(node_taxa)
 
-        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=0.0)
+        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=0.0, depth=depth)
         child.left = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=True)
         child.right = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=False)
         node_reference[inode_idx] = child

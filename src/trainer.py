@@ -60,6 +60,7 @@ class trainer:
         self.time_interval = self.model.time_interval
         self.depth = self.model.depth
         self.training = self.model.training
+        self.annealing_frac = self.model.annealing_frac
 
     def init_training_param(self):
         self.batch_size = self.FLAGS.batch_size
@@ -147,7 +148,7 @@ class trainer:
         # regularization
         if self.model.f_tran_type == "ilr_clv":
             reg = self.model.f_tran.regularization_loss()
-            loss += reg * tf.minimum(global_step / (len(obs_train) * 200.0), 1.0)
+            loss += reg * tf.minimum(self.annealing_frac * 2, 1.0)
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
@@ -210,9 +211,11 @@ class trainer:
                 mask_weight = 0
             else:
                 mask_weight = 1
-            self.n_epochs += 1
+            self.n_epochs += 1.0
+            annealing_frac = self.n_epochs / np.sum(self.epochs)
 
             set_feed_dict(self.mask_weight, mask_weight)
+            set_feed_dict(self.annealing_frac, annealing_frac)
             start = time.time()
 
             if i == 0:
@@ -226,15 +229,16 @@ class trainer:
                 assert self.batch_size == 1
 
                 self.sess.run(self.train_op,
-                              feed_dict={self.obs:           obs_train[j:j + self.batch_size],
-                                         self.input:         input_train[j:j + self.batch_size],
-                                         self.time:          obs_train[j].shape[0],
-                                         self.mask:          mask_train[j:j + self.batch_size],
-                                         self.mask_weight:   mask_weight,
-                                         self.time_interval: time_interval_train[j:j + self.batch_size],
-                                         self.depth:  depth_train[j:j + self.batch_size],
-                                         self.lr_holder:     self.lr,
-                                         self.training:      True})
+                              feed_dict={self.obs:            obs_train[j:j + self.batch_size],
+                                         self.input:          input_train[j:j + self.batch_size],
+                                         self.time:           obs_train[j].shape[0],
+                                         self.mask:           mask_train[j:j + self.batch_size],
+                                         self.mask_weight:    mask_weight,
+                                         self.time_interval:  time_interval_train[j:j + self.batch_size],
+                                         self.depth:          depth_train[j:j + self.batch_size],
+                                         self.lr_holder:      self.lr,
+                                         self.training:       True,
+                                         self.annealing_frac: annealing_frac})
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:

@@ -143,7 +143,8 @@ def main(_):
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
         if FLAGS.f_tran_type == "ilr_clv":
-            f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params, {SSM_model.training: False})
+            f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params, {SSM_model.training: False,
+                                                                         SSM_model.annealing_frac: 1.0})
             with open(data_dir, "rb") as f:
                 data = pickle.load(f)
             plot_interaction_matrix(checkpoint_dir + "interaction", f_tran_params, data)
