@@ -110,7 +110,7 @@ def main(_):
     mytrainer.init_train(obs_train, obs_test, input_train, input_test, mask_train, mask_test,
                          time_interval_train, time_interval_test, depth_train, depth_test)
 
-    plot_start_idx = 0
+    plot_start_idx, plot_start_epoch = 0, 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):
         print("\n\nStart training {}...".format(checkpoint_idx))
 
@@ -156,8 +156,9 @@ def main(_):
             pickle.dump(data_dict, f)
 
         plot_log_ZSMC(checkpoint_dir, history["log_ZSMC_trains"][plot_start_idx:],
-                      history["log_ZSMC_tests"][plot_start_idx:], plot_start_idx, print_freq)
+                      history["log_ZSMC_tests"][plot_start_idx:], plot_start_epoch, print_freq)
         plot_start_idx += int(epoch / print_freq) + 1
+        plot_start_epoch += epoch
 
         y_hat_unmasked_train = mytrainer.evaluate(mytrainer.unmasked_y_hat_N_BxTxDy, mytrainer.train_all_feed_dict)
         y_hat_unmasked_test = mytrainer.evaluate(mytrainer.unmasked_y_hat_N_BxTxDy, mytrainer.test_all_feed_dict)

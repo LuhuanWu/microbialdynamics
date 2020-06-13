@@ -97,15 +97,16 @@ def plot_learning_results(RLT_DIR, Xs_val, hidden_train, saving_num=20):
             plt.close()
 
 
-def plot_log_ZSMC(RLT_DIR, log_ZSMC_trains, log_ZSMC_tests, start_idx, print_freq):
-    epoch = start_idx + np.arange(len(log_ZSMC_trains)) * print_freq
+def plot_log_ZSMC(RLT_DIR, log_ZSMC_trains, log_ZSMC_tests, start_epoch, print_freq):
+    epoch = start_epoch + np.arange(len(log_ZSMC_trains)) * print_freq
     plt.figure()
     plt.plot(epoch, log_ZSMC_trains)
     plt.plot(epoch, log_ZSMC_tests)
     plt.legend(["log_ZSMC_train", "log_ZSMC_test"])
     sns.despine()
     plt.savefig(RLT_DIR + "log_ZSMC")
-    plt.show()
+    plt.close()
+    # plt.show()
 
 
 def plot_MSEs(RLT_DIR, MSE_trains, MSE_tests, print_freq):
