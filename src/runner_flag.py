@@ -24,15 +24,15 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # Dy and Dv need to match the data set
-Dy = 6             # dimension of observations (num of taxa)
-Dv = 0             # dimension of inputs (num of perturbations)
-Dx = 5             # dimension of hidden states (num of groups/topics)
+Dy = 11             # dimension of observations (num of taxa)
+Dv = 3             # dimension of inputs (num of perturbations)
+Dx = 10             # dimension of hidden states (num of groups/topics)
 
 # see options: utils/available_data.py
-data_type = "six_taxa_in_group_True"
+data_type = "oral_11_taxa"
 
 lr = 1e-3               # learning rate
-epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
+epochs = [3000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
@@ -43,8 +43,9 @@ batch_size = 1          # batch size
 
 seed = 0
 
-exist_in_group_dynamics = True
-use_L0 = False
+exist_in_group_dynamics = False
+use_L0 = True
+L0_reg_coef = 0.1
 
 # ------------------------------- Data ------------------------------- #
 
@@ -178,6 +179,7 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 flags.DEFINE_boolean("exist_in_group_dynamics", exist_in_group_dynamics, "whether exists in-group interaction")
 flags.DEFINE_boolean("use_L0", use_L0, "whether use L0 regularization for break score in irl_clv transformation")
+flags.DEFINE_float("L0_reg_coef", L0_reg_coef, "L0 regularization coefficient")
 
 # ------------------------------- Data ------------------------------- #
 
