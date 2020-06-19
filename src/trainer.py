@@ -148,7 +148,7 @@ class trainer:
         # regularization
         if self.model.f_tran_type == "ilr_clv":
             reg = self.model.f_tran.regularization_loss()
-            loss += reg * tf.minimum(self.annealing_frac * 2, 1.0)
+            loss += reg
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")

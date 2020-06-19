@@ -13,11 +13,12 @@ EPS = 1e-6
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dev,
                  exist_in_group_dynamics=False, training=False,
-                 use_L0=True, L0_reg_coef=1.0, b_dropout_rate=0.5, annealing_frac=1.0):
+                 use_L0=True, L0_reg_coef=1.0, b_dropout_rate=0.9, annealing_frac=1.0):
         self.Dx, self.Dy = theta.shape
         self.Dev = Dev
         self.use_L0 = use_L0
         self.L0_reg_coef = L0_reg_coef
+        self.annealing_frac = annealing_frac
 
         # init variable
         self.A_in_var = tf.Variable(tf.zeros((self.Dx, self.Dx + self.Dy)))
@@ -50,13 +51,27 @@ class ilr_clv_transformation(transformation):
 
         b = []
         b_before_gated = []
+        self.A_between_var_list = tf.unstack(self.A_between_var, axis=-1)
+        self.A_between_var_masked = [0 for _ in range(self.Dx + self.Dy)]
         for inode, b_noise, mask in zip(self.reference[:self.Dx], tf.unstack(b_noises), tf.unstack(training_mask)):
             b_before_gated.append(inode.b)
             inode.b = tf.where(mask, inode.b, tf.stop_gradient(inode.b))
             inode.b = inode.b * b_noise
             b.append(inode.b)
+
+            idxes = [inode.left.node_idx, inode.right.node_idx]
+            if inode == self.root:
+                idxes.append(inode.node_idx)
+            for idx in idxes:
+                node_A_var = self.A_between_var_list[idx]
+                self.A_between_var_masked[idx] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+
         self.b_before_gated = tf.stack(b_before_gated)
         self.b = tf.stack(b)
+
+        self.A_between_var = tf.stack(self.A_between_var_masked, axis=-1)
+        self.g_between_var = tf.where(training_mask, self.g_between_var, tf.stop_gradient(self.g_between_var))
+        self.Wv_between_var = tf.where(training_mask, self.Wv_between_var, tf.stop_gradient(self.Wv_between_var))
 
         self.p_i = get_p_i(self.Dx, self.root)
         self.in_group_p_j_given_i = get_in_group_p_j_given_i(self.Dx + self.Dy, self.Dx, self.root)
@@ -86,8 +101,12 @@ class ilr_clv_transformation(transformation):
              tf.reduce_sum(self.Wv_in_var ** 2) + \
              tf.reduce_sum(self.A_between_var ** 2) + tf.reduce_sum(self.g_between_var ** 2) + \
              tf.reduce_sum(self.Wv_between_var ** 2)
-        b_regularization = tf.log(1 - (2 * self.b_before_gated - 1) ** 2 + EPS)
-        return L0 * self.L0_reg_coef + L2 * 1e-2 + b_regularization
+        L1 = tf.reduce_sum(tf.abs(self.A_in_var)) + tf.reduce_sum(tf.abs(self.g_in_var)) + \
+             tf.reduce_sum(tf.abs(self.Wv_in_var)) + \
+             tf.reduce_sum(tf.abs(self.A_between_var)) + tf.reduce_sum(tf.abs(self.g_between_var)) + \
+             tf.reduce_sum(tf.abs(self.Wv_between_var))
+        b_regularization = tf.log(1 - tf.abs(self.b_before_gated - 0.5) ** 3 + EPS)
+        return (L0 + L2 + b_regularization) * self.L0_reg_coef  * self.annealing_frac
 
     def transform(self, Input):
         """
