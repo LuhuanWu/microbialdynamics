@@ -88,6 +88,7 @@ in_group_balance_4_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_4_mag
 in_group_balance_4_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_4_mag_30.p"
 in_group_balance_5_mag_20_dir = "data/ilr_clv/vary_balance/14_taxa_balance_5_mag_20.p"
 in_group_balance_5_mag_30_dir = "data/ilr_clv/vary_balance/14_taxa_balance_5_mag_30.p"
+in_group_balance_6_mag_00_dir = "data/ilr_clv/vary_balance/16_taxa_balance_6_mag_00.p"
 in_group_balance_6_mag_20_dir = "data/ilr_clv/vary_balance/16_taxa_balance_6_mag_20.p"
 in_group_balance_6_mag_30_dir = "data/ilr_clv/vary_balance/16_taxa_balance_6_mag_30.p"
 
@@ -129,6 +130,7 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        in_group_balance_4_mag_30_16_taxa=in_group_balance_4_mag_30_dir,
                        in_group_balance_5_mag_20_14_taxa=in_group_balance_5_mag_20_dir,
                        in_group_balance_5_mag_30_14_taxa=in_group_balance_5_mag_30_dir,
+                       in_group_balance_6_mag_00_16_taxa=in_group_balance_6_mag_00_dir,
                        in_group_balance_6_mag_20_16_taxa=in_group_balance_6_mag_20_dir,
                        in_group_balance_6_mag_30_16_taxa=in_group_balance_6_mag_30_dir,
                        in_group_gran_1_mag_20=in_group_gran_1_mag_20_dir,
