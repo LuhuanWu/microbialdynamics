@@ -36,7 +36,6 @@ epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, s
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
-Dev = 0                 # dimension of inputs embedding
 n_particles = 8         # number of particles
 n_bw_particles = 8      # number of subparticles sampled when augmenting the trajectory backwards
 batch_size = 1          # batch size
@@ -169,7 +168,6 @@ flags = tf.app.flags
 flags.DEFINE_integer("Dx", Dx, "dimension of hidden states")
 flags.DEFINE_integer("Dy", Dy, "dimension of observations")
 flags.DEFINE_integer("Dv", Dv, "dimension of inputs")
-flags.DEFINE_integer("Dev", Dev, "input embedding size")
 
 flags.DEFINE_integer("n_particles", n_particles, "number of particles")
 flags.DEFINE_integer("batch_size", batch_size, "batch size")

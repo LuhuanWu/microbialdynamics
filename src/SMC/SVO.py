@@ -136,8 +136,8 @@ class SVO:
 
             # q_f_t_feed = X_ancestor_tm1
             Input = tf.tile(tf.expand_dims(input[:, t - 1, :], axis=0),
-                            (n_particles, 1, 1))  # (n_particles, batch_size, Dev)
-            q_f_t_feed = tf.concat((X_ancestor_tm1, Input), axis=-1)  # (n_particles, batch_size, Dx + Dev)
+                            (n_particles, 1, 1))  # (n_particles, batch_size, Dv)
+            q_f_t_feed = tf.concat((X_ancestor_tm1, Input), axis=-1)  # (n_particles, batch_size, Dx + Dv)
 
             # proposal
             preprocessed_obs_t = preprocessed_obs_ta.read(t)
@@ -414,7 +414,7 @@ class SVO:
                 # x: (batch_size, time - k - 1, Dx), beta_log: (batch_size, time-k-1, Dx+1, Dy-1)
                 particle_BxTmkxDz = [p[:, :-1] for p in particle_BxTmkxDz]
 
-                # (batch_size, time - k - 1, Dx+Dev)
+                # (batch_size, time - k - 1, Dx+Dv)
                 f_k_feed = tf.concat([particle_BxTmkxDz[0], input[:, k:-1]], axis=-1)
                 x_BxTmkxDz = self.f.mean(f_k_feed, Dx=self.Dx)   # (batch_size, time - k - 1, Dx)
 

@@ -11,13 +11,13 @@ EPS = 1e-6
 
 
 class ilr_clv_transformation(transformation):
-    def __init__(self, theta, Dev,
+    def __init__(self, theta, Dv,
                  exist_in_group_dynamics=False, use_L0=True, inference_schedule=None,
                  reg_coef=1.0, b_dropout_rate=0.95,
                  training=False, annealing_frac=1.0):
         self.theta = theta
         self.Dx, self.Dy = theta.shape
-        self.Dev = Dev
+        self.Dv = Dv
         self.use_L0 = use_L0
         self.inference_schedule = inference_schedule   # "flat" / "top_down" / "bottom_up"
         self.reg_coef = reg_coef
@@ -35,11 +35,11 @@ class ilr_clv_transformation(transformation):
         # init variable
         self.A_in_var = tf.Variable(tf.zeros((self.Dx, self.Dx + self.Dy)))
         self.g_in_var = tf.Variable(tf.zeros((self.Dx,)))
-        self.Wv_in_var = tf.Variable(tf.zeros((self.Dx, self.Dev)))
+        self.Wv_in_var = tf.Variable(tf.zeros((self.Dx, self.Dv)))
 
         self.A_between_var = tf.Variable(tf.zeros((self.Dx, self.Dx + self.Dy)))
         self.g_between_var = tf.Variable(tf.zeros((self.Dx,)))
-        self.Wv_between_var = tf.Variable(tf.zeros((self.Dx, self.Dev)))
+        self.Wv_between_var = tf.Variable(tf.zeros((self.Dx, self.Dv)))
 
         # init tree
         self.root, self.reference = convert_theta_to_tree(theta, inode_b_init)
@@ -142,7 +142,7 @@ class ilr_clv_transformation(transformation):
 
     def transform(self, Input):
         """
-        :param Input: (n_particles, batch_size, Dx + Dev)
+        :param Input: (n_particles, batch_size, Dx + Dv)
         :param Dx: dimension of hidden space
         :return: output: (n_particles, batch_size, Dx)
         """
@@ -154,7 +154,7 @@ class ilr_clv_transformation(transformation):
         Dx = self.Dx
 
         x = Input[..., :Dx]  # (n_particles, batch_size, Dx)
-        v = Input[0, 0:1, Dx:]  # (1, Dev)
+        v = Input[0, 0:1, Dx:]  # (1, Dv)
         v_size = v.shape[-1]
 
         p_t = inverse_ilr_transform(x, self.psi)
@@ -166,7 +166,7 @@ class ilr_clv_transformation(transformation):
 
         delta = g_in + g_between + pA
         if v_size > 0:
-            # Wv shape (Dev, Dx)
+            # Wv shape (Dv, Dx)
             Wvv = tf.reduce_sum(v[..., None] * (Wv_in + Wv_between), axis=-2)  # (n_particles, batch_size, Dx)
             delta += Wvv
 

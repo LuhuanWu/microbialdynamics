@@ -35,7 +35,6 @@ class SSM(object):
         self.Dx = FLAGS.Dx
         self.Dy = FLAGS.Dy
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
-        self.Dev = FLAGS.Dev
 
         self.theta = theta
         self.exist_in_group_dynamics = FLAGS.exist_in_group_dynamics
@@ -82,7 +81,6 @@ class SSM(object):
         self.init_trans()
         self.init_dist()
         self.init_RNNs()
-        self.init_input_embedding()
 
     def init_placeholder(self):
         self.obs = tf.placeholder(tf.float32, shape=(self.batch_size, None, self.Dy), name="obs")
@@ -100,15 +98,15 @@ class SSM(object):
             self.f_tran = MLP_transformation(self.f_layers, self.Dx,
                                              use_residual=self.f_use_residual, training=self.training, name="f_tran")
         elif self.f_tran_type == "linear":
-            self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
+            self.f_tran = tf_linear_transformation(self.Dx, self.Dv)
         elif self.f_tran_type == "clv":
             assert self.Dx == self.Dy - 1
-            self.f_tran = clv_transformation(self.Dx, self.Dev,
+            self.f_tran = clv_transformation(self.Dx, self.Dv,
                                              reg_coef=self.reg_coef, annealing_frac=self.annealing_frac)
         elif self.f_tran_type == "ilr_clv":
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
-            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.exist_in_group_dynamics,
+            self.f_tran = ilr_clv_transformation(self.theta, self.Dv, self.exist_in_group_dynamics,
                                                  use_L0=self.use_L0, inference_schedule=self.inference_schedule,
                                                  training=self.training, annealing_frac=self.annealing_frac)
         else:
@@ -230,66 +228,3 @@ class SSM(object):
 
         else:
             self.bRNN = None
-
-    def init_input_embedding(self):
-        self.input_embedding_layer = Dense(self.Dev,
-                                           activation="linear",
-                                           kernel_initializer="he_uniform",
-                                           name="input_embedding")
-        self.input_embedding = self.input_embedding_layer(self.input)
-
-    def sample(self, T, x0=None, x0_mu=None, inputs=None):
-        """
-        Sampling using f and g
-        :param T: the length of sample sequence
-        :param x0_mu: transformation input for initial distribution, (1, Dy)
-        :param x0: initial hidden state, (1, Dx)
-        :param inputs: (T, Dv)
-        :return: (x_{0:T-1), y_{0:T-1}), a tuple of two tensors
-        """
-
-        if x0 is None:
-            assert x0_mu is not None
-            # TODO: fix this
-            assert x0_mu.shape == (1, self.Dy)
-            x0 = self.q0_dist.sample(x0_mu)
-
-        else:
-            assert x0.shape == (1, self.Dx)
-
-        if inputs is not None:
-            batch_size, T_inputs, Dv = inputs.shape
-            assert Dv == self.Dv
-            assert batch_size == 1
-            assert T_inputs == T
-
-            inputs_embedding = self.input_embedding_layer(inputs)
-
-            assert inputs_embedding.shape == (1, T, self.Dev)
-
-        # TODO: fix poisson sampling
-        y0 = self.g_dist.sample(x0)
-
-        x_list = [x0]
-        y_list = [y0]
-        for t in range(1, T):
-            if inputs is None:
-                xt = self.f_dist.sample(x_list[-1])
-            else:
-                xt = self.f_dist.sample(tf.concat((x_list[-1], inputs_embedding[:,t-1]), axis=-1))
-            yt = self.g_dist.sample(xt)
-
-            x_list.append(xt)
-            y_list.append(yt)
-
-        xs = tf.stack(x_list, axis=0)  # (T, n_batches, Dx)
-        ys = tf.stack(y_list, axis=0)  # (T, n_batches, Dy)
-
-        assert xs.shape == (T, 1, self.Dx)
-        assert ys.shape == (T, 1, self.Dy)
-
-        xs = tf.transpose(xs, (1, 0, 2))  # (n_batches, T, Dx)
-        ys = tf.transpose(ys, (1, 0, 2))  # (n_batches, T, Dy)s
-        return xs, ys
-
-

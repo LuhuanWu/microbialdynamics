@@ -49,7 +49,6 @@ class trainer:
 
         self.init_placeholder()
         self.init_training_param()
-        self.input_embedding = model.input_embedding
 
     def init_placeholder(self):
         self.obs = self.model.obs
@@ -128,7 +127,7 @@ class trainer:
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
 
         # define objective
-        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.input_embedding, self.time,
+        self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.input, self.time,
                                                         self.mask, self.time_interval, self.depth,
                                                         self.mask_weight)
 
@@ -136,7 +135,7 @@ class trainer:
         self.particles = [self.Xs]
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
             self.SMC.n_step_MSE(self.MSE_steps, self.particles,
-                                self.obs, self.input_embedding, self.mask, self.depth)
+                                self.obs, self.input, self.mask, self.depth)
         self.log["y_hat"] = self.y_hat_N_BxTxDy
 
         # set up feed_dict
