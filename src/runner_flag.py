@@ -24,15 +24,15 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # Dy and Dv need to match the data set
-Dy = 11             # dimension of observations (num of taxa)
-Dv = 3             # dimension of inputs (num of perturbations)
-Dx = 10             # dimension of hidden states (num of groups/topics)
+Dy = 16             # dimension of observations (num of taxa)
+Dv = 0             # dimension of inputs (num of perturbations)
+Dx = 15             # dimension of hidden states (num of groups/topics)
 
 # see options: utils/available_data.py
-data_type = "oral_11_taxa"
+data_type = "in_group_balance_6_mag_00_16_taxa"
 
 lr = 1e-3               # learning rate
-epochs = [3000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
+epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
                         # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
@@ -45,7 +45,8 @@ seed = 0
 
 exist_in_group_dynamics = False
 use_L0 = True
-L0_reg_coef = 0.1
+inference_schedule = "bottom_up"   # "flat" / "top_down" / "bottom_up"
+reg_coef = 0.1
 
 # ------------------------------- Data ------------------------------- #
 
@@ -179,13 +180,14 @@ flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
 flags.DEFINE_boolean("exist_in_group_dynamics", exist_in_group_dynamics, "whether exists in-group interaction")
 flags.DEFINE_boolean("use_L0", use_L0, "whether use L0 regularization for break score in irl_clv transformation")
-flags.DEFINE_float("L0_reg_coef", L0_reg_coef, "L0 regularization coefficient")
+flags.DEFINE_string("inference_schedule", inference_schedule, "training schedule for ilr_clv transformation")
+flags.DEFINE_float("reg_coef", reg_coef, "regularization coefficient")
 
 # ------------------------------- Data ------------------------------- #
 
 flags.DEFINE_string("data_type", data_type, "The type of data, chosen from toy, percentage and count.")
 flags.DEFINE_string("interpolation_type", interpolation_type, "The type of interpolation, "
-                                                              "chhoose from 'linear_lar', 'gp_lar', 'clv', and None")
+                                                              "choose from 'linear_lar', 'gp_lar', 'clv', and None")
 flags.DEFINE_integer("pseudo_count", pseudo_count, "pseudo_count added to the observations")
 
 flags.DEFINE_integer("train_num", train_num, "number of samples from the dataset for training")

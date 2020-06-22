@@ -3,15 +3,15 @@ import tensorflow as tf
 from src.transformation.base import transformation
 
 class clv_transformation(transformation):
-    def __init__(self, Dx, Dev):
+    def __init__(self, Dx, Dev, reg_coef=1.0, annealing_frac=1.0):
         self.Dx = Dx
         self.Dev = Dev
+        self.reg_coef = reg_coef
+        self.annealing_frac = annealing_frac
 
-        hidden_dim = Dx
-
-        A_init_val = tf.zeros((hidden_dim, hidden_dim))
-        g_init_val = tf.zeros((hidden_dim,))
-        Wv_init_val = tf.zeros((self.Dev, hidden_dim))
+        A_init_val = tf.zeros((Dx + 1, Dx))
+        g_init_val = tf.zeros((Dx,))
+        Wv_init_val = tf.zeros((self.Dev, Dx))
         self.A_var = tf.Variable(A_init_val)
         self.g_var = tf.Variable(g_init_val)
         self.Wv_var = tf.Variable(Wv_init_val)
@@ -35,6 +35,8 @@ class clv_transformation(transformation):
         v = Input[0, 0:1, Dx:]  # (1, Dev)
         v_size = v.shape[-1]
 
+        zeros = tf.zeros_like(x[..., 0:1])
+        x = tf.concat([x, zeros], axis=-1)
         p = tf.nn.softmax(x, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
@@ -47,3 +49,7 @@ class clv_transformation(transformation):
             output = x + g + pA
 
         return output
+
+    def regularization_loss(self):
+        L2 = tf.reduce_sum(self.A_var ** 2) + tf.reduce_sum(self.g_var ** 2) + tf.reduce_sum(self.Wv_var ** 2)
+        return L2 * self.reg_coef * self.annealing_frac

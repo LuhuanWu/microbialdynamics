@@ -40,7 +40,8 @@ class SSM(object):
         self.theta = theta
         self.exist_in_group_dynamics = FLAGS.exist_in_group_dynamics
         self.use_L0 = FLAGS.use_L0
-        self.L0_reg_coef = FLAGS.L0_reg_coef
+        self.inference_schedule = FLAGS.inference_schedule
+        self.reg_coef = FLAGS.reg_coef
 
         self.batch_size = FLAGS.batch_size
 
@@ -101,13 +102,15 @@ class SSM(object):
         elif self.f_tran_type == "linear":
             self.f_tran = tf_linear_transformation(self.Dx, self.Dev)
         elif self.f_tran_type == "clv":
-            self.f_tran = clv_transformation(self.Dx, self.Dev)
+            assert self.Dx == self.Dy - 1
+            self.f_tran = clv_transformation(self.Dx, self.Dev,
+                                             reg_coef=self.reg_coef, annealing_frac=self.annealing_frac)
         elif self.f_tran_type == "ilr_clv":
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
-            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.exist_in_group_dynamics, self.training,
-                                                 self.use_L0, L0_reg_coef=self.L0_reg_coef,
-                                                 annealing_frac=self.annealing_frac)
+            self.f_tran = ilr_clv_transformation(self.theta, self.Dev, self.exist_in_group_dynamics,
+                                                 use_L0=self.use_L0, inference_schedule=self.inference_schedule,
+                                                 training=self.training, annealing_frac=self.annealing_frac)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 

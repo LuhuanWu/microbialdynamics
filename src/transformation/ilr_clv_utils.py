@@ -14,7 +14,9 @@ class Tree(object):
         self.taxon_idx = taxon_idx
         self.node_idx = node_idx
         if inode_idx is not None:
-            self.b = tf.sigmoid(tf.Variable(b, dtype=tf.float32))
+            b = np.clip(b, EPS, 1 - EPS)
+            inode_b_init = np.log(b / (1 - b))
+            self.b = tf.sigmoid(tf.Variable(inode_b_init, dtype=tf.float32))
         elif taxon_idx is not None:
             self.b = b
         else:
@@ -40,14 +42,14 @@ class Tree(object):
         return name
 
 
-def convert_theta_to_tree(theta):
+def convert_theta_to_tree(theta, inode_b_init=0.5):
     n_node = theta.shape[0] + theta.shape[1]
     node_reference = [0 for _ in range(n_node)]  # placeholder
-    root = convert_theta_to_tree_helper(theta, node_reference, None)
+    root = convert_theta_to_tree_helper(theta, node_reference, None, inode_b_init=inode_b_init)
     return root, node_reference
 
 
-def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=True):
+def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=True, inode_b_init=0.5):
     # find and return parent's left/right child node
     if parent is None:
         n_taxa = theta.shape[1]
@@ -78,7 +80,7 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
                 break
         assert inode_idx != -1, "cannot find the child whose leaves should be {}".format(node_taxa)
 
-        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=0.0, depth=depth)
+        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=inode_b_init, depth=depth)
         child.left = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=True)
         child.right = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=False)
         node_reference[inode_idx] = child
