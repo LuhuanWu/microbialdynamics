@@ -81,11 +81,57 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
         assert inode_idx != -1, "cannot find the child whose leaves should be {}".format(node_taxa)
 
         child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=inode_b_init, depth=depth)
-        child.left = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=True)
-        child.right = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=False)
+        child.left = convert_theta_to_tree_helper(theta, node_reference, child,
+                                                  is_left_child=True, inode_b_init=inode_b_init)
+        child.right = convert_theta_to_tree_helper(theta, node_reference, child,
+                                                   is_left_child=False, inode_b_init=inode_b_init)
         node_reference[inode_idx] = child
 
     return child
+
+
+# --------------------------------------------------- helpers --------------------------------------------------- #
+
+
+def get_inode_depths(n_inode, reference):
+    depths = []
+    for inode in reference[:n_inode]:
+        depths.append(inode.depth)
+    depths = np.array(depths)
+    return depths
+
+
+def get_inode_heights(n_inode, root):
+    heights = [0 for _ in range(n_inode)]
+    get_height_helper(heights, root)
+    heights = np.array(heights)
+    return heights
+
+
+def get_height_helper(heights, node):
+    if node.is_taxon():
+        return -1
+    l_height = get_height_helper(heights, node.left)
+    r_height = get_height_helper(heights, node.right)
+    heights[node.inode_idx] = height = max(l_height, r_height) + 1
+    return height
+
+
+def get_inode_and_taxon_idxes(node):
+    inode_idxes = []
+    taxon_idxes = []
+    get_inode_and_taxon_idxes_helper(inode_idxes, taxon_idxes, node)
+    return inode_idxes, taxon_idxes
+
+
+def get_inode_and_taxon_idxes_helper(inode_idxes, taxon_idxes, node):
+    if node.is_taxon():
+        taxon_idxes.append(node.node_idx)
+    else:
+        inode_idxes.append(node.node_idx)
+        get_inode_and_taxon_idxes_helper(inode_idxes, taxon_idxes, node.left)
+        get_inode_and_taxon_idxes_helper(inode_idxes, taxon_idxes, node.right)
+
 
 # ------------------------------------------ between-group interaction ------------------------------------------ #
 

@@ -13,12 +13,14 @@ from src.distribution.mvn import tf_mvn
 from src.distribution.poisson import tf_poisson
 from src.distribution.dirichlet import tf_dirichlet
 from src.distribution.multinomial import tf_multinomial
+from src.distribution.multinomial_compose import tf_multinomial_compose
 
 SUPPORTED_EMISSION = dict(dirichlet=tf_dirichlet,
                           poisson=tf_poisson,
                           mvn=tf_mvn,
                           multinomial=tf_multinomial,
-                          LDA=LDA_transformation)
+                          LDA=LDA_transformation,
+                          multinomial_compose=tf_multinomial_compose)
 
 
 class SSM(object):
@@ -105,6 +107,9 @@ class SSM(object):
         elif self.f_tran_type == "ilr_clv":
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
+            if self.inference_schedule == "bottom_up":
+                assert self.g_tran_type == "inv_ilr"
+                assert self.g_dist_type == "multinomial_compose"
             self.f_tran = ilr_clv_transformation(self.theta, self.Dv, self.exist_in_group_dynamics,
                                                  use_L0=self.use_L0, inference_schedule=self.inference_schedule,
                                                  training=self.training, annealing_frac=self.annealing_frac)
@@ -118,7 +123,8 @@ class SSM(object):
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
         elif self.g_tran_type == "inv_ilr":
-            self.g_tran = inv_ilr_transformation(self.theta)
+            assert self.f_tran_type == "ilr_clv"
+            self.g_tran = inv_ilr_transformation(self.theta, self.f_tran)
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 

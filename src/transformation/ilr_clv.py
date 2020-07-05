@@ -3,6 +3,7 @@ import tensorflow as tf
 
 from src.transformation.base import transformation
 from src.transformation.ilr_clv_utils import convert_theta_to_tree
+from src.transformation.ilr_clv_utils import get_inode_depths, get_inode_heights, get_inode_and_taxon_idxes
 from src.transformation.ilr_clv_utils import get_p_i, get_between_group_p_j_given_i, get_psi, get_in_group_p_j_given_i
 from src.transformation.ilr_clv_utils import inverse_ilr_transform, get_inode_relative_abundance
 from src.transformation.l0_utils import hard_concrete_sample, hard_concrete_mean, l0_norm
@@ -13,7 +14,7 @@ EPS = 1e-6
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dv,
                  exist_in_group_dynamics=False, use_L0=True, inference_schedule=None,
-                 reg_coef=1.0, b_dropout_rate=0.95,
+                 reg_coef=1.0, b_dropout_rate=0.999,
                  training=False, annealing_frac=1.0):
         self.theta = theta
         self.Dx, self.Dy = theta.shape
@@ -26,9 +27,9 @@ class ilr_clv_transformation(transformation):
         if self.inference_schedule == "flat":
             inode_b_init = 0.5
         elif self.inference_schedule == "top_down":
-            inode_b_init = 0.01
+            inode_b_init = 1e-3
         elif self.inference_schedule == "bottom_up":
-            inode_b_init = 0.99
+            inode_b_init = 1 - 1e-3
         else:
             raise NotImplementedError
 
@@ -45,53 +46,44 @@ class ilr_clv_transformation(transformation):
         self.root, self.reference = convert_theta_to_tree(theta, inode_b_init)
         self.psi = get_psi(theta)
 
-        inode_depth = []
-        for inode in self.reference[:self.Dx]:
-            inode_depth.append(inode.depth)
-        inode_depth = np.array(inode_depth)
-        max_depth = np.max(inode_depth) + 1.0
+        inode_depths = get_inode_depths(self.Dx, self.reference)
+        inode_heights = get_inode_heights(self.Dx, self.root)
+        max_depth = np.max(inode_depths) + 1.0
+        max_height = np.max(inode_heights) + 1.0
 
         if self.inference_schedule == "flat":
-            training_mask = np.ones_like(inode_depth, dtype=bool)
+            self.training_mask = np.ones_like(inode_depths, dtype=bool)
         elif self.inference_schedule == "top_down":
-            training_mask = (inode_depth * 0.75 / max_depth) < annealing_frac
+            self.training_mask = (inode_depths * 0.75 / max_depth) < annealing_frac
         else:  # "bottom_up"
-            training_mask = ((max_depth - 1.0 - inode_depth) * 0.75 / max_depth) < annealing_frac
+            self.training_mask = (inode_heights * 0.75 / max_height) < annealing_frac
 
         # L0 regularization for break score
         if use_L0:
             log_alpha_init = tf.log(b_dropout_rate / (1 - b_dropout_rate))
             self.log_alpha = tf.Variable(log_alpha_init * tf.ones(self.Dx, dtype=tf.float32))
-            self.log_alpha = tf.where(training_mask, self.log_alpha, tf.stop_gradient(self.log_alpha))
+            self.log_alpha = tf.where(self.training_mask, self.log_alpha, tf.stop_gradient(self.log_alpha))
             b_noises = tf.cond(training,
                                lambda: hard_concrete_sample(self.log_alpha),
                                lambda: hard_concrete_mean(self.log_alpha))
         else:
             b_noises = tf.ones(self.Dx, dtype=tf.float32)
 
+        # training mask for b
         b = []
         b_before_gated = []
-        self.A_between_var_list = tf.unstack(self.A_between_var, axis=-1)
-        self.A_between_var_masked = [0 for _ in range(self.Dx + self.Dy)]
-        for inode, b_noise, mask in zip(self.reference[:self.Dx], tf.unstack(b_noises), tf.unstack(training_mask)):
+        for inode, b_noise, mask in zip(self.reference[:self.Dx], tf.unstack(b_noises), tf.unstack(self.training_mask)):
             b_before_gated.append(inode.b)
             inode.b = tf.where(mask, inode.b, tf.stop_gradient(inode.b))
             inode.b = inode.b * b_noise
             b.append(inode.b)
-
-            idxes = [inode.left.node_idx, inode.right.node_idx]
-            if inode == self.root:
-                idxes.append(inode.node_idx)
-            for idx in idxes:
-                node_A_var = self.A_between_var_list[idx]
-                self.A_between_var_masked[idx] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
-
         self.b_before_gated = tf.stack(b_before_gated)
         self.b = tf.stack(b)
 
-        self.A_between_var = tf.stack(self.A_between_var_masked, axis=-1)
-        self.g_between_var = tf.where(training_mask, self.g_between_var, tf.stop_gradient(self.g_between_var))
-        self.Wv_between_var = tf.where(training_mask, self.Wv_between_var, tf.stop_gradient(self.Wv_between_var))
+        # training mask for A_between
+        self.A_between_var = self.get_A_between_var_masked()
+        self.g_between_var = tf.where(self.training_mask, self.g_between_var, tf.stop_gradient(self.g_between_var))
+        self.Wv_between_var = tf.where(self.training_mask, self.Wv_between_var, tf.stop_gradient(self.Wv_between_var))
 
         self.p_i = get_p_i(self.Dx, self.root)
         self.in_group_p_j_given_i = get_in_group_p_j_given_i(self.Dx + self.Dy, self.Dx, self.root)
@@ -158,6 +150,10 @@ class ilr_clv_transformation(transformation):
         v_size = v.shape[-1]
 
         p_t = inverse_ilr_transform(x, self.psi)
+        if self.inference_schedule == "bottom_up":
+            # self-normalize inside each tree
+            p_t = self.get_normalized_p_t(p_t)
+
         r_t = get_inode_relative_abundance(self.root, p_t, Dx)
         p_t = tf.concat([r_t, p_t], axis=-1)
 
@@ -173,3 +169,85 @@ class ilr_clv_transformation(transformation):
         output = x + delta
 
         return output
+    
+    def get_A_between_var_masked(self):
+        if self.inference_schedule == "flat":
+            return self.A_between_var
+        elif self.inference_schedule == "top_down":
+            A_between_var_list = tf.unstack(self.A_between_var, axis=-1)
+            A_between_var_masked = [0 for _ in range(self.Dx + self.Dy)]
+            for inode, mask in zip(self.reference[:self.Dx], tf.unstack(self.training_mask)):
+                idxes = [inode.left.node_idx, inode.right.node_idx]
+                if inode == self.root:
+                    idxes.append(inode.node_idx)
+                for idx in idxes:
+                    node_A_var = A_between_var_list[idx]
+                    A_between_var_masked[idx] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+            return tf.stack(A_between_var_masked, axis=-1)
+        else:  # "bottom_up"
+            A_between_var_list = tf.unstack(self.A_between_var, axis=0)
+            A_between_var_list = [tf.unstack(ele) for ele in A_between_var_list]
+            A_between_var_masked = [[None for _ in range(self.Dx + self.Dy)] for _ in range(self.Dx)]
+            for inode, mask in zip(self.reference[:self.Dx], tf.unstack(self.training_mask)):
+                left_inode_idxes, left_taxon_idxes = get_inode_and_taxon_idxes(inode.left)
+                right_inode_idxes, right_taxon_idxes = get_inode_and_taxon_idxes(inode.right)
+                for i in left_inode_idxes:
+                    for j in right_inode_idxes + right_taxon_idxes:
+                        node_A_var = A_between_var_list[i][j]
+                        A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                for i in right_inode_idxes:
+                    for j in left_inode_idxes + left_taxon_idxes:
+                        node_A_var = A_between_var_list[i][j]
+                        A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                i = inode.inode_idx
+                for j in left_taxon_idxes + right_taxon_idxes + [i]:
+                    node_A_var = A_between_var_list[i][j]
+                    A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                for j in left_inode_idxes + right_inode_idxes:
+                    node_A_var = A_between_var_list[i][j]
+                    A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                    node_A_var = A_between_var_list[j][i]
+                    A_between_var_masked[j][i] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+
+            A_between_var_masked = [tf.stack(ele) for ele in A_between_var_masked]
+            return tf.stack(A_between_var_masked)
+
+    def get_bottom_up_subtrees(self):
+        training_mask = tf.unstack(self.training_mask)
+
+        is_root_of_subtree = []
+        leaves_of_subtree = []
+
+        for node in self.reference:
+            if node == self.root:
+                is_root_of_subtree.append(training_mask[node.inode_idx])
+                leaves_of_subtree.append(list(range(self.Dy)))
+                continue
+
+            if node.is_taxon():
+                mask = True
+            else:
+                mask = training_mask[node.node_idx]
+
+            parent_mask = training_mask[node.parent.inode_idx]
+            inode_is_root_of_subtree = tf.logical_and(mask, tf.logical_not(parent_mask))
+            is_root_of_subtree.append(inode_is_root_of_subtree)
+
+            _, child_taxon_idxes = get_inode_and_taxon_idxes(node)
+            child_taxon_idxes = np.array(child_taxon_idxes) - self.Dx
+            leaves_of_subtree.append(child_taxon_idxes)
+
+        return is_root_of_subtree, leaves_of_subtree
+
+    def get_normalized_p_t(self, p_t):
+
+        p_t_list = tf.unstack(p_t, axis=-1)
+        p_t_sum = tf.unstack(tf.ones_like(p_t), axis=-1)
+
+        for is_root_of_subtree, leaves_of_subtree in zip(*self.get_bottom_up_subtrees()):
+            p_t_sum_ = tf.reduce_sum([p_t_list[leaf_idx] for leaf_idx in leaves_of_subtree], axis=0)
+            for leaf_idx in leaves_of_subtree:
+                p_t_sum[leaf_idx] = tf.cond(is_root_of_subtree, lambda: p_t_sum_, lambda: p_t_sum[leaf_idx])
+
+        p_t_sum = tf.stack(p_t_sum, axis=-1)
+        return p_t / p_t_sum

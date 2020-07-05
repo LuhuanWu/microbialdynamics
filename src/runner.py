@@ -29,7 +29,7 @@ def main(_):
     print_freq = FLAGS.print_freq
 
     # evaluation parameters
-    if FLAGS.g_dist_type == "poisson" or FLAGS.g_dist_type == "multinomial":
+    if FLAGS.g_dist_type in ["poisson", "multinomial", "multinomial_compose"]:
         y_hat_bar_plot_to_normalize = True
     else:
         raise ValueError("Unsupported emission!")
