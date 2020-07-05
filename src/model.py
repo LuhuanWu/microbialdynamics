@@ -89,7 +89,6 @@ class SSM(object):
         self.mask = tf.placeholder(tf.bool, shape=(self.batch_size, None), name="mask")
         self.mask_weight = tf.placeholder(tf.float32, shape=(), name="mask_weight")
         self.time_interval = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="time_interval")
-        self.depth = tf.placeholder(tf.float32, shape=(self.batch_size, None), name="depth")
         self.training = tf.placeholder(tf.bool, shape=(), name="training")
         self.annealing_frac = tf.placeholder(tf.float32, shape=(), name="annealing_frac")
 

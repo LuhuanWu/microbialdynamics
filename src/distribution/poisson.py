@@ -46,7 +46,8 @@ class tf_poisson(distribution):
                                   allow_nan_stats=False)
             return poisson
 
-    def log_prob(self, Input, output, depth=None, name=None):
+    def log_prob(self, Input, output, name=None):
+        depth = tf.reduce_sum(output, axis=-1)
         poisson = self.get_poisson(Input, depth)
         with tf.variable_scope(name or self.name):
             return tf.reduce_sum(poisson.log_prob(output), axis=-1)

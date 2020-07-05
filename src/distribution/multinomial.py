@@ -26,7 +26,8 @@ class tf_multinomial(distribution):
                                           allow_nan_stats=False)
             return multinomial
 
-    def log_prob(self, Input, output, depth=None, name=None):
+    def log_prob(self, Input, output, name=None):
+        depth = tf.reduce_sum(output, axis=-1)
         multinomial = self.get_multinomial(Input, depth)
         with tf.variable_scope(name or self.name):
             return multinomial.log_prob(output)

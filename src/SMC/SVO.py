@@ -31,7 +31,7 @@ class SVO:
 
         self.name = name
 
-    def get_log_ZSMC(self, obs, input, time, mask, time_interval, depth, mask_weight):
+    def get_log_ZSMC(self, obs, input, time, mask, time_interval, mask_weight):
         """
         Get log_ZSMC from obs y_1:T
         Inputs are all placeholders:
@@ -40,7 +40,6 @@ class SVO:
             time.shape = ()
             mask.shape = (batch_size, time) | batch_size=1
             time_interval:
-            depth.shape = (batch_size, time) -- count data
         Output:
             log_ZSMC: shape = scalar
             log: stuff to debug
@@ -54,7 +53,7 @@ class SVO:
             log = {}
 
             # get X_1:T, resampled X_1:T and log(W_1:T) from SMC
-            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, depth, mask_weight)
+            X_prevs, X_ancestors, log_Ws = self.SMC(obs, input, mask, time_interval, mask_weight)
 
             log_ZSMC = self.compute_log_ZSMC(log_Ws)
 
@@ -66,7 +65,7 @@ class SVO:
 
         return log_ZSMC, log
 
-    def SMC(self, obs, input, mask, time_interval, depth, mask_weight, q_cov=1.0):
+    def SMC(self, obs, input, mask, time_interval, mask_weight, q_cov=1.0):
         Dx, n_particles, batch_size, time = self.Dx, self.n_particles, self.batch_size, self.time
 
         # preprocessing obs
@@ -96,7 +95,7 @@ class SVO:
         else:
             g_input = X_0
             qh_0_log_prob = h_0_log_prob = 0
-        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0], depth=depth[:, 0])
+        g_0_log_prob = self.g.log_prob(g_input, obs[:, 0])
         g_0_log_prob += h_0_log_prob - qh_0_log_prob
         g_0_log_prob = tf.where(mask[0][0], g_0_log_prob, g_0_log_prob * mask_weight, name="g_0_log_prob")
 
@@ -155,7 +154,7 @@ class SVO:
                 qh_t_log_prob = h_t_log_prob = 0
 
             # emission log probability and log weights
-            g_t_log_prob = self.g.log_prob(g_input, obs[:, t], depth=depth[:, t])
+            g_t_log_prob = self.g.log_prob(g_input, obs[:, t])
             g_t_log_prob += h_t_log_prob - qh_t_log_prob
             g_t_log_prob = tf.where(mask[0][t], g_t_log_prob, g_t_log_prob * mask_weight, name="g_t_log_prob")
 
@@ -374,7 +373,7 @@ class SVO:
 
         return preprocessed_X0, preprocessed_obs
 
-    def n_step_MSE(self, n_steps, particles, obs, input, mask, depth):
+    def n_step_MSE(self, n_steps, particles, obs, input, mask):
         """
         Compute MSE_k for k = 0, ..., n_steps. This is an intermediate step to calculate k-step R^2
         :param n_steps: integer
@@ -382,7 +381,6 @@ class SVO:
         :param obs: (batch_size, time, Dy)
         :param input: (batch_size, time, Dv)
         :param mask: (batch_size, time)
-        :param depth: (batch_size, time)
         :return:
         """
 
@@ -391,6 +389,7 @@ class SVO:
         assert batch_size == 1
 
         _, _, Dy = obs.shape.as_list()  # (batch_size, time, Dy)
+        depth = tf.reduce_sum(obs, axis=-1)
         # assert n_steps < time, "n_steps = {} >= time".format(n_steps)
 
         with tf.variable_scope(self.name):

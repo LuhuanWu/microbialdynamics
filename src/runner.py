@@ -48,17 +48,16 @@ def main(_):
     if FLAGS.interpolation_type == 'none':
         FLAGS.interpolation_type = None
 
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, depth_train, depth_test, theta, params = \
+    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, theta, params = \
         load_data(data_dir, train_num=FLAGS.train_num, test_num=FLAGS.test_num)
 
     FLAGS.n_train, FLAGS.n_test = n_train, n_test = len(obs_train), len(obs_test)
 
     hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-        mask_train, mask_test, time_interval_train, time_interval_test, depth_train, depth_test = \
+        mask_train, mask_test, time_interval_train, time_interval_test = \
         interpolate_data(hidden_train, hidden_test,
                          obs_train, obs_test,
                          input_train, input_test,
-                         depth_train, depth_test,
                          interpolation_type=FLAGS.interpolation_type,
                          pseudo_count=FLAGS.pseudo_count)
 
@@ -108,7 +107,7 @@ def main(_):
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
     mytrainer.set_data_saving()
     mytrainer.init_train(obs_train, obs_test, input_train, input_test, mask_train, mask_test,
-                         time_interval_train, time_interval_test, depth_train, depth_test)
+                         time_interval_train, time_interval_test)
 
     plot_start_idx, plot_start_epoch = 0, 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):

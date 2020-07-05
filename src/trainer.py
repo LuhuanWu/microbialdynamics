@@ -7,17 +7,8 @@ import tensorflow as tf
 import os
 import pickle
 import time
-import pdb
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-from src.rslts_saving.rslts_saving import plot_R_square_epoch
-from src.utils.data_interpolation import trainer_interpolation_helper
-from src.rslts_saving.rslts_saving import plot_topic_bar_plot_while_training, plot_topic_taxa_matrix_while_training, \
-    plot_x_bar_plot_while_training, plot_topic_bar_plot
-
-from tensorflow.python import debug as tf_debug
 
 
 EPS = 1e-6
@@ -57,7 +48,6 @@ class trainer:
         self.mask = self.model.mask
         self.mask_weight = self.model.mask_weight
         self.time_interval = self.model.time_interval
-        self.depth = self.model.depth
         self.training = self.model.training
         self.annealing_frac = self.model.annealing_frac
 
@@ -117,25 +107,21 @@ class trainer:
             self.writer = tf.summary.FileWriter(self.checkpoint_dir)
 
     def init_train(self, obs_train, obs_test, input_train, input_test,
-                   mask_train, mask_test, time_interval_train, time_interval_test,
-                   depth_train, depth_test):
+                   mask_train, mask_test, time_interval_train, time_interval_test):
 
         self.obs_train, self.obs_test = obs_train, obs_test
-        self.depth_train, self.depth_test = depth_train, depth_test
         self.input_train, self.input_test = input_train, input_test
         self.mask_train, self.mask_test = mask_train, mask_test
         self.time_interval_train, self.time_interval_test = time_interval_train, time_interval_test
 
         # define objective
         self.log_ZSMC, self.log = self.SMC.get_log_ZSMC(self.obs, self.input, self.time,
-                                                        self.mask, self.time_interval, self.depth,
-                                                        self.mask_weight)
+                                                        self.mask, self.time_interval, self.mask_weight)
 
         self.Xs = self.log["Xs_resampled"]
         self.particles = [self.Xs]
         self.y_hat_N_BxTxDy, self.y_N_BxTxDy, self.unmasked_y_hat_N_BxTxDy = \
-            self.SMC.n_step_MSE(self.MSE_steps, self.particles,
-                                self.obs, self.input, self.mask, self.depth)
+            self.SMC.n_step_MSE(self.MSE_steps, self.particles, self.obs, self.input, self.mask)
         self.log["y_hat"] = self.y_hat_N_BxTxDy
 
         # set up feed_dict
@@ -168,7 +154,6 @@ class trainer:
                                 self.time: [obs.shape[0] for obs in self.obs_train[0: self.saving_train_num]],
                                 self.mask: self.mask_train[0: self.saving_train_num],
                                 self.time_interval: self.time_interval_train[0:self.saving_train_num],
-                                self.depth: self.depth_train[0: self.saving_train_num],
                                 self.training: [False] * self.saving_train_num}
 
         self.test_feed_dict = {self.obs: self.obs_test[0:self.saving_test_num],
@@ -176,7 +161,6 @@ class trainer:
                                self.time: [obs.shape[0] for obs in self.obs_test[0: self.saving_test_num]],
                                self.mask: self.mask_test[0:self.saving_test_num],
                                self.time_interval: self.time_interval_test[0:self.saving_test_num],
-                               self.depth: self.depth_test[0:self.saving_test_num],
                                self.training: [False] * self.saving_test_num}
         # all data
         self.train_all_feed_dict = {self.obs: self.obs_train,
@@ -184,7 +168,6 @@ class trainer:
                                     self.time: [obs.shape[0] for obs in self.obs_train],
                                     self.mask: self.mask_train,
                                     self.time_interval: self.time_interval_train,
-                                    self.depth: self.depth_train,
                                     self.training: [False] * len(self.obs_train)}
 
         self.test_all_feed_dict = {self.obs: self.obs_test,
@@ -192,7 +175,6 @@ class trainer:
                                    self.time: [obs.shape[0] for obs in self.obs_test],
                                    self.mask: self.mask_test,
                                    self.time_interval: self.time_interval_test,
-                                   self.depth: self.depth_test,
                                    self.training: [False] * len(self.obs_test)}
 
     def train(self, print_freq, epoch):
@@ -221,9 +203,8 @@ class trainer:
                 self.evaluate_and_save_metrics(self.total_epoch_count)
 
             # training
-            obs_train, input_train, mask_train, time_interval_train, depth_train = \
-                shuffle(self.obs_train, self.input_train, self.mask_train,
-                        self.time_interval_train, self.depth_train)
+            obs_train, input_train, mask_train, time_interval_train = \
+                shuffle(self.obs_train, self.input_train, self.mask_train, self.time_interval_train)
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
@@ -234,7 +215,6 @@ class trainer:
                                          self.mask:           mask_train[j:j + self.batch_size],
                                          self.mask_weight:    mask_weight,
                                          self.time_interval:  time_interval_train[j:j + self.batch_size],
-                                         self.depth:          depth_train[j:j + self.batch_size],
                                          self.lr_holder:      self.lr,
                                          self.training:       True,
                                          self.annealing_frac: annealing_frac})

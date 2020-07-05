@@ -5,8 +5,7 @@ from scipy.special import logsumexp
 
 
 def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                     depth_train, depth_test, interpolation_type=None,
-                     pseudo_count=1, pseudo_percentage=1e-6):
+                     interpolation_type=None, pseudo_count=1, pseudo_percentage=1e-6):
     interpolated_hidden_train = []
     interpolated_hidden_test = []
     interpolated_obs_train = []
@@ -17,12 +16,11 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
     mask_test = []
     time_interval_train = []
     time_interval_test = []
-    interpolated_depth_train = []
-    interpolated_depth_test = []
 
-    for hidden, obs, input, depth in zip(hidden_train, obs_train, input_train, depth_train):
-        hidden, obs, input, mask, time_interval, depth = \
-            interpolate_datapoint(hidden, obs, input, depth, interpolation_type=interpolation_type,
+    for hidden, obs, input in zip(hidden_train, obs_train, input_train):
+        hidden, obs, input, mask, time_interval = \
+            interpolate_datapoint(hidden, obs, input,
+                                  interpolation_type=interpolation_type,
                                   pseudo_count=pseudo_count, pseudo_percentage=pseudo_percentage)
 
         interpolated_hidden_train.append(hidden)
@@ -30,11 +28,10 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         interpolated_input_train.append(input)
         mask_train.append(mask)
         time_interval_train.append(time_interval)
-        interpolated_depth_train.append(depth)
 
-    for hidden, obs, input, depth in zip(hidden_test, obs_test, input_test, depth_test):
-        hidden, obs, input, mask, time_interval, depth = \
-            interpolate_datapoint(hidden, obs, input, depth, interpolation_type=interpolation_type,
+    for hidden, obs, input in zip(hidden_test, obs_test, input_test):
+        hidden, obs, input, mask, time_interval = \
+            interpolate_datapoint(hidden, obs, input, interpolation_type=interpolation_type,
                                   pseudo_count=pseudo_count, pseudo_percentage=pseudo_percentage)
 
         interpolated_hidden_test.append(hidden)
@@ -42,22 +39,18 @@ def interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train
         interpolated_input_test.append(input)
         mask_test.append(mask)
         time_interval_test.append(time_interval)
-        interpolated_depth_test.append(depth)
 
     return interpolated_hidden_train, interpolated_hidden_test, \
            interpolated_obs_train, interpolated_obs_test, \
            interpolated_input_train, interpolated_input_test, \
            mask_train, mask_test, time_interval_train, time_interval_test, \
-           interpolated_depth_train, interpolated_depth_test
 
 
-def interpolate_datapoint(hidden, obs, input, depth, interpolation_type=None,
-                          pseudo_count=1, pseudo_percentage=1e-6):
+def interpolate_datapoint(hidden, obs, input, interpolation_type=None, pseudo_count=1, pseudo_percentage=1e-6):
     """
     :param hidden: ndarray of shape (n_obs, Dx)
     :param obs: ndarray of shape (n_obs, Dy + 1), where obs[:, 0] records day information
     :param input: ndarray of shape (n_inputs, Dy + 1], where input[:, 0] records day information
-    :param depth: nrarray of shape (n_obs_inputs, )
     :return:
     hidden: (time, Dx)
     obs: (time, Dy)
@@ -169,32 +162,7 @@ def interpolate_datapoint(hidden, obs, input, depth, interpolation_type=None,
         if days[0] <= day <= days[-1]:
             interpolated_input[day - days[0]] = day_input[1:]
 
-    # depth
-    interpolated_depth = np.zeros(time)
-
-    if depth is not None:
-        if interpolation_type is None:
-            last_valid_value = depth[0] + Dy * pseudo_count
-            i = 0
-            for t in np.arange(days[0], days[-1] + 1):
-                if t == days[i]:
-                    interpolated_depth[t - days[0]] = depth[i] + Dy * pseudo_count
-                    last_valid_value = depth[i] + Dy * pseudo_count
-                    i += 1
-                else:
-                    interpolated_depth[t - days[0]] = last_valid_value
-        else:
-            interpolated_depth[days - days[0]] = depth
-            for i, (m, ei, iobs) in enumerate(zip(mask, interpolated_depth, interpolated_obs)):
-                interpolated_depth[i] = ei if m else np.sum(iobs)
-
-    # sanity checks
-    if np.abs(np.sum(interpolated_obs, axis=-1)[0] - 1) > 1e-5:
-        assert np.allclose(np.sum(interpolated_obs, axis=-1), interpolated_depth), \
-            "sum of counts does not match total counts!, {} != {}".format(np.sum(interpolated_obs, axis=-1),
-                                                                                 interpolated_depth)
-
-    return hidden, interpolated_obs, interpolated_input, mask, time_interval, interpolated_depth
+    return hidden, interpolated_obs, interpolated_input, mask, time_interval
 
 
 def lar_transform_with_pseudopercentage(obs):
@@ -286,101 +254,3 @@ def test_linear_interpolation():
 
     assert np.all(correct_interpolated_lars == interpolated_lars), \
         "interpolated_lars = {} \n the correct lars = {}".format(interpolated_lars, correct_interpolated_lars)
-
-
-def test_interpolate_data(interpolation_type, plot_interpolation=False,
-                          plot_dir=None, plot_ground_truth=False):
-    from src.utils.data_loader import load_data
-    from src.utils.available_data import DATA_DIR_DICT
-    import git
-    import os
-
-    data_type = "count"
-    data_dir = DATA_DIR_DICT[data_type]
-    repo = git.Repo('.', search_parent_directories=True)
-    repo_dir = repo.working_tree_dir  # microbialdynamics
-    data_dir = os.path.join(repo_dir, data_dir)
-    Dx = 10
-
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-    depth_train, depth_test = \
-        load_data(data_dir, Dx, False)
-
-    if interpolation_type == 'count_clv':
-        from src.utils.available_data import INTERPOLATION_DATA_DICT
-        import pickle
-
-        interpolation_data_dir = INTERPOLATION_DATA_DICT['count_clv']
-        interpolation_data_dir = os.path.join(repo_dir, interpolation_data_dir)
-        with open(interpolation_data_dir, "rb") as f:
-            interpolation_data = pickle.load(f)
-    else:
-        interpolation_data = None
-
-    hidden_train, hidden_test, obs_train, obs_test, input_train, input_test, \
-    _mask_train, _mask_test, time_interval_train, time_interval_test, depth_train, depth_test = \
-        interpolate_data(hidden_train, hidden_test, obs_train, obs_test, input_train, input_test,
-                         depth_train, depth_test,
-                         interpolation_type=interpolation_type, interpolation_data=interpolation_data)
-
-    if plot_interpolation:
-        from src.rslts_saving.rslts_saving import plot_obs_bar_plot
-        plot_dir = os.path.join(repo_dir, plot_dir)
-
-        plot_obs_bar_plot(obs_train, batch_mask=None, rslt_dir=plot_dir+"/train")
-
-    if plot_ground_truth:
-        from src.rslts_saving.rslts_saving import plot_obs_bar_plot
-        plot_dir = os.path.join(repo_dir, plot_dir)
-
-        plot_obs_bar_plot(obs_train, batch_mask=_mask_train, rslt_dir=plot_dir + "/train")
-
-
-def trainer_interpolation_helper(data, y_hat_vals, masks):
-    """
-
-    :param data: a list, each is an ndarray of shape (time, Dy)
-    :param y_hat_vals: a list, each is an ndarry of shape (time, Dy)
-    :param masks: a list, each is an ndarray of shape (time,)
-    :return: updated_data: a list, each is an ndarray of shape (time, ), updated_depth: a list, each is an ndarray of shape (time, )
-    """
-
-    print("starting inteprolation")
-    def interpolate(y, y_hat_val, mask):
-        pseudo_count = 1
-        updated_y = np.round(y_hat_val[0]).astype(int) + pseudo_count
-        updated_y[mask] = y[mask]
-        return updated_y
-
-    updated_data = list(map(interpolate, data, y_hat_vals, masks))
-    updated_depth = [np.sum(updated_y, axis=-1) for updated_y in updated_data]
-
-    return updated_data, updated_depth
-
-
-if __name__ == "__main__":
-    # test_linear_interpolation()
-    print("hey")
-
-    test_interpolate_data(interpolation_type="linear_lar", plot_interpolation=False,
-                    plot_dir='test_interpolation/linear_lar')
-
-    test_interpolate_data(interpolation_type="gp_lar", plot_interpolation=False, plot_dir='test_interpolation/gp_lar')
-
-
-
-    # test_interpolate_data(interpolation_type="gp", plot_interpolation=False, plot_dir="test_interpolation/gp")
-
-
-    test_interpolate_data(interpolation_type="count_clv",
-                          plot_interpolation=True, plot_dir="test_interpolation/clv")
-
-
-    test_interpolate_data(interpolation_type=None, plot_interpolation=False,
-                          plot_dir="test_interpolation/ground_truth", plot_ground_truth=False)
-
-
-
-
-
-
