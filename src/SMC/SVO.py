@@ -403,7 +403,7 @@ class SVO:
 
             for k in range(n_steps):
                 g_input = particle_BxTmkxDz[0]
-                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, depth=depth[:, k:])
+                unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, obs=obs[:, k:, :])
                 # (batch_size, time - k, Dy)
                 y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
 
@@ -420,7 +420,7 @@ class SVO:
                 particle_BxTmkxDz = [x_BxTmkxDz]
 
             g_input = particle_BxTmkxDz[0]
-            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, depth=depth[:, n_steps:])  # (batch_size, T - N, Dy)
+            unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, obs=obs[:, n_steps:, :])  # (batch_size, T - N, Dy)
             y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
 
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)

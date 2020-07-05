@@ -32,7 +32,8 @@ class tf_multinomial(distribution):
         with tf.variable_scope(name or self.name):
             return multinomial.log_prob(output)
 
-    def mean(self, Input, depth, name=None):
+    def mean(self, Input, obs, name=None):
+        depth = tf.reduce_sum(obs, axis=-1)
         multinomial = self.get_multinomial(Input, depth)
         with tf.variable_scope(name or self.name):
             return multinomial.mean()

@@ -52,7 +52,8 @@ class tf_poisson(distribution):
         with tf.variable_scope(name or self.name):
             return tf.reduce_sum(poisson.log_prob(output), axis=-1)
 
-    def mean(self, Input, depth, name=None):
+    def mean(self, Input, obs, name=None):
+        depth = tf.reduce_sum(obs, axis=-1)
         poisson = self.get_poisson(Input, depth)
         with tf.variable_scope(name or self.name):
             return poisson.mean()
