@@ -46,17 +46,20 @@ class ilr_clv_transformation(transformation):
         self.root, self.reference = convert_theta_to_tree(theta, inode_b_init)
         self.psi = get_psi(theta)
 
-        inode_depths = get_inode_depths(self.Dx, self.reference)
-        inode_heights = get_inode_heights(self.Dx, self.root)
-        max_depth = np.max(inode_depths) + 1.0
-        max_height = np.max(inode_heights) + 1.0
-
         if self.inference_schedule == "flat":
-            self.training_mask = np.ones_like(inode_depths, dtype=bool)
-        elif self.inference_schedule == "top_down":
-            self.training_mask = (inode_depths * 0.75 / max_depth) < annealing_frac
-        else:  # "bottom_up"
-            self.training_mask = (inode_heights * 0.75 / max_height) < annealing_frac
+            self.training_mask = np.ones(self.Dx, dtype=bool)
+            self.reg_frac = np.ones(self.Dx) * annealing_frac
+        else:
+            if self.inference_schedule == "top_down":
+                inode_depths = get_inode_depths(self.Dx, self.reference)
+                max_depth = np.max(inode_depths) + 1.0
+                training_starts = (inode_depths * 0.75 / max_depth)
+            else:  # "bottom_up"
+                inode_heights = get_inode_heights(self.Dx, self.root)
+                max_height = np.max(inode_heights) + 1.0
+                training_starts = (inode_heights * 0.75 / max_height)
+            self.training_mask = training_starts <= annealing_frac
+            self.reg_frac = tf.minimum(0.0, (annealing_frac - training_starts) / (1.0 - training_starts))
 
         # L0 regularization for break score
         if use_L0:
@@ -107,6 +110,7 @@ class ilr_clv_transformation(transformation):
     def regularization_loss(self):
         if self.use_L0:
             L0 = l0_norm(self.log_alpha)
+            L0 = tf.reduce_sum(L0 * self.reg_frac)
         else:
             L0 = 0.0
 
@@ -114,23 +118,23 @@ class ilr_clv_transformation(transformation):
         num_leaves = np.array([np.sum(theta_i != 0) for theta_i in self.theta])
         num_leaves = np.concatenate([num_leaves, np.ones(self.Dy)])
 
-        L2 = tf.reduce_sum(self.A_in_var ** 2) / num_leaves + \
-             tf.reduce_sum(self.g_in_var ** 2) + tf.reduce_sum(self.Wv_in_var ** 2) + \
-             tf.reduce_sum(self.A_between_var ** 2) / num_leaves + \
-             tf.reduce_sum(self.g_between_var ** 2) + tf.reduce_sum(self.Wv_between_var ** 2)
-        L1 = tf.reduce_sum(tf.abs(self.A_in_var)) / num_leaves + \
-             tf.reduce_sum(tf.abs(self.g_in_var)) + tf.reduce_sum(tf.abs(self.Wv_in_var)) + \
-             tf.reduce_sum(tf.abs(self.A_between_var)) / num_leaves + \
-             tf.reduce_sum(tf.abs(self.g_between_var)) + tf.reduce_sum(tf.abs(self.Wv_between_var))
+        L1 = tf.reduce_sum(self.A_between_L1 / num_leaves) + \
+             tf.reduce_sum(tf.abs(self.g_between_var) * self.reg_frac) + \
+             tf.reduce_sum(tf.abs(self.Wv_between_var) * self.reg_frac[:, None])
+
+        L2 = tf.reduce_sum(self.A_between_L2 / num_leaves) + \
+             tf.reduce_sum(self.g_between_var ** 2 * self.reg_frac) + \
+             tf.reduce_sum(self.Wv_between_var ** 2 * self.reg_frac[:, None])
 
         if self.inference_schedule == "flat":
-            b_regularization = tf.reduce_sum(tf.log(1 - tf.abs(self.b_before_gated - 0.5) ** 3 + EPS))
+            b_regularization = tf.log(1 - tf.abs(self.b_before_gated - 0.5) ** 3 + EPS)
         elif self.inference_schedule == "top_down":
             b_regularization = 0.0
         else:  # "bottom_up"
-            b_regularization = tf.reduce_sum(tf.abs(self.b_before_gated))
+            b_regularization = tf.abs(self.b_before_gated)
+        b_regularization = tf.reduce_sum(b_regularization * self.reg_frac)
 
-        return ((L0 + L2) * self.reg_coef + b_regularization) * self.annealing_frac
+        return (L0 + L2) * self.reg_coef + b_regularization
 
     def transform(self, Input):
         """
@@ -171,46 +175,56 @@ class ilr_clv_transformation(transformation):
         return output
     
     def get_A_between_var_masked(self):
+        training_mask = tf.unstack(self.training_mask)
+        reg_frac = tf.unstack(self.reg_frac)
         if self.inference_schedule == "flat":
+            self.A_between_L1 = tf.abs(self.A_between_var) * self.annealing_frac
+            self.A_between_L2 = self.A_between_var ** 2 * self.annealing_frac
             return self.A_between_var
         elif self.inference_schedule == "top_down":
             A_between_var_list = tf.unstack(self.A_between_var, axis=-1)
             A_between_var_masked = [0 for _ in range(self.Dx + self.Dy)]
-            for inode, mask in zip(self.reference[:self.Dx], tf.unstack(self.training_mask)):
+            A_between_L1 = [0 for _ in range(self.Dx + self.Dy)]
+            A_between_L2 = [0 for _ in range(self.Dx + self.Dy)]
+            for inode, mask, reg_frac_ in zip(self.reference[:self.Dx], training_mask, reg_frac):
                 idxes = [inode.left.node_idx, inode.right.node_idx]
                 if inode == self.root:
                     idxes.append(inode.node_idx)
                 for idx in idxes:
                     node_A_var = A_between_var_list[idx]
                     A_between_var_masked[idx] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                    A_between_L1[idx] = tf.abs(node_A_var) * reg_frac_
+                    A_between_L2[idx] = node_A_var ** 2 * reg_frac_
+            self.A_between_L1 = tf.stack(A_between_L1, axis=-1)
+            self.A_between_L2 = tf.stack(A_between_L2, axis=-1)
             return tf.stack(A_between_var_masked, axis=-1)
         else:  # "bottom_up"
             A_between_var_list = tf.unstack(self.A_between_var, axis=0)
             A_between_var_list = [tf.unstack(ele) for ele in A_between_var_list]
             A_between_var_masked = [[None for _ in range(self.Dx + self.Dy)] for _ in range(self.Dx)]
-            for inode, mask in zip(self.reference[:self.Dx], tf.unstack(self.training_mask)):
+            A_between_L1 = [[None for _ in range(self.Dx + self.Dy)] for _ in range(self.Dx)]
+            A_between_L2 = [[None for _ in range(self.Dx + self.Dy)] for _ in range(self.Dx)]
+            for inode, mask, reg_frac_ in zip(self.reference[:self.Dx], training_mask, reg_frac):
                 left_inode_idxes, left_taxon_idxes = get_inode_and_taxon_idxes(inode.left)
                 right_inode_idxes, right_taxon_idxes = get_inode_and_taxon_idxes(inode.right)
-                for i in left_inode_idxes:
-                    for j in right_inode_idxes + right_taxon_idxes:
-                        node_A_var = A_between_var_list[i][j]
-                        A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
-                for i in right_inode_idxes:
-                    for j in left_inode_idxes + left_taxon_idxes:
-                        node_A_var = A_between_var_list[i][j]
-                        A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
-                i = inode.inode_idx
-                for j in left_taxon_idxes + right_taxon_idxes + [i]:
-                    node_A_var = A_between_var_list[i][j]
-                    A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
-                for j in left_inode_idxes + right_inode_idxes:
-                    node_A_var = A_between_var_list[i][j]
-                    A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
-                    node_A_var = A_between_var_list[j][i]
-                    A_between_var_masked[j][i] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                idxes_to_update = [[left_inode_idxes, right_inode_idxes + right_taxon_idxes],
+                                   [right_inode_idxes, left_inode_idxes + left_taxon_idxes],
+                                   [[inode.inode_idx], left_inode_idxes + left_taxon_idxes],
+                                   [[inode.inode_idx], right_inode_idxes + right_taxon_idxes],
+                                   [left_inode_idxes + right_inode_idxes, [inode.inode_idx]],
+                                   [[inode.inode_idx], [inode.inode_idx]]]
+                for i_idxes, j_idxes in idxes_to_update:
+                    for i in i_idxes:
+                        for j in j_idxes:
+                            node_A_var = A_between_var_list[i][j]
+                            A_between_var_masked[i][j] = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
+                            A_between_L1[i][j] = tf.abs(node_A_var) * reg_frac_
+                            A_between_L2[i][j] = node_A_var ** 2 * reg_frac_
 
-            A_between_var_masked = [tf.stack(ele) for ele in A_between_var_masked]
-            return tf.stack(A_between_var_masked)
+            A_between_var_masked = tf.stack([tf.stack(ele) for ele in A_between_var_masked])
+            self.A_between_L1 = tf.stack([tf.stack(ele) for ele in A_between_L1])
+            self.A_between_L2 = tf.stack([tf.stack(ele) for ele in A_between_L2])
+            return A_between_var_masked
 
     def get_bottom_up_subtrees(self):
         training_mask = tf.unstack(self.training_mask)

@@ -89,4 +89,4 @@ def l0_norm(
     """
     # Value of the CDF of the hard-concrete distribution evaluated at 0
     reg_per_weight = tf.sigmoid(log_alpha - beta * tf.log(-gamma / zeta))
-    return tf.reduce_sum(reg_per_weight)
+    return reg_per_weight

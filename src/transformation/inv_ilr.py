@@ -10,8 +10,5 @@ class inv_ilr_transformation(object):
 
     def transform(self, x):
         p = inverse_ilr_transform(x, self.psi)
-        if self.ilr_clv is not None and self.ilr_clv.inference_schedule == "bottom_up":
-            # self-normalize inside each tree
-            p = self.ilr_clv.get_normalized_p_t(p)
         logp = tf.log(p)
         return logp
