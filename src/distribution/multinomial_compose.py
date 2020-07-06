@@ -1,4 +1,5 @@
 import numpy as np
+from copy import deepcopy
 
 import tensorflow as tf
 from tensorflow_probability import distributions as tfd
@@ -48,25 +49,29 @@ class tf_multinomial_compose(distribution):
         logits_list = tf.unstack(logits, axis=-1)
         Dy = obs.shape.as_list()[-1]
 
-        mean = [0 for _ in range(Dy)]
+        mean = [0.0 for _ in range(Dy)]
 
-        def update_mean(mean_, leaves_of_subtree_):
+        def get_mean_subtree(leaves_of_subtree_):
             if len(leaves_of_subtree_) == 1:
-                leaf_idx = leaves_of_subtree_[0]
-                mean_[leaf_idx] = obs_list[leaf_idx]
-                return mean_
+                leaf_idx_ = leaves_of_subtree_[0]
+                return [obs_list[leaf_idx_]]
 
             with tf.variable_scope(name or self.name):
-                logits_ = tf.stack([logits_list[leaf_idx] for leaf_idx in leaves_of_subtree_], axis=-1)
-                depth = tf.reduce_sum([obs_list[leaf_idx] for leaf_idx in leaves_of_subtree_], axis=-1)
+                logits_ = tf.stack([logits_list[leaf_idx_] for leaf_idx_ in leaves_of_subtree_], axis=-1)
+                depth = tf.reduce_sum([obs_list[leaf_idx_] for leaf_idx_ in leaves_of_subtree_], axis=0)
                 multinomial = tfd.Multinomial(total_count=depth, logits=logits_,
                                               validate_args=True, allow_nan_stats=False)
                 mean_subtree = multinomial.mean()
-            for leaf_idx, mean_i in zip(leaves_of_subtree_, tf.unstack(mean_subtree, axis=-1)):
-                mean_[leaf_idx] = mean_i
-            return mean_
+            return tf.unstack(mean_subtree, axis=-1)
 
         for is_root_of_subtree, leaves_of_subtree in zip(*self.ilr_clv.get_bottom_up_subtrees()):
-            mean = tf.cond(is_root_of_subtree, lambda: update_mean(mean, leaves_of_subtree), lambda: mean)
+            mean_subtree = tf.cond(is_root_of_subtree,
+                                   lambda: get_mean_subtree(leaves_of_subtree),
+                                   lambda: [mean[leaf_idx] for leaf_idx in leaves_of_subtree])
+            if len(leaves_of_subtree) == 1:
+                # for some reason, tf.cond will automatically squeeze lambda return if it's a list of len == 1
+                mean_subtree = [mean_subtree]
+            for i, leaf_idx in enumerate(leaves_of_subtree):
+                mean[leaf_idx] = mean_subtree[i]
 
         return tf.stack(mean, axis=-1)
