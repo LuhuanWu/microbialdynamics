@@ -1,0 +1,133 @@
+"","parameter_type","source_taxon","target_taxon","value","significance","MCMC_std"
+"1","growth_rate",NA,"OTU 0",-0.00879177653352632,NA,NA
+"2","growth_rate",NA,"OTU 1",-0.0205525772189206,NA,NA
+"3","growth_rate",NA,"OTU 2",0,NA,NA
+"4","growth_rate",NA,"OTU 3",0.00634819503090869,NA,NA
+"5","growth_rate",NA,"OTU 4",-0.00849251526008307,NA,NA
+"6","growth_rate",NA,"OTU 5",-0.00217589439910274,NA,NA
+"7","growth_rate",NA,"OTU 6",0.0186816589902006,NA,NA
+"8","growth_rate",NA,"OTU 7",-0.00391971253488345,NA,NA
+"9","growth_rate",NA,"OTU 8",0.0180678216370823,NA,NA
+"10","growth_rate",NA,"OTU 9",-0.0175375492481669,NA,NA
+"11","growth_rate",NA,"OTU 10",-0.0199519753227773,NA,NA
+"12","interaction","OTU 0","OTU 0",-3.32817173629604e-08,NA,NA
+"13","interaction","OTU 0","OTU 1",2.5736432252546e-06,NA,NA
+"14","interaction","OTU 0","OTU 2",0,NA,NA
+"15","interaction","OTU 0","OTU 3",5.69467695688412e-07,NA,NA
+"16","interaction","OTU 0","OTU 4",7.76115837303735e-07,NA,NA
+"17","interaction","OTU 0","OTU 5",2.92032929303912e-06,NA,NA
+"18","interaction","OTU 0","OTU 6",3.42063079802115e-07,NA,NA
+"19","interaction","OTU 0","OTU 7",7.90099808478582e-08,NA,NA
+"20","interaction","OTU 0","OTU 8",-1.7828464464129e-07,NA,NA
+"21","interaction","OTU 0","OTU 9",9.73029405382412e-08,NA,NA
+"22","interaction","OTU 0","OTU 10",-1.97102977706985e-06,NA,NA
+"23","interaction","OTU 1","OTU 0",-1.20059991450496e-08,NA,NA
+"24","interaction","OTU 1","OTU 1",-4.33947986266613e-08,NA,NA
+"25","interaction","OTU 1","OTU 2",0,NA,NA
+"26","interaction","OTU 1","OTU 3",-9.84409382204699e-09,NA,NA
+"27","interaction","OTU 1","OTU 4",-1.03482181038518e-08,NA,NA
+"28","interaction","OTU 1","OTU 5",-1.24954584630022e-07,NA,NA
+"29","interaction","OTU 1","OTU 6",-8.54989253113716e-08,NA,NA
+"30","interaction","OTU 1","OTU 7",1.10529001725212e-09,NA,NA
+"31","interaction","OTU 1","OTU 8",-2.00375014308078e-08,NA,NA
+"32","interaction","OTU 1","OTU 9",7.22272216830552e-09,NA,NA
+"33","interaction","OTU 1","OTU 10",-8.89079058278347e-09,NA,NA
+"34","interaction","OTU 2","OTU 0",-6.53740981620901e-09,NA,NA
+"35","interaction","OTU 2","OTU 1",-1.54154443956769e-08,NA,NA
+"36","interaction","OTU 2","OTU 2",0,NA,NA
+"37","interaction","OTU 2","OTU 3",9.8877597132067e-08,NA,NA
+"38","interaction","OTU 2","OTU 4",2.37314576110557e-08,NA,NA
+"39","interaction","OTU 2","OTU 5",5.61427246121889e-08,NA,NA
+"40","interaction","OTU 2","OTU 6",-1.15335659522458e-09,NA,NA
+"41","interaction","OTU 2","OTU 7",1.23367917932364e-08,NA,NA
+"42","interaction","OTU 2","OTU 8",-1.11288925532228e-08,NA,NA
+"43","interaction","OTU 2","OTU 9",2.40124135145526e-07,NA,NA
+"44","interaction","OTU 2","OTU 10",3.57805430708737e-07,NA,NA
+"45","interaction","OTU 3","OTU 0",-6.95619816980597e-08,NA,NA
+"46","interaction","OTU 3","OTU 1",1.40758917006993e-05,NA,NA
+"47","interaction","OTU 3","OTU 2",0,NA,NA
+"48","interaction","OTU 3","OTU 3",5.72652809319957e-08,NA,NA
+"49","interaction","OTU 3","OTU 4",1.27823770852874e-05,NA,NA
+"50","interaction","OTU 3","OTU 5",1.94901930488222e-05,NA,NA
+"51","interaction","OTU 3","OTU 6",3.25711337699488e-06,NA,NA
+"52","interaction","OTU 3","OTU 7",1.30144292625992e-08,NA,NA
+"53","interaction","OTU 3","OTU 8",-1.87270145720085e-07,NA,NA
+"54","interaction","OTU 3","OTU 9",5.28514353941521e-06,NA,NA
+"55","interaction","OTU 3","OTU 10",2.93399654336019e-07,NA,NA
+"56","interaction","OTU 4","OTU 0",-1.80336286182086e-09,NA,NA
+"57","interaction","OTU 4","OTU 1",-8.76936362987573e-07,NA,NA
+"58","interaction","OTU 4","OTU 2",0,NA,NA
+"59","interaction","OTU 4","OTU 3",1.85762958907491e-08,NA,NA
+"60","interaction","OTU 4","OTU 4",-7.62198141622007e-07,NA,NA
+"61","interaction","OTU 4","OTU 5",-1.12608223885415e-06,NA,NA
+"62","interaction","OTU 4","OTU 6",3.45250630088798e-09,NA,NA
+"63","interaction","OTU 4","OTU 7",5.71991007544842e-09,NA,NA
+"64","interaction","OTU 4","OTU 8",2.60655536840072e-08,NA,NA
+"65","interaction","OTU 4","OTU 9",-2.79645945974716e-09,NA,NA
+"66","interaction","OTU 4","OTU 10",-7.17469521168473e-08,NA,NA
+"67","interaction","OTU 5","OTU 0",3.60579610120885e-09,NA,NA
+"68","interaction","OTU 5","OTU 1",-6.29762837795113e-08,NA,NA
+"69","interaction","OTU 5","OTU 2",0,NA,NA
+"70","interaction","OTU 5","OTU 3",6.50215565006192e-09,NA,NA
+"71","interaction","OTU 5","OTU 4",-1.54086254055148e-07,NA,NA
+"72","interaction","OTU 5","OTU 5",-6.11090439450546e-08,NA,NA
+"73","interaction","OTU 5","OTU 6",-1.02106014911946e-07,NA,NA
+"74","interaction","OTU 5","OTU 7",-1.28231009656459e-09,NA,NA
+"75","interaction","OTU 5","OTU 8",-1.13926350184623e-07,NA,NA
+"76","interaction","OTU 5","OTU 9",7.86976599835925e-08,NA,NA
+"77","interaction","OTU 5","OTU 10",4.14938486150137e-08,NA,NA
+"78","interaction","OTU 6","OTU 0",5.47179492683936e-08,NA,NA
+"79","interaction","OTU 6","OTU 1",1.83783056024749e-07,NA,NA
+"80","interaction","OTU 6","OTU 2",0,NA,NA
+"81","interaction","OTU 6","OTU 3",1.06230773557378e-07,NA,NA
+"82","interaction","OTU 6","OTU 4",1.06500561982077e-07,NA,NA
+"83","interaction","OTU 6","OTU 5",-4.83538040195669e-07,NA,NA
+"84","interaction","OTU 6","OTU 6",-1.70001356501584e-07,NA,NA
+"85","interaction","OTU 6","OTU 7",3.83216642015109e-08,NA,NA
+"86","interaction","OTU 6","OTU 8",-1.09113671854335e-07,NA,NA
+"87","interaction","OTU 6","OTU 9",7.47258482023153e-08,NA,NA
+"88","interaction","OTU 6","OTU 10",7.22789031567453e-08,NA,NA
+"89","interaction","OTU 7","OTU 0",4.90566899272453e-09,NA,NA
+"90","interaction","OTU 7","OTU 1",-5.88806519169114e-08,NA,NA
+"91","interaction","OTU 7","OTU 2",0,NA,NA
+"92","interaction","OTU 7","OTU 3",-1.30977939756002e-08,NA,NA
+"93","interaction","OTU 7","OTU 4",-2.29403148628793e-09,NA,NA
+"94","interaction","OTU 7","OTU 5",3.10371239401467e-08,NA,NA
+"95","interaction","OTU 7","OTU 6",1.170472541854e-08,NA,NA
+"96","interaction","OTU 7","OTU 7",-2.07243116659339e-09,NA,NA
+"97","interaction","OTU 7","OTU 8",1.86878739170784e-07,NA,NA
+"98","interaction","OTU 7","OTU 9",-1.44746670000261e-08,NA,NA
+"99","interaction","OTU 7","OTU 10",-5.55509915766865e-09,NA,NA
+"100","interaction","OTU 8","OTU 0",-9.29516893932281e-10,NA,NA
+"101","interaction","OTU 8","OTU 1",1.75674381667905e-08,NA,NA
+"102","interaction","OTU 8","OTU 2",0,NA,NA
+"103","interaction","OTU 8","OTU 3",9.80336157722225e-10,NA,NA
+"104","interaction","OTU 8","OTU 4",-8.75870422668789e-09,NA,NA
+"105","interaction","OTU 8","OTU 5",-4.95403566067164e-09,NA,NA
+"106","interaction","OTU 8","OTU 6",1.60942591121733e-09,NA,NA
+"107","interaction","OTU 8","OTU 7",-3.229016600159e-09,NA,NA
+"108","interaction","OTU 8","OTU 8",-8.43006596207993e-10,NA,NA
+"109","interaction","OTU 8","OTU 9",-1.97651546243561e-08,NA,NA
+"110","interaction","OTU 8","OTU 10",-3.21553801727737e-08,NA,NA
+"111","interaction","OTU 9","OTU 0",7.01166410313695e-08,NA,NA
+"112","interaction","OTU 9","OTU 1",-4.41806345609847e-09,NA,NA
+"113","interaction","OTU 9","OTU 2",0,NA,NA
+"114","interaction","OTU 9","OTU 3",2.02620889269122e-07,NA,NA
+"115","interaction","OTU 9","OTU 4",7.66664153974292e-08,NA,NA
+"116","interaction","OTU 9","OTU 5",8.37436670032354e-08,NA,NA
+"117","interaction","OTU 9","OTU 6",-5.41914734958169e-08,NA,NA
+"118","interaction","OTU 9","OTU 7",3.9304169627441e-08,NA,NA
+"119","interaction","OTU 9","OTU 8",-4.81519398377193e-08,NA,NA
+"120","interaction","OTU 9","OTU 9",2.91987525755707e-07,NA,NA
+"121","interaction","OTU 9","OTU 10",6.41310136222491e-07,NA,NA
+"122","interaction","OTU 10","OTU 0",4.13602286417977e-09,NA,NA
+"123","interaction","OTU 10","OTU 1",-1.51908352010373e-09,NA,NA
+"124","interaction","OTU 10","OTU 2",0,NA,NA
+"125","interaction","OTU 10","OTU 3",8.85209232624974e-09,NA,NA
+"126","interaction","OTU 10","OTU 4",-8.12667405261912e-09,NA,NA
+"127","interaction","OTU 10","OTU 5",4.79840981831126e-09,NA,NA
+"128","interaction","OTU 10","OTU 6",-2.84380774736047e-08,NA,NA
+"129","interaction","OTU 10","OTU 7",2.55193510834596e-09,NA,NA
+"130","interaction","OTU 10","OTU 8",-6.79222185842867e-09,NA,NA
+"131","interaction","OTU 10","OTU 9",7.96987807507377e-09,NA,NA
+"132","interaction","OTU 10","OTU 10",1.49791539191492e-08,NA,NA
