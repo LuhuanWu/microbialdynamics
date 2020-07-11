@@ -41,8 +41,12 @@ class SSM(object):
         self.theta = theta
         self.exist_in_group_dynamics = FLAGS.exist_in_group_dynamics
         self.use_L0 = FLAGS.use_L0
+
+        # For irl+clv
         self.inference_schedule = FLAGS.inference_schedule
         self.reg_coef = FLAGS.reg_coef
+        self.b_reg_func = FLAGS.b_reg_func
+        self.params_reg_func = FLAGS.params_reg_func
 
         self.batch_size = FLAGS.batch_size
 
@@ -112,7 +116,9 @@ class SSM(object):
                 assert self.g_dist_type == "multinomial_compose"
             self.f_tran = ilr_clv_transformation(self.theta, self.Dv, self.exist_in_group_dynamics,
                                                  use_L0=self.use_L0, inference_schedule=self.inference_schedule,
-                                                 training=self.training, annealing_frac=self.annealing_frac)
+                                                 training=self.training, annealing_frac=self.annealing_frac,
+                                                 b_reg_func=self.b_reg_func, params_reg_func=self.params_reg_func,
+                                                 reg_coef=self.reg_coef)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 

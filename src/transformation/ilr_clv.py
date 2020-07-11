@@ -14,22 +14,27 @@ EPS = 1e-6
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dv,
                  exist_in_group_dynamics=False, use_L0=True, inference_schedule=None,
-                 reg_coef=1.0, b_dropout_rate=0.999,
+                 reg_coef=1.0, b_reg_func="log", params_reg_func="L2", b_dropout_rate=0.999,
                  training=False, annealing_frac=1.0):
         self.theta = theta
         self.Dx, self.Dy = theta.shape
         self.Dv = Dv
         self.use_L0 = use_L0
         self.inference_schedule = inference_schedule   # "flat" / "top_down" / "bottom_up"
-        self.reg_coef = reg_coef
         self.annealing_frac = annealing_frac
 
+        assert b_reg_func in ["L1", "log"]
+        assert params_reg_func in ["L1", "L2"]
+        self.b_reg_func = b_reg_func
+        self.params_reg_func = params_reg_func
+        self.reg_coef = reg_coef
+
         if self.inference_schedule == "flat":
-            inode_b_init = 0.5
+            inode_b_before_train = 0.5
         elif self.inference_schedule == "top_down":
-            inode_b_init = 1e-3
+            inode_b_before_train = 0.0
         elif self.inference_schedule == "bottom_up":
-            inode_b_init = 1 - 1e-3
+            inode_b_before_train = 1.0
         else:
             raise NotImplementedError
 
@@ -43,7 +48,7 @@ class ilr_clv_transformation(transformation):
         self.Wv_between_var = tf.Variable(tf.zeros((self.Dx, self.Dv)))
 
         # init tree
-        self.root, self.reference = convert_theta_to_tree(theta, inode_b_init)
+        self.root, self.reference = convert_theta_to_tree(theta, inode_b_init=0.5)
         self.psi = get_psi(theta)
 
         if self.inference_schedule == "flat":
@@ -53,11 +58,11 @@ class ilr_clv_transformation(transformation):
             if self.inference_schedule == "top_down":
                 inode_depths = get_inode_depths(self.Dx, self.reference)
                 max_depth = np.max(inode_depths) + 1.0
-                training_starts = (inode_depths * 0.75 / max_depth)
+                training_starts = (inode_depths * 0.5 / max_depth)
             else:  # "bottom_up"
                 inode_heights = get_inode_heights(self.Dx, self.root)
                 max_height = np.max(inode_heights) + 1.0
-                training_starts = (inode_heights * 0.75 / max_height)
+                training_starts = (inode_heights * 0.5 / max_height)
             self.training_mask = training_starts <= annealing_frac
             self.reg_frac = tf.minimum(0.0, (annealing_frac - training_starts) / (1.0 - training_starts))
 
@@ -77,8 +82,7 @@ class ilr_clv_transformation(transformation):
         b_before_gated = []
         for inode, b_noise, mask in zip(self.reference[:self.Dx], tf.unstack(b_noises), tf.unstack(self.training_mask)):
             b_before_gated.append(inode.b)
-            inode.b = tf.where(mask, inode.b, tf.stop_gradient(inode.b))
-            inode.b = inode.b * b_noise
+            inode.b = tf.where(mask, inode.b * b_noise, tf.constant(inode_b_before_train, dtype=tf.float32))
             b.append(inode.b)
         self.b_before_gated = tf.stack(b_before_gated)
         self.b = tf.stack(b)
@@ -118,23 +122,23 @@ class ilr_clv_transformation(transformation):
         num_leaves = np.array([np.sum(theta_i != 0) for theta_i in self.theta])
         num_leaves = np.concatenate([num_leaves, np.ones(self.Dy)])
 
-        L1 = tf.reduce_sum(self.A_between_L1 / num_leaves) + \
-             tf.reduce_sum(tf.abs(self.g_between_var) * self.reg_frac) + \
-             tf.reduce_sum(tf.abs(self.Wv_between_var) * self.reg_frac[:, None])
+        if self.params_reg_func == "L1":
+            params_reg = tf.reduce_sum(self.A_between_L1 / num_leaves) + \
+                         tf.reduce_sum(tf.abs(self.g_between_var) * self.reg_frac) + \
+                         tf.reduce_sum(tf.abs(self.Wv_between_var) * self.reg_frac[:, None])
+        else:
+            params_reg = tf.reduce_sum(self.A_between_L2 / num_leaves) + \
+                         tf.reduce_sum(self.g_between_var ** 2 * self.reg_frac) + \
+                         tf.reduce_sum(self.Wv_between_var ** 2 * self.reg_frac[:, None])
 
-        L2 = tf.reduce_sum(self.A_between_L2 / num_leaves) + \
-             tf.reduce_sum(self.g_between_var ** 2 * self.reg_frac) + \
-             tf.reduce_sum(self.Wv_between_var ** 2 * self.reg_frac[:, None])
+        if self.b_reg_func == "L1":
+            b_reg = tf.abs(self.b_before_gated)
+        else:
+            b_reg = tf.log(1 - tf.abs(self.b_before_gated - 0.5) ** 3 + EPS)
 
-        if self.inference_schedule == "flat":
-            b_regularization = tf.log(1 - tf.abs(self.b_before_gated - 0.5) ** 3 + EPS)
-        elif self.inference_schedule == "top_down":
-            b_regularization = 0.0
-        else:  # "bottom_up"
-            b_regularization = tf.abs(self.b_before_gated)
-        b_regularization = tf.reduce_sum(b_regularization * self.reg_frac)
+        b_reg = tf.reduce_sum(b_reg * self.reg_frac)
 
-        return (L0 + L2) * self.reg_coef + b_regularization
+        return (L0 + params_reg) * self.reg_coef + b_reg
 
     def transform(self, Input):
         """
