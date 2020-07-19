@@ -454,7 +454,8 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
 
 def plot_interaction_matrix(RLT_DIR, inferred, truth):
-    b = inferred["b"]
+    in_assignment = inferred["in_assignment"]
+    between_assignment = inferred["between_assignment"]
     g_in = inferred["g_in"]
     A_in = inferred["A_in"]
     Wv_in = inferred["Wv_in"]
@@ -465,16 +466,28 @@ def plot_interaction_matrix(RLT_DIR, inferred, truth):
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
-    if "b" in truth:
-        b_truth = truth["b"]
+    if "in_assignment" in truth:
+        in_assignment_truth = truth["in_assignment"]
     else:
-        b_truth = np.zeros_like(b)
-    sns.heatmap(np.stack([b_truth, b], axis=0),
+        in_assignment_truth = np.zeros_like(in_assignment)
+    sns.heatmap(np.stack([in_assignment_truth, in_assignment], axis=0),
                 cmap="seismic", center=0, square=True, linewidth=0.5)
     ticks = ["truth", "inferred"]
     plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
     plt.tight_layout()
-    plt.savefig(RLT_DIR + "/b")
+    plt.savefig(RLT_DIR + "/in_assignment")
+    plt.close()
+
+    if "between_assignment" in truth:
+        between_assignment_truth = truth["between_assignment"]
+    else:
+        between_assignment_truth = np.zeros_like(between_assignment)
+    sns.heatmap(np.stack([between_assignment_truth, between_assignment], axis=0),
+                cmap="seismic", center=0, square=True, linewidth=0.5)
+    ticks = ["truth", "inferred"]
+    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+    plt.tight_layout()
+    plt.savefig(RLT_DIR + "/between_assignment")
     plt.close()
 
     # interaction

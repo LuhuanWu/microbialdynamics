@@ -147,9 +147,12 @@ def main(_):
             with open(data_dir, "rb") as f:
                 data = pickle.load(f)
             plot_interaction_matrix(checkpoint_dir + "interaction", f_tran_params, data)
+        else:
+            f_tran_params = None
 
         data_dict = {"testing_data_dict": testing_data_dict,
-                     "learned_model_dict": learned_model_dict}
+                     "learned_model_dict": learned_model_dict,
+                     "f_tran_params": f_tran_params}
 
         with open(checkpoint_dir + "data.p", "wb") as f:
             pickle.dump(data_dict, f)
