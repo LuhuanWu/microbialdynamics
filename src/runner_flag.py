@@ -31,9 +31,9 @@ Dx = 20             # dimension of hidden states (num of groups/topics)
 # see options: utils/available_data.py
 data_type = "oral_21_taxa"
 
-lr = 1e-3               # learning rate
-epochs = [1000]         # num of epochs, [500, 500] will train for 500 epochs, save results,
-                        # and train for another 500 epochs and save results
+lr = 1e-3                 # learning rate
+epochs = [1000]           # num of epochs, [500, 500] will train for 500 epochs, save results,
+                          # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
 n_particles = 8         # number of particles
@@ -42,12 +42,10 @@ batch_size = 1          # batch size
 
 seed = 0
 
-exist_in_group_dynamics = False
-use_L0 = True
-inference_schedule = "bottom_up"   # "flat" / "top_down" / "bottom_up"
-b_reg_func = "L1"                  # "L1" / "log"
-params_reg_func = "L2"             # "L1" / "L2"
-reg_coef = 0.1
+flat_inference = False
+params_reg_func = "L1"             # "L1" / "L2"
+overlap_reg_func = "KL"             # "L1" / "log"
+reg_coef = 1.0
 
 # ------------------------------- Data ------------------------------- #
 
@@ -64,7 +62,7 @@ use_mask = True  # whether to use mask in log_ZSMC. note that mask will always b
 
 f_tran_type = "ilr_clv"          # choose from MLP, linear, clv
 g_tran_type = "inv_ilr"          # choose from MLP, LDA
-g_dist_type = "multinomial_compose"      # choose from dirichlet, poisson, multinomial, multinomial_compose and mvn
+g_dist_type = "multinomial"      # choose from dirichlet, poisson, multinomial, multinomial_compose and mvn
 
 emission_use_auxiliary = True  # use auxiliary hidden variable to mitigate overfitting to sequencing noise
 
@@ -178,11 +176,10 @@ flags.DEFINE_string("epochs", epochs, "list of number of epochs")
 
 flags.DEFINE_integer("seed", seed, "random seed for np.random and tf")
 
-flags.DEFINE_boolean("exist_in_group_dynamics", exist_in_group_dynamics, "whether exists in-group interaction")
-flags.DEFINE_boolean("use_L0", use_L0, "whether use L0 regularization for break score in irl_clv transformation")
-flags.DEFINE_string("inference_schedule", inference_schedule, "training schedule for ilr_clv transformation")
-flags.DEFINE_string("b_reg_func", b_reg_func, "regularization for break score")
+flags.DEFINE_boolean("flat_inference", flat_inference, "training schedule for ilr_clv transformation")
 flags.DEFINE_string("params_reg_func", params_reg_func, "regularization for transition parameters")
+flags.DEFINE_string("overlap_reg_func", overlap_reg_func, "regularization for overlap of "
+                                                          "between-group and in-group interaction")
 flags.DEFINE_float("reg_coef", reg_coef, "regularization coefficient")
 
 # ------------------------------- Data ------------------------------- #

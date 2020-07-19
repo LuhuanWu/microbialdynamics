@@ -39,14 +39,12 @@ class SSM(object):
         self.Dv = FLAGS.Dv  # dimension of the input. 0 indicates not using input
 
         self.theta = theta
-        self.exist_in_group_dynamics = FLAGS.exist_in_group_dynamics
-        self.use_L0 = FLAGS.use_L0
 
         # For irl+clv
-        self.inference_schedule = FLAGS.inference_schedule
+        self.flat_inference = FLAGS.flat_inference
         self.reg_coef = FLAGS.reg_coef
-        self.b_reg_func = FLAGS.b_reg_func
         self.params_reg_func = FLAGS.params_reg_func
+        self.overlap_reg_func = FLAGS.overlap_reg_func
 
         self.batch_size = FLAGS.batch_size
 
@@ -111,14 +109,11 @@ class SSM(object):
         elif self.f_tran_type == "ilr_clv":
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
-            if self.inference_schedule == "bottom_up":
-                assert self.g_tran_type == "inv_ilr"
-                assert self.g_dist_type == "multinomial_compose"
-            self.f_tran = ilr_clv_transformation(self.theta, self.Dv, self.exist_in_group_dynamics,
-                                                 use_L0=self.use_L0, inference_schedule=self.inference_schedule,
-                                                 training=self.training, annealing_frac=self.annealing_frac,
-                                                 b_reg_func=self.b_reg_func, params_reg_func=self.params_reg_func,
-                                                 reg_coef=self.reg_coef)
+            self.f_tran = \
+                ilr_clv_transformation(self.theta, self.Dv, flat_inference=self.flat_inference,
+                                       training=self.training, annealing_frac=self.annealing_frac,
+                                       params_reg_func=self.params_reg_func, overlap_reg_func=self.overlap_reg_func,
+                                       reg_coef=self.reg_coef)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
