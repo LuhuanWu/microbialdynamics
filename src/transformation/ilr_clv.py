@@ -136,15 +136,16 @@ class ilr_clv_transformation(transformation):
         # regularize in-group params by height (exponentially), and between-group params by num_leaves (linearly)
         Dx = self.Dx
         num_leaves = self.num_leaves
+        inode_num_leaves = num_leaves[:Dx]
 
         in_L0 = l0_norm(self.in_log_alpha)
-        in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * (2 ** self.inode_heights))
+        in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * inode_num_leaves)
         between_L0 = l0_norm(self.between_log_alpha)
         between_L0 = tf.reduce_sum(between_L0 * self.between_reg_annealing / num_leaves)
         L0 = in_L0 + between_L0
 
         # smaller assignment_var -> sigmoid -> assigment score closer to 0
-        in_assigment_reg = tf.reduce_sum(self.in_assignment_var * self.in_reg_annealing * (2 ** self.inode_heights))
+        in_assigment_reg = tf.reduce_sum(self.in_assignment_var * self.in_reg_annealing * inode_num_leaves)
         between_assigment_reg = tf.reduce_sum(self.between_assignment_var * self.between_reg_annealing / num_leaves)
         assigment_reg = in_assigment_reg + between_assigment_reg
 
@@ -154,31 +155,35 @@ class ilr_clv_transformation(transformation):
                          tf.reduce_sum(tf.abs(self.Wv_between_var) *
                                        (self.between_reg_annealing / num_leaves)[:Dx, None]) + \
                          tf.reduce_sum(self.A_in_L2) + \
-                         tf.reduce_sum(tf.abs(self.g_in_var) * self.in_reg_annealing * self.inode_heights) + \
-                         tf.reduce_sum(tf.abs(self.Wv_in_var) * (self.in_reg_annealing * self.inode_heights)[:, None])
+                         tf.reduce_sum(tf.abs(self.g_in_var) * self.in_reg_annealing * inode_num_leaves) + \
+                         tf.reduce_sum(tf.abs(self.Wv_in_var) * (self.in_reg_annealing * inode_num_leaves)[:, None])
         else:  # L2
             params_reg = tf.reduce_sum(self.A_between_L2) + \
                          tf.reduce_sum(self.g_between_var ** 2 * (self.between_reg_annealing / num_leaves)[:Dx]) + \
                          tf.reduce_sum(self.Wv_between_var ** 2 *
                                        (self.between_reg_annealing / num_leaves)[:Dx, None]) + \
                          tf.reduce_sum(self.A_in_L1) + \
-                         tf.reduce_sum(self.g_in_var ** 2 * self.in_reg_annealing * self.inode_heights) + \
-                         tf.reduce_sum(self.Wv_in_var ** 2 * (self.in_reg_annealing * self.inode_heights)[:, None])
+                         tf.reduce_sum(self.g_in_var ** 2 * self.in_reg_annealing * inode_num_leaves) + \
+                         tf.reduce_sum(self.Wv_in_var ** 2 * (self.in_reg_annealing * inode_num_leaves)[:, None])
 
         overlap_reg = 0.0
         between_assigment = tf.unstack(self.between_assignment)
-        for inode, a_in in zip(self.reference[:Dx], tf.unstack(self.in_assignment)):
+        for inode, a_in, num_leaves_i in zip(self.reference[:Dx], tf.unstack(self.in_assignment), inode_num_leaves):
             child_inode_idxes, child_taxon_idxes = get_inode_and_taxon_idxes(inode)
+            a_in = tf.clip_by_value(a_in, EPS, 1 - EPS)
             for idx in child_inode_idxes + child_taxon_idxes:
                 child_a_between = between_assigment[idx]
+                child_a_between = tf.clip_by_value(child_a_between, EPS, 1 - EPS)
+                num_leaves_j = num_leaves[idx]
                 if self.overlap_reg_func == "L1":
-                    overlap_reg += a_in * child_a_between
+                    overlap_reg_ij = a_in * child_a_between
                 elif self.overlap_reg_func == "log":
-                    overlap_reg += tf.log(a_in * child_a_between)
+                    overlap_reg_ij = tf.log(a_in * child_a_between)
                 else:  # KL
-                    overlap_reg += a_in * tf.log(child_a_between) + tf.log(a_in) * child_a_between
+                    overlap_reg_ij = a_in * tf.log(child_a_between) + tf.log(a_in) * child_a_between
+                overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
 
-        return (L0 + assigment_reg + params_reg) * self.reg_coef
+        return (L0 + assigment_reg + params_reg + overlap_reg) * self.reg_coef
 
     def transform(self, Input):
         """
@@ -226,8 +231,8 @@ class ilr_clv_transformation(transformation):
         A_in_L2 = [[None for _ in range(self.Dy)] for _ in range(self.Dx)]
         A_in = [[None for _ in range(self.Dy)] for _ in range(self.Dx)]
 
-        for inode, mask, reg_annealing, inode_height, assignment in \
-                zip(inodes, in_training_mask, in_reg_annealing, self.inode_heights, in_assignment):
+        for inode, mask, reg_annealing, num_leaves, assignment in \
+                zip(inodes, in_training_mask, in_reg_annealing, self.num_leaves[:self.Dx], in_assignment):
             left_inode_idxes, left_taxon_idxes = get_inode_and_taxon_idxes(inode.left)
             right_inode_idxes, right_taxon_idxes = get_inode_and_taxon_idxes(inode.right)
             idxes_to_update = [[left_inode_idxes, right_taxon_idxes],
@@ -240,8 +245,8 @@ class ilr_clv_transformation(transformation):
                         node_A_var = A_in_var_list[i][j]
                         node_A_var = tf.where(mask, node_A_var, tf.stop_gradient(node_A_var))
                         A_in_var_masked[i][j] = node_A_var
-                        A_in_L1[i][j] = tf.abs(node_A_var) * reg_annealing * inode_height
-                        A_in_L2[i][j] = node_A_var ** 2 * reg_annealing * inode_height
+                        A_in_L1[i][j] = tf.abs(node_A_var) * reg_annealing * num_leaves
+                        A_in_L2[i][j] = node_A_var ** 2 * reg_annealing * num_leaves
                         A_in[i][j] = node_A_var * assignment
 
         A_in_var_masked = tf.stack([tf.stack(ele) for ele in A_in_var_masked])
