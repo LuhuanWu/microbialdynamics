@@ -3,24 +3,17 @@ import tensorflow as tf
 
 EPS = 1e-6
 
+
 class Tree(object):
     def __init__(self, parent=None, left=None, right=None,
                  node_idx=None, inode_idx=None, taxon_idx=None,
-                 b=0.0, depth=0):
+                 depth=0):
         self.left = left
         self.right = right
         self.parent = parent
         self.inode_idx = inode_idx
         self.taxon_idx = taxon_idx
         self.node_idx = node_idx
-        if inode_idx is not None:
-            b = np.clip(b, EPS, 1 - EPS)
-            inode_b_init = np.log(b / (1 - b))
-            self.b = tf.sigmoid(tf.Variable(inode_b_init, dtype=tf.float32))
-        elif taxon_idx is not None:
-            self.b = b
-        else:
-            raise ValueError("the node must either be an inode or a leaf (taxon)")
         self.depth = depth
 
     def is_taxon(self):
@@ -42,14 +35,14 @@ class Tree(object):
         return name
 
 
-def convert_theta_to_tree(theta, inode_b_init=0.5):
+def convert_theta_to_tree(theta):
     n_node = theta.shape[0] + theta.shape[1]
     node_reference = [0 for _ in range(n_node)]  # placeholder
-    root = convert_theta_to_tree_helper(theta, node_reference, None, inode_b_init=inode_b_init)
+    root = convert_theta_to_tree_helper(theta, node_reference, None)
     return root, node_reference
 
 
-def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=True, inode_b_init=0.5):
+def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=True):
     # find and return parent's left/right child node
     if parent is None:
         n_taxa = theta.shape[1]
@@ -63,13 +56,13 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
         else:
             node_taxa = np.where(theta_node == -1)[0]
 
-    depth = 0 if parent is None else parent.depth + 1
+    # root.depth = 1
+    depth = 1 if parent is None else parent.depth + 1
     if len(node_taxa) == 1:
         taxon_idx = node_taxa[0]
         n_inode = theta.shape[0]
         node_idx = n_inode + taxon_idx
-        child = Tree(parent=parent, taxon_idx=taxon_idx, node_idx=node_idx,
-                     b=0.0, depth=depth)  # taxon nodes cannot break
+        child = Tree(parent=parent, taxon_idx=taxon_idx, node_idx=node_idx, depth=depth)
         node_reference[node_idx] = child
     else:
         inode_idx = -1
@@ -80,11 +73,9 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
                 break
         assert inode_idx != -1, "cannot find the child whose leaves should be {}".format(node_taxa)
 
-        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, b=inode_b_init, depth=depth)
-        child.left = convert_theta_to_tree_helper(theta, node_reference, child,
-                                                  is_left_child=True, inode_b_init=inode_b_init)
-        child.right = convert_theta_to_tree_helper(theta, node_reference, child,
-                                                   is_left_child=False, inode_b_init=inode_b_init)
+        child = Tree(parent=parent, inode_idx=inode_idx, node_idx=inode_idx, depth=depth)
+        child.left = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=True)
+        child.right = convert_theta_to_tree_helper(theta, node_reference, child, is_left_child=False)
         node_reference[inode_idx] = child
 
     return child
@@ -92,29 +83,14 @@ def convert_theta_to_tree_helper(theta, node_reference, parent, is_left_child=Tr
 
 # --------------------------------------------------- helpers --------------------------------------------------- #
 
-
-def get_inode_depths(n_inode, reference):
-    depths = []
-    for inode in reference[:n_inode]:
-        depths.append(inode.depth)
-    depths = np.array(depths)
-    return depths
-
-
-def get_inode_heights(n_inode, root):
-    heights = [0 for _ in range(n_inode)]
-    get_height_helper(heights, root)
-    heights = np.array(heights)
-    return heights
-
-
-def get_height_helper(heights, node):
+def setup_heights(node):
+    # taxon.height = 0
     if node.is_taxon():
-        return -1
-    l_height = get_height_helper(heights, node.left)
-    r_height = get_height_helper(heights, node.right)
-    heights[node.inode_idx] = height = max(l_height, r_height) + 1
-    return height
+        node.height = 0
+        return
+    setup_heights(node.left)
+    setup_heights(node.right)
+    node.height = max(node.left.height, node.right.height) + 1
 
 
 def get_inode_and_taxon_idxes(node):
