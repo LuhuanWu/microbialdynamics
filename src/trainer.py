@@ -31,7 +31,6 @@ class trainer:
 
         self.use_mask = self.FLAGS.use_mask
         self.epochs = self.FLAGS.epochs
-        self.n_epochs = 0
 
         self.MSE_steps = self.FLAGS.MSE_steps
 
@@ -66,7 +65,7 @@ class trainer:
         self.min_lr = self.FLAGS.min_lr
         self.lr_reduce_count = 0
 
-    def set_data_saving(self):
+    def set_data_saving(self, RLT_DIR):
         self.save_res = True
         self.save_trajectory = self.FLAGS.save_trajectory
         self.save_y_hat_train = self.FLAGS.save_y_hat_train
@@ -95,6 +94,9 @@ class trainer:
         if self.save_model:
             self.saver = tf.train.Saver(max_to_keep=1)
 
+        if self.save_tensorboard:
+            self.writer = tf.summary.FileWriter(RLT_DIR)
+
     def set_saving_dir(self, checkpoint_dir):
         self.checkpoint_dir = checkpoint_dir
 
@@ -102,9 +104,6 @@ class trainer:
         epoch_data_DIR = self.checkpoint_dir.split("/")
         epoch_data_DIR.insert(epoch_data_DIR.index("rslts") + 1, "epoch_data")
         self.epoch_data_DIR = "/".join(epoch_data_DIR)
-
-        if self.save_tensorboard:
-            self.writer = tf.summary.FileWriter(self.checkpoint_dir)
 
     def init_train(self, obs_train, obs_test, input_train, input_test,
                    mask_train, mask_test, time_interval_train, time_interval_test):
@@ -127,18 +126,22 @@ class trainer:
         # set up feed_dict
         self.set_feed_dict()
 
-        loss = -self.log_ZSMC
-        global_step = tf.Variable(0, name='global_step', dtype=tf.float32, trainable=False)
-
         # regularization
         if self.model.f_tran_type == "ilr_clv":
             reg = self.model.f_tran.regularization_loss()
-            loss += reg
+
+        with tf.variable_scope("loss"):
+            loss = -self.log_ZSMC
+            tf.summary.scalar('neg_log_ZSMC', -self.log_ZSMC)
+
+            if self.model.f_tran_type == "ilr_clv":
+                tf.summary.scalar('reg', reg)
+                loss += reg
 
         with tf.variable_scope("train"):
             self.lr_holder = tf.placeholder(tf.float32, name="lr")
             optimizer = tf.train.AdamOptimizer(self.lr_holder)
-            self.train_op = optimizer.minimize(loss, global_step=global_step)
+            self.train_op = optimizer.minimize(loss)
 
         init = tf.global_variables_initializer()
         self.sess = tf.Session()
@@ -146,6 +149,7 @@ class trainer:
         print("initializing variables...")
         self.sess.run(init)
         self.total_epoch_count = 0
+        self.summary = tf.summary.merge_all()
 
     def set_feed_dict(self):
         # data up to saving_num
@@ -192,8 +196,7 @@ class trainer:
                 mask_weight = 0
             else:
                 mask_weight = 1
-            self.n_epochs += 1.0
-            annealing_frac = self.n_epochs / np.sum(self.epochs)
+            annealing_frac = (self.total_epoch_count + 1.0) / np.sum(self.epochs)
 
             set_feed_dict(self.mask_weight, mask_weight)
             set_feed_dict(self.annealing_frac, annealing_frac)
@@ -208,16 +211,17 @@ class trainer:
             for j in range(0, len(obs_train), self.batch_size):
                 assert self.batch_size == 1
 
-                self.sess.run(self.train_op,
-                              feed_dict={self.obs:            obs_train[j:j + self.batch_size],
-                                         self.input:          input_train[j:j + self.batch_size],
-                                         self.time:           obs_train[j].shape[0],
-                                         self.mask:           mask_train[j:j + self.batch_size],
-                                         self.mask_weight:    mask_weight,
-                                         self.time_interval:  time_interval_train[j:j + self.batch_size],
-                                         self.lr_holder:      self.lr,
-                                         self.training:       True,
-                                         self.annealing_frac: annealing_frac})
+                summary, _ = self.sess.run([self.summary, self.train_op],
+                                           feed_dict={self.obs:            obs_train[j:j + self.batch_size],
+                                                      self.input:          input_train[j:j + self.batch_size],
+                                                      self.time:           obs_train[j].shape[0],
+                                                      self.mask:           mask_train[j:j + self.batch_size],
+                                                      self.mask_weight:    mask_weight,
+                                                      self.time_interval:  time_interval_train[j:j + self.batch_size],
+                                                      self.lr_holder:      self.lr,
+                                                      self.training:       True,
+                                                      self.annealing_frac: annealing_frac})
+                self.writer.add_summary(summary, self.total_epoch_count * len(obs_train) + j)
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:

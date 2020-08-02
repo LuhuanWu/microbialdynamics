@@ -105,12 +105,14 @@ def main(_):
 
     # ============================================= training part ============================================ #
     mytrainer = trainer(SSM_model, SMC_train, FLAGS)
-    mytrainer.set_data_saving()
+    mytrainer.set_data_saving(RLT_DIR)
     mytrainer.init_train(obs_train, obs_test, input_train, input_test, mask_train, mask_test,
                          time_interval_train, time_interval_test)
 
     plot_start_idx, plot_start_epoch = 0, 0
+    cum_epoch = 0
     for checkpoint_idx, epoch in enumerate(FLAGS.epochs):
+        cum_epoch += epoch
         print("\n\nStart training {}...".format(checkpoint_idx))
 
         checkpoint_dir = RLT_DIR + "checkpoint_{}/".format(checkpoint_idx)
@@ -142,8 +144,9 @@ def main(_):
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
         if FLAGS.f_tran_type == "ilr_clv":
-            f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params, {SSM_model.training: False,
-                                                                         SSM_model.annealing_frac: 1.0})
+            f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params,
+                                               {SSM_model.training: False,
+                                                SSM_model.annealing_frac: cum_epoch / np.sum(FLAGS.epochs)})
             with open(data_dir, "rb") as f:
                 data = pickle.load(f)
             plot_interaction_matrix(checkpoint_dir + "interaction", f_tran_params, data)

@@ -22,7 +22,7 @@ class ilr_clv_transformation(transformation):
         self.annealing_frac = annealing_frac
 
         assert params_reg_func in ["L1", "L2"]
-        assert overlap_reg_func in ["L1", "log", "KL"]
+        assert overlap_reg_func in ["L1", "KL"]
         self.params_reg_func = params_reg_func
         self.overlap_reg_func = overlap_reg_func
         self.reg_coef = reg_coef
@@ -39,7 +39,7 @@ class ilr_clv_transformation(transformation):
         self.inode_heights = self.heights[:Dx]
         self.parent_heights = np.array([node.parent.height if node.parent is not None else node.height
                                         for node in self.reference])
-        num_leaves = np.array([np.sum(theta_i != 0) for theta_i in self.theta])
+        num_leaves = np.array([np.sum(theta_i == 1) * np.sum(theta_i == -1) for theta_i in self.theta])
         self.num_leaves = np.concatenate([num_leaves, np.ones(Dy)])
 
         # training mask
@@ -49,8 +49,8 @@ class ilr_clv_transformation(transformation):
             self.in_reg_annealing = np.ones(Dx) * self.annealing_frac
             self.between_reg_annealing = np.ones(Dx + Dy) * self.annealing_frac
         else:
-            schedule_frac = 0.5  # how long it takes for top-down & bottom-up to fully spread to all nodes
-            in_training_delay = 0.2  # bottom-up starts later than top-down
+            schedule_frac = 0.8  # how long it takes for top-down & bottom-up to fully spread to all nodes
+            in_training_delay = 0.0  # bottom-up starts later than top-down
 
             in_training_starts = ((self.inode_heights - 1) / self.inode_heights.max()) * schedule_frac
             in_training_starts += in_training_delay
@@ -76,7 +76,7 @@ class ilr_clv_transformation(transformation):
         self.Wv_between_var = tf.Variable(tf.zeros((Dx, self.Dv)))
 
         # init in-group / between-group assignment
-        assignment_init = 0.5
+        assignment_init = 0.2
         assignment_init = tf.log(assignment_init / (1 - assignment_init))
         self.in_assignment_var = tf.Variable(assignment_init * tf.ones(Dx, dtype=tf.float32))
         self.between_assignment_var = tf.Variable(assignment_init * tf.ones(Dx + Dy, dtype=tf.float32))
@@ -92,7 +92,7 @@ class ilr_clv_transformation(transformation):
         self.between_assignment = tf.sigmoid(self.between_assignment_var)
 
         # L0 regularization for between-group / in-group assignment
-        L0_init = 0.5
+        L0_init = 0.2
         log_alpha_init = tf.log(L0_init / (1 - L0_init))
         self.in_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx, dtype=tf.float32))
         self.between_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx + Dy, dtype=tf.float32))
@@ -137,6 +137,7 @@ class ilr_clv_transformation(transformation):
         Dx = self.Dx
         num_leaves = self.num_leaves
         inode_num_leaves = num_leaves[:Dx]
+        num_leaves = num_leaves / num_leaves.max()
 
         in_L0 = l0_norm(self.in_log_alpha)
         in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * inode_num_leaves)
@@ -177,11 +178,15 @@ class ilr_clv_transformation(transformation):
                 num_leaves_j = num_leaves[idx]
                 if self.overlap_reg_func == "L1":
                     overlap_reg_ij = a_in * child_a_between
-                elif self.overlap_reg_func == "log":
-                    overlap_reg_ij = tf.log(a_in * child_a_between)
                 else:  # KL
                     overlap_reg_ij = a_in * tf.log(child_a_between) + tf.log(a_in) * child_a_between
                 overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
+
+        with tf.variable_scope('reg_loss'):
+            tf.summary.scalar('L0', L0 * self.reg_coef)
+            tf.summary.scalar('assigment_reg', assigment_reg * self.reg_coef)
+            tf.summary.scalar('params_reg', params_reg * self.reg_coef)
+            tf.summary.scalar('overlap_reg', overlap_reg * self.reg_coef)
 
         return (L0 + assigment_reg + params_reg + overlap_reg) * self.reg_coef
 
@@ -263,6 +268,7 @@ class ilr_clv_transformation(transformation):
 
         between_reg_annealing = tf.unstack(self.between_reg_annealing)
         num_leaves = self.num_leaves
+        num_leaves /= num_leaves.max()
 
         A_between_var_list = tf.unstack(A_between_var, axis=0)
         A_between_var_list = [tf.unstack(ele) for ele in A_between_var_list]
