@@ -58,13 +58,15 @@ class ilr_clv_transformation(transformation):
             max_parent_height = self.parent_heights.max()
             between_training_starts = ((max_parent_height - self.parent_heights) / max_parent_height) * schedule_frac
 
+            self.in_training_starts, self.between_training_starts = in_training_starts, between_training_starts
+
             self.in_training_mask = in_training_starts < annealing_frac
             self.between_training_mask = between_training_starts < annealing_frac
             self.in_reg_annealing = (self.annealing_frac - in_training_starts) / (1.0 - in_training_starts)
-            self.in_reg_annealing = tf.minimum(0.0, self.in_reg_annealing)
+            self.in_reg_annealing = tf.maximum(0.0, self.in_reg_annealing)
             self.between_reg_annealing = (self.annealing_frac - between_training_starts) / \
                                          (1.0 - between_training_starts)
-            self.between_reg_annealing = tf.minimum(0.0, self.between_reg_annealing)
+            self.between_reg_annealing = tf.maximum(0.0, self.between_reg_annealing)
 
         # init variable
         self.A_in_var = tf.Variable(tf.zeros((Dx, Dy)))
