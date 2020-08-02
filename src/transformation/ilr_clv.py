@@ -13,7 +13,7 @@ EPS = 1e-6
 class ilr_clv_transformation(transformation):
     def __init__(self, theta, Dv, flat_inference=False,
                  reg_coef=1.0, params_reg_func="L2", overlap_reg_func="L1",
-                 training=False, annealing_frac=1.0):
+                 training=False, annealing_frac=1.0, in_training_delay=0.0, num_leaves_sum=True):
         self.theta = theta
         Dx, Dy = self.Dx, self.Dy = theta.shape
         self.Dv = Dv
@@ -39,7 +39,10 @@ class ilr_clv_transformation(transformation):
         self.inode_heights = self.heights[:Dx]
         self.parent_heights = np.array([node.parent.height if node.parent is not None else node.height
                                         for node in self.reference])
-        num_leaves = np.array([np.sum(theta_i == 1) * np.sum(theta_i == -1) for theta_i in self.theta])
+        if num_leaves_sum:
+            num_leaves = np.array([np.sum(theta_i == 1) + np.sum(theta_i == -1) for theta_i in self.theta])
+        else:
+            num_leaves = np.array([np.sum(theta_i == 1) * np.sum(theta_i == -1) for theta_i in self.theta])
         self.num_leaves = np.concatenate([num_leaves, np.ones(Dy)])
 
         # training mask
@@ -50,7 +53,6 @@ class ilr_clv_transformation(transformation):
             self.between_reg_annealing = np.ones(Dx + Dy) * self.annealing_frac
         else:
             schedule_frac = 0.8  # how long it takes for top-down & bottom-up to fully spread to all nodes
-            in_training_delay = 0.0  # bottom-up starts later than top-down
 
             in_training_starts = ((self.inode_heights - 1) / self.inode_heights.max()) * schedule_frac
             in_training_starts += in_training_delay

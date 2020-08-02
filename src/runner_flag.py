@@ -46,6 +46,8 @@ flat_inference = False
 params_reg_func = "L1"             # "L1" / "L2"
 overlap_reg_func = "KL"             # "L1" / "log"
 reg_coef = 1.0
+in_training_delay = 0.1
+num_leaves_sum = True
 
 # ------------------------------- Data ------------------------------- #
 
@@ -141,7 +143,7 @@ saving_train_num = 10
 saving_test_num = 10
 
 # whether to save tensorboard
-save_tensorboard = False
+save_tensorboard = True
 
 # whether to save model
 save_model = False
@@ -181,6 +183,8 @@ flags.DEFINE_string("params_reg_func", params_reg_func, "regularization for tran
 flags.DEFINE_string("overlap_reg_func", overlap_reg_func, "regularization for overlap of "
                                                           "between-group and in-group interaction")
 flags.DEFINE_float("reg_coef", reg_coef, "regularization coefficient")
+flags.DEFINE_float("in_training_delay", in_training_delay, "how much does bottom-up start later than top-down")
+flags.DEFINE_boolean("num_leaves_sum", num_leaves_sum, "regularization use sum or product of num_leaves")
 
 # ------------------------------- Data ------------------------------- #
 

@@ -45,6 +45,8 @@ class SSM(object):
         self.reg_coef = FLAGS.reg_coef
         self.params_reg_func = FLAGS.params_reg_func
         self.overlap_reg_func = FLAGS.overlap_reg_func
+        self.in_training_delay = FLAGS.in_training_delay
+        self.num_leaves_sum = FLAGS.num_leaves_sum
 
         self.batch_size = FLAGS.batch_size
 
@@ -113,7 +115,8 @@ class SSM(object):
                 ilr_clv_transformation(self.theta, self.Dv, flat_inference=self.flat_inference,
                                        training=self.training, annealing_frac=self.annealing_frac,
                                        params_reg_func=self.params_reg_func, overlap_reg_func=self.overlap_reg_func,
-                                       reg_coef=self.reg_coef)
+                                       reg_coef=self.reg_coef, in_training_delay=self.in_training_delay,
+                                       num_leaves_sum=self.num_leaves_sum)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
