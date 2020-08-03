@@ -221,7 +221,8 @@ class trainer:
                                                       self.lr_holder:      self.lr,
                                                       self.training:       True,
                                                       self.annealing_frac: annealing_frac})
-                self.writer.add_summary(summary, self.total_epoch_count * len(obs_train) + j)
+                if self.save_tensorboard:
+                    self.writer.add_summary(summary, self.total_epoch_count * len(obs_train) + j)
 
             if (self.total_epoch_count + 1) % print_freq == 0:
                 try:
@@ -252,7 +253,8 @@ class trainer:
                             pickle.dump(y_hat_test_dict, f)
 
             self.total_epoch_count += 1
-
+            if self.FLAGS.print_f_sigma:
+                print("f sig", self.sess.run(self.model.f_dist.sigma_con))
             end = time.time()
             print("epoch {:<14} took {:.3f} seconds".format(self.total_epoch_count, end - start))
         print("finished training...")
