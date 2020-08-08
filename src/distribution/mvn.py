@@ -22,11 +22,13 @@ class mvn(distribution):
 class tf_mvn(distribution):
     # multivariate normal distribution
 
-    def __init__(self, transformation, name='tf_mvn', sigma_init=5, sigma_min=1, rank=1):
+    def __init__(self, transformation, name='tf_mvn', sigma_init=5, sigma_min=1, rank=1, train_sigma=True):
         super(tf_mvn, self).__init__(transformation, name)
         self.sigma_init = sigma_init
         self.sigma_min = sigma_min
         self.rank = rank  # rank of the random variable
+        self.train_sigma = train_sigma
+
 
     def get_mvn(self, Input):
         with tf.variable_scope(self.name, reuse=tf.AUTO_REUSE):
@@ -43,10 +45,11 @@ class tf_mvn(distribution):
                                     shape=shape,
                                     dtype=tf.float32,
                                     initializer=tf.constant_initializer(self.sigma_init),
-                                    trainable=True)
+                                    trainable=self.train_sigma)
         sigma_con = tf.nn.softplus(sigma_con)
         sigma_con = tf.where(tf.is_nan(sigma_con), tf.zeros_like(sigma_con), sigma_con)
         sigma_con = tf.maximum(sigma_con, self.sigma_min)
+        self.sigma_con = sigma_con
         return sigma_con
 
     def sample_and_log_prob(self, Input, sample_shape=(), name=None, **kwargs):
@@ -71,3 +74,8 @@ class tf_mvn(distribution):
         mvn = self.get_mvn(Input)
         with tf.variable_scope(name or self.name):
             return mvn.mean()
+
+    def sigma(self, Input, name=None, **kwargs):
+        mvn = self.get_mvn(Input)
+        with tf.variable_scope(name or self.name):
+            return mvn.stddev()

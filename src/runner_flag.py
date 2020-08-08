@@ -23,16 +23,20 @@ print("\t tensorflow version:", tf.__version__)
 print("\t tensorflow_probability version:", tfp.__version__)
 
 
+# transition variane
+train_f_sigma = False
+print_f_sigma = True
+
 # Dy and Dv need to match the data set
-Dy = 21             # dimension of observations (num of taxa)
-Dv = 3             # dimension of inputs (num of perturbations)
-Dx = 20             # dimension of hidden states (num of groups/topics)
+Dy = 16             # dimension of observations (num of taxa)
+Dv = 0             # dimension of inputs (num of perturbations)
+Dx = 15             # dimension of hidden states (num of groups/topics)
 
 # see options: utils/available_data.py
-data_type = "oral_21_taxa"
+data_type = "in_group_balance_6_mag_00_16_taxa"
 
 lr = 1e-3                 # learning rate
-epochs = [1000]           # num of epochs, [500, 500] will train for 500 epochs, save results,
+epochs = [200 for _ in range(5)]           # num of epochs, [500, 500] will train for 500 epochs, save results,
                           # and train for another 500 epochs and save results
 
 # You probably don't need to worry about the followings for the 1st time
@@ -124,7 +128,7 @@ min_lr = lr / 100
 
 # --------------------- printing, data saving and evaluation params --------------------- #
 # frequency to evaluate testing loss & other metrics and save results
-print_freq = 10
+print_freq = 20
 
 # whether to save following into epoch folder
 save_trajectory = False
@@ -166,6 +170,9 @@ flags = tf.app.flags
 
 
 # --------------------- Training Hyperparameters --------------------- #
+
+flags.DEFINE_boolean("train_f_sigma", train_f_sigma, "whether to train transition sigma")
+flags.DEFINE_boolean("print_f_sigma", print_f_sigma, "whether to print transition sigma")
 
 flags.DEFINE_integer("Dx", Dx, "dimension of hidden states")
 flags.DEFINE_integer("Dy", Dy, "dimension of observations")

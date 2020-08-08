@@ -50,6 +50,8 @@ class SSM(object):
 
         self.batch_size = FLAGS.batch_size
 
+        self.train_f_sigma = FLAGS.train_f_sigma
+
         # Feed-Forward Network (FFN) architectures
         self.q0_layers = [int(x) for x in FLAGS.q0_layers.split(",") if x != '']
         self.q1_layers = [int(x) for x in FLAGS.q1_layers.split(",") if x != '']
@@ -166,10 +168,12 @@ class SSM(object):
                               sigma_min=self.q0_sigma_min,
                               name="q0_dist")
 
+        train_sigma = self.train_f_sigma if self.use_bootstrap else True
         self.q1_dist = tf_mvn(self.q1_tran,
                               sigma_init=self.q1_sigma_init,
                               sigma_min=self.q1_sigma_min,
-                              name="q1_dist")
+                              name="q1_dist",
+                              train_sigma=train_sigma)
         if self.use_2_q:
             self.q2_dist = tf_mvn(self.q2_tran,
                                   sigma_init=self.q2_sigma_init,
@@ -199,7 +203,8 @@ class SSM(object):
             self.f_dist = tf_mvn(self.f_tran,
                                  sigma_init=self.f_sigma_init,
                                  sigma_min=self.f_sigma_min,
-                                 name="f_dist")
+                                 name="f_dist",
+                                 train_sigma=self.train_f_sigma)
 
         if self.g_dist_type == "mvn":
             self.g_dist = tf_mvn(self.g_tran, name="g_dist",
