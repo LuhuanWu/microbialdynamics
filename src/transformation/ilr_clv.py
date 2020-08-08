@@ -5,7 +5,7 @@ from src.transformation.base import transformation
 from src.transformation.ilr_clv_utils import convert_theta_to_tree
 from src.transformation.ilr_clv_utils import setup_heights, get_inode_and_taxon_idxes
 from src.transformation.ilr_clv_utils import get_psi, inverse_ilr_transform, get_inode_relative_abundance
-from src.transformation.l0_utils import hard_concrete_sample, hard_concrete_mean, l0_norm
+from src.transformation.l0_utils import hard_concrete_sample, hard_concrete_mean, l0_norm, GAMMA, ZETA, BETA
 
 EPS = 1e-6
 
@@ -97,7 +97,8 @@ class ilr_clv_transformation(transformation):
 
         # L0 regularization for between-group / in-group assignment
         L0_init = 0.2
-        log_alpha_init = tf.log(L0_init / (1 - L0_init))
+        log_alpha_init = (L0_init - GAMMA) / (ZETA - GAMMA) * BETA
+        log_alpha_init = tf.log(log_alpha_init / (1 - log_alpha_init))
         self.in_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx, dtype=tf.float32))
         self.between_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx + Dy, dtype=tf.float32))
 
@@ -144,10 +145,10 @@ class ilr_clv_transformation(transformation):
         num_leaves = num_leaves / num_leaves.max()
 
         in_L0 = l0_norm(self.in_log_alpha)
-        in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * inode_num_leaves)
+        self.in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * inode_num_leaves)
         between_L0 = l0_norm(self.between_log_alpha)
-        between_L0 = tf.reduce_sum(between_L0 * self.between_reg_annealing / num_leaves)
-        L0 = in_L0 + between_L0
+        self.between_L0 = tf.reduce_sum(between_L0 * self.between_reg_annealing / num_leaves)
+        L0 = self.in_L0 + self.between_L0
 
         # smaller assignment_var -> sigmoid -> assigment score closer to 0
         in_assigment_reg = tf.reduce_sum(self.in_assignment_var * self.in_reg_annealing * inode_num_leaves)
@@ -183,7 +184,7 @@ class ilr_clv_transformation(transformation):
                 if self.overlap_reg_func == "L1":
                     overlap_reg_ij = a_in * child_a_between
                 else:  # KL
-                    overlap_reg_ij = a_in * tf.log(child_a_between) + tf.log(a_in) * child_a_between
+                    overlap_reg_ij = a_in * tf.log(child_a_between)
                 overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
 
         with tf.variable_scope('reg_loss'):
@@ -272,7 +273,7 @@ class ilr_clv_transformation(transformation):
 
         between_reg_annealing = tf.unstack(self.between_reg_annealing)
         num_leaves = self.num_leaves
-        num_leaves /= num_leaves.max()
+        num_leaves = num_leaves / num_leaves.max()
 
         A_between_var_list = tf.unstack(A_between_var, axis=0)
         A_between_var_list = [tf.unstack(ele) for ele in A_between_var_list]
