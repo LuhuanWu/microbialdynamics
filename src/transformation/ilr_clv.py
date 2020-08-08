@@ -22,7 +22,7 @@ class ilr_clv_transformation(transformation):
         self.annealing_frac = annealing_frac
 
         assert params_reg_func in ["L1", "L2"]
-        assert overlap_reg_func in ["L1", "KL"]
+        assert overlap_reg_func in ["L1", "KL", "L2", "None"]
         self.params_reg_func = params_reg_func
         self.overlap_reg_func = overlap_reg_func
         self.reg_coef = reg_coef
@@ -92,8 +92,8 @@ class ilr_clv_transformation(transformation):
                                                self.between_assignment_var,
                                                -10.0 * tf.ones_like(self.between_assignment_var))
 
-        self.in_assignment = tf.sigmoid(self.in_assignment_var)
-        self.between_assignment = tf.sigmoid(self.between_assignment_var)
+        self.in_assignment_before_gated = tf.sigmoid(self.in_assignment_var)
+        self.between_assignment_before_gated = tf.sigmoid(self.between_assignment_var)
 
         # L0 regularization for between-group / in-group assignment
         L0_init = 0.2
@@ -115,8 +115,8 @@ class ilr_clv_transformation(transformation):
                                         lambda: hard_concrete_mean(self.between_log_alpha))
 
         # apply assignment
-        self.in_assignment = self.in_assignment * self.in_L0_noise
-        self.between_assignment = self.between_assignment * self.between_L0_noise
+        self.in_assignment = self.in_assignment_before_gated * self.in_L0_noise
+        self.between_assignment = self.between_assignment_before_gated * self.between_L0_noise
 
         self.A_in_var, self.A_in = self.get_A_in(self.A_in_var, self.in_training_mask, self.in_assignment)
         self.g_in_var = tf.where(self.in_training_mask, self.g_in_var, tf.stop_gradient(self.g_in_var))
@@ -150,9 +150,9 @@ class ilr_clv_transformation(transformation):
         self.between_L0 = tf.reduce_sum(between_L0 * self.between_reg_annealing / num_leaves)
         L0 = self.in_L0 + self.between_L0
 
-        # smaller assignment_var -> sigmoid -> assigment score closer to 0
-        in_assigment_reg = tf.reduce_sum(self.in_assignment_var * self.in_reg_annealing * inode_num_leaves)
-        between_assigment_reg = tf.reduce_sum(self.between_assignment_var * self.between_reg_annealing / num_leaves)
+        in_assigment_reg = tf.reduce_sum(self.in_assignment_before_gated * self.in_reg_annealing * inode_num_leaves)
+        between_assigment_reg = \
+            tf.reduce_sum(self.between_assignment_before_gated * self.between_reg_annealing / num_leaves)
         assigment_reg = in_assigment_reg + between_assigment_reg
 
         if self.params_reg_func == "L1":
@@ -182,9 +182,13 @@ class ilr_clv_transformation(transformation):
                 child_a_between = tf.clip_by_value(child_a_between, EPS, 1 - EPS)
                 num_leaves_j = num_leaves[idx]
                 if self.overlap_reg_func == "L1":
+                    overlap_reg_ij = (a_in * child_a_between) ** 2
+                elif self.overlap_reg_func == "L1":
                     overlap_reg_ij = a_in * child_a_between
-                else:  # KL
-                    overlap_reg_ij = a_in * tf.log(child_a_between)
+                elif self.overlap_reg_func == "KL":
+                    overlap_reg_ij = -a_in * (tf.log(a_in) - tf.log(child_a_between))
+                else:  # None
+                    overlap_reg_ij = tf.zeros(1)
                 overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
 
         with tf.variable_scope('reg_loss'):
