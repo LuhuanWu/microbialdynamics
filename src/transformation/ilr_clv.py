@@ -182,13 +182,13 @@ class ilr_clv_transformation(transformation):
                 child_a_between = tf.clip_by_value(child_a_between, EPS, 1 - EPS)
                 num_leaves_j = num_leaves[idx]
                 if self.overlap_reg_func == "L1":
-                    overlap_reg_ij = (a_in * child_a_between) ** 2
-                elif self.overlap_reg_func == "L1":
                     overlap_reg_ij = a_in * child_a_between
+                elif self.overlap_reg_func == "L2":
+                    overlap_reg_ij = (a_in * child_a_between) ** 2
                 elif self.overlap_reg_func == "KL":
                     overlap_reg_ij = -a_in * (tf.log(a_in) - tf.log(child_a_between))
                 else:  # None
-                    overlap_reg_ij = tf.zeros(1)
+                    overlap_reg_ij = tf.constant(1, dtype=tf.float32)
                 overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
 
         with tf.variable_scope('reg_loss'):

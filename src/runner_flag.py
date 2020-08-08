@@ -48,7 +48,7 @@ seed = 0
 
 flat_inference = False
 params_reg_func = "L1"             # "L1" / "L2"
-overlap_reg_func = "KL"             # "L1" / "log"
+overlap_reg_func = "None"             # "L1" / "log"
 reg_coef = 1.0
 in_training_delay = 0.1
 num_leaves_sum = True
