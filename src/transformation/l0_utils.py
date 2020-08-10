@@ -47,7 +47,7 @@ def hard_concrete_sample(
             clip_value_min=0.0)
 
 
-def hard_concrete_mean(log_alpha, gamma=GAMMA, zeta=ZETA):
+def hard_concrete_mean(log_alpha, gamma=GAMMA, zeta=ZETA, beta=BETA):
     """Calculate the mean of the hard concrete distribution.
     The hard concrete distribution is described in
     https://arxiv.org/abs/1712.01312.
@@ -61,7 +61,7 @@ def hard_concrete_mean(log_alpha, gamma=GAMMA, zeta=ZETA):
     Returns:
         A tf.Tensor representing the calculated means.
     """
-    stretched_values = tf.sigmoid(log_alpha) * (zeta - gamma) + gamma
+    stretched_values = tf.sigmoid(log_alpha / beta) * (zeta - gamma) + gamma
     return tf.clip_by_value(
             stretched_values,
             clip_value_max=1.0,

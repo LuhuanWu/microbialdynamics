@@ -52,7 +52,7 @@ class ilr_clv_transformation(transformation):
             self.in_reg_annealing = np.ones(Dx) * self.annealing_frac
             self.between_reg_annealing = np.ones(Dx + Dy) * self.annealing_frac
         else:
-            schedule_frac = 0.8  # how long it takes for top-down & bottom-up to fully spread to all nodes
+            schedule_frac = 0.6  # how long it takes for top-down & bottom-up to fully spread to all nodes
 
             in_training_starts = ((self.inode_heights - 1) / self.inode_heights.max()) * schedule_frac
             in_training_starts += in_training_delay
@@ -80,7 +80,7 @@ class ilr_clv_transformation(transformation):
         self.Wv_between_var = tf.Variable(tf.zeros((Dx, self.Dv)))
 
         # init in-group / between-group assignment
-        assignment_init = 0.2
+        assignment_init = 0.7
         assignment_init = tf.log(assignment_init / (1 - assignment_init))
         self.in_assignment_var = tf.Variable(assignment_init * tf.ones(Dx, dtype=tf.float32))
         self.between_assignment_var = tf.Variable(assignment_init * tf.ones(Dx + Dy, dtype=tf.float32))
@@ -96,9 +96,9 @@ class ilr_clv_transformation(transformation):
         self.between_assignment_before_gated = tf.sigmoid(self.between_assignment_var)
 
         # L0 regularization for between-group / in-group assignment
-        L0_init = 0.2
-        log_alpha_init = (L0_init - GAMMA) / (ZETA - GAMMA) * BETA
-        log_alpha_init = tf.log(log_alpha_init / (1 - log_alpha_init))
+        L0_init = 0.7
+        log_alpha_init = (L0_init - GAMMA) / (ZETA - GAMMA)
+        log_alpha_init = tf.log(log_alpha_init / (1 - log_alpha_init)) * BETA
         self.in_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx, dtype=tf.float32))
         self.between_log_alpha = tf.Variable(log_alpha_init * tf.ones(Dx + Dy, dtype=tf.float32))
 
