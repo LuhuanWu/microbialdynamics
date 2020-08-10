@@ -142,7 +142,6 @@ class ilr_clv_transformation(transformation):
         Dx = self.Dx
         num_leaves = self.num_leaves
         inode_num_leaves = num_leaves[:Dx]
-        num_leaves = num_leaves / num_leaves.max()
 
         in_L0 = l0_norm(self.in_log_alpha)
         self.in_L0 = tf.reduce_sum(in_L0 * self.in_reg_annealing * inode_num_leaves)
@@ -188,7 +187,7 @@ class ilr_clv_transformation(transformation):
                 elif self.overlap_reg_func == "KL":
                     overlap_reg_ij = -a_in * (tf.log(a_in) - tf.log(child_a_between))
                 else:  # None
-                    overlap_reg_ij = tf.constant(1, dtype=tf.float32)
+                    overlap_reg_ij = tf.constant(0.0, dtype=tf.float32)
                 overlap_reg += overlap_reg_ij * num_leaves_i / num_leaves_j
 
         with tf.variable_scope('reg_loss'):
@@ -277,7 +276,6 @@ class ilr_clv_transformation(transformation):
 
         between_reg_annealing = tf.unstack(self.between_reg_annealing)
         num_leaves = self.num_leaves
-        num_leaves = num_leaves / num_leaves.max()
 
         A_between_var_list = tf.unstack(A_between_var, axis=0)
         A_between_var_list = [tf.unstack(ele) for ele in A_between_var_list]

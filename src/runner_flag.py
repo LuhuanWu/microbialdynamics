@@ -24,8 +24,8 @@ print("\t tensorflow_probability version:", tfp.__version__)
 
 
 # transition variane
-train_f_sigma = False
-print_f_sigma = True
+train_f_sigma = True
+print_f_sigma = False
 
 # Dy and Dv need to match the data set
 Dy = 16             # dimension of observations (num of taxa)
