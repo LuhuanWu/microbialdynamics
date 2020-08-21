@@ -6,6 +6,7 @@ from src.transformation.linear import tf_linear_transformation
 from src.transformation.LDA import LDA_transformation
 from src.transformation.clv import clv_transformation
 from src.transformation.ilr_clv import ilr_clv_transformation
+from src.transformation.ilr_clv_taxon import ilr_clv_taxon_transformation
 from src.transformation.identity import identity_transformation
 from src.transformation.inv_alr import inv_alr_transformation
 from src.transformation.inv_ilr import inv_ilr_transformation
@@ -110,15 +111,19 @@ class SSM(object):
             assert self.Dx == self.Dy - 1
             self.f_tran = clv_transformation(self.Dx, self.Dv,
                                              reg_coef=self.reg_coef, annealing_frac=self.annealing_frac)
-        elif self.f_tran_type == "ilr_clv":
+        elif self.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
             assert self.Dx == self.Dy - 1
             assert self.theta.shape == (self.Dy - 1, self.Dy)
-            self.f_tran = \
-                ilr_clv_transformation(self.theta, self.Dv, flat_inference=self.flat_inference,
-                                       training=self.training, annealing_frac=self.annealing_frac,
-                                       params_reg_func=self.params_reg_func, overlap_reg_func=self.overlap_reg_func,
-                                       reg_coef=self.reg_coef, in_training_delay=self.in_training_delay,
-                                       num_leaves_sum=self.num_leaves_sum)
+            if self.f_tran_type == "ilr_clv":
+                self.f_tran = \
+                    ilr_clv_transformation(self.theta, self.Dv, flat_inference=self.flat_inference,
+                                           training=self.training, annealing_frac=self.annealing_frac,
+                                           params_reg_func=self.params_reg_func, overlap_reg_func=self.overlap_reg_func,
+                                           reg_coef=self.reg_coef, in_training_delay=self.in_training_delay,
+                                           num_leaves_sum=self.num_leaves_sum)
+            else:
+                self.f_tran = ilr_clv_taxon_transformation(self.theta, self.Dv, annealing_frac=self.annealing_frac,
+                                                           params_reg_func=self.params_reg_func, reg_coef=self.reg_coef)
         else:
             raise ValueError("Invalid value for f transformation. Must choose from MLP, linear and clv.")
 
@@ -129,7 +134,7 @@ class SSM(object):
         elif self.g_tran_type == "inv_alr":
             self.g_tran = inv_alr_transformation()
         elif self.g_tran_type == "inv_ilr":
-            assert self.f_tran_type == "ilr_clv"
+            assert self.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]
             self.g_tran = inv_ilr_transformation(self.theta, self.f_tran)
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")

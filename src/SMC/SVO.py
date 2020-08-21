@@ -72,7 +72,7 @@ class SVO:
         if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
             # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
-            if self.model.f_tran_type == "ilr_clv":
+            if self.model.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
                 obs_4_proposal = ilr_transform(obs_4_proposal, self.model.theta)
         else:
             obs_4_proposal = obs

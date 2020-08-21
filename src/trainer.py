@@ -127,14 +127,14 @@ class trainer:
         self.set_feed_dict()
 
         # regularization
-        if self.model.f_tran_type == "ilr_clv":
+        if self.model.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
             reg = self.model.f_tran.regularization_loss()
 
         with tf.variable_scope("loss"):
             loss = -self.log_ZSMC
             tf.summary.scalar('neg_log_ZSMC', -self.log_ZSMC)
 
-            if self.model.f_tran_type == "ilr_clv":
+            if self.model.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
                 tf.summary.scalar('reg', reg)
                 loss += reg
 
