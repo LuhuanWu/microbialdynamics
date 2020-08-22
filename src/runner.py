@@ -143,7 +143,7 @@ def main(_):
                              "obs_test": obs_test[0:FLAGS.saving_test_num],
                              "input_test": input_test[0:FLAGS.saving_test_num]}
 
-        if FLAGS.f_tran_type == "ilr_clv":
+        if FLAGS.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
             f_tran_params = mytrainer.sess.run(SSM_model.f_tran.params,
                                                {SSM_model.training: False,
                                                 SSM_model.annealing_frac: cum_epoch / np.sum(FLAGS.epochs)})

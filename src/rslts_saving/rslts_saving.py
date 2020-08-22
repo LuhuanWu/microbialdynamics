@@ -454,47 +454,57 @@ def plot_x_bar_plot_while_training(axs, xs_val):
 
 
 def plot_interaction_matrix(RLT_DIR, inferred, truth):
-    in_assignment = inferred["in_assignment"]
-    between_assignment = inferred["between_assignment"]
-    g_in = inferred["g_in"]
-    A_in = inferred["A_in"]
-    Wv_in = inferred["Wv_in"]
-    g_between = inferred["g_between"]
-    A_between = inferred["A_between"]
-    Wv_between = inferred["Wv_between"]
+    # for f_tran_type == "ilr_clv"
+    in_assignment = inferred.get("in_assignment")
+    between_assignment = inferred.get("between_assignment")
+
+    g_in = inferred.get("g_in")
+    A_in = inferred.get("A_in")
+    Wv_in = inferred.get("Wv_in")
+    g_between = inferred.get("g_between")
+    A_between = inferred.get("A_between")
+    Wv_between = inferred.get("Wv_between")
+
+    # for f_tran_type == "ilr_clv_taxon"
+    A = inferred.get("A")
+    g = inferred.get("g")
+    Wv = inferred.get("Wv")
 
     if not os.path.exists(RLT_DIR):
         os.makedirs(RLT_DIR)
 
-    if "in_assignment" in truth:
-        in_assignment_truth = truth["in_assignment"]
-    else:
-        in_assignment_truth = np.zeros_like(in_assignment)
-    sns.heatmap(np.stack([in_assignment_truth, in_assignment], axis=0),
-                cmap="seismic", center=0, square=True, linewidth=0.5)
-    ticks = ["truth", "inferred"]
-    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/in_assignment")
-    plt.close()
+    if in_assignment is not None:
+        if "in_assignment" in truth:
+            in_assignment_truth = truth["in_assignment"]
+        else:
+            in_assignment_truth = np.zeros_like(in_assignment)
+        sns.heatmap(np.stack([in_assignment_truth, in_assignment], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth", "inferred"]
+        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/in_assignment")
+        plt.close()
 
-    if "between_assignment" in truth:
-        between_assignment_truth = truth["between_assignment"]
-    else:
-        between_assignment_truth = np.zeros_like(between_assignment)
-    sns.heatmap(np.stack([between_assignment_truth, between_assignment], axis=0),
-                cmap="seismic", center=0, square=True, linewidth=0.5)
-    ticks = ["truth", "inferred"]
-    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/between_assignment")
-    plt.close()
+    if between_assignment is not None:
+        if "between_assignment" in truth:
+            between_assignment_truth = truth["between_assignment"]
+        else:
+            between_assignment_truth = np.zeros_like(between_assignment)
+        sns.heatmap(np.stack([between_assignment_truth, between_assignment], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth", "inferred"]
+        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/between_assignment")
+        plt.close()
 
     # interaction
-    sns.heatmap(A_in, cmap="seismic", center=0, square=True, linewidth=0.5)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/A_in")
-    plt.close()
+    if A_in is not None:
+        sns.heatmap(A_in, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_in")
+        plt.close()
 
     if "masked_A_in" in truth:
         A_in_truth = truth["masked_A_in"]
@@ -503,10 +513,11 @@ def plot_interaction_matrix(RLT_DIR, inferred, truth):
         plt.savefig(RLT_DIR + "/A_in_truth")
         plt.close()
 
-    sns.heatmap(A_between, cmap="seismic", center=0, square=True, linewidth=0.5)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/A_between")
-    plt.close()
+    if A_between is not None:
+        sns.heatmap(A_between, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_between")
+        plt.close()
 
     if "masked_A_between" in truth:
         A_between_truth = truth["masked_A_between"]
@@ -515,46 +526,86 @@ def plot_interaction_matrix(RLT_DIR, inferred, truth):
         plt.savefig(RLT_DIR + "/A_between_truth")
         plt.close()
 
-    # growth
-    if "masked_g_in" in truth:
-        g_in_truth = truth["masked_g_in"]
-    else:
-        g_in_truth = np.zeros_like(g_in)
-    sns.heatmap(np.stack([g_in_truth, g_in], axis=0),
-                cmap="seismic", center=0, square=True, linewidth=0.5)
-    ticks = ["truth", "inferred"]
-    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/g_in")
-    plt.close()
+    if A is not None:
+        sns.heatmap(A, cmap="seismic", center=0, square=True, linewidth=0.5)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/A_taxon")
+        plt.close()
 
-    if "masked_g_between" in truth:
-        g_between_truth = truth["masked_g_between"]
-    else:
-        g_between_truth = np.zeros_like(g_between)
-    sns.heatmap(np.stack([g_between_truth, g_between], axis=0),
-                cmap="seismic", center=0, square=True, linewidth=0.5)
-    ticks = ["truth", "inferred"]
-    plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
-    plt.tight_layout()
-    plt.savefig(RLT_DIR + "/g_between")
-    plt.close()
+    # growth
+    if g_in is not None:
+        if "masked_g_in" in truth:
+            g_in_truth = truth["masked_g_in"]
+        else:
+            g_in_truth = np.zeros_like(g_in)
+        sns.heatmap(np.stack([g_in_truth, g_in], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth", "inferred"]
+        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/g_in")
+        plt.close()
+
+    if g_between is not None:
+        if "masked_g_between" in truth:
+            g_between_truth = truth["masked_g_between"]
+        else:
+            g_between_truth = np.zeros_like(g_between)
+        sns.heatmap(np.stack([g_between_truth, g_between], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth", "inferred"]
+        plt.yticks(0.5 + np.arange(2), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/g_between")
+        plt.close()
+
+    if g is not None:
+        if "masked_g_in" in truth:
+            g_in_truth = truth["masked_g_in"]
+        else:
+            g_in_truth = np.zeros_like(g)
+        if "masked_g_between" in truth:
+            g_between_truth = truth["masked_g_between"]
+        else:
+            g_between_truth = np.zeros_like(g)
+        sns.heatmap(np.stack([g_in_truth, g_between_truth, g], axis=0),
+                    cmap="seismic", center=0, square=True, linewidth=0.5)
+        ticks = ["truth_in_group", "truth_between_group", "inferred"]
+        plt.yticks(0.5 + np.arange(3), ticks, rotation=0)
+        plt.tight_layout()
+        plt.savefig(RLT_DIR + "/g_taxon")
+        plt.close()
 
     # perturbation
-    if Wv_in.shape[1] > 0:
-        sns.heatmap(Wv_in, cmap="seismic", center=0, square=True, linewidth=0.5)
-        plt.tight_layout()
-        plt.savefig(RLT_DIR + "/Wv_in")
-        plt.close()
-
-        sns.heatmap(Wv_between, cmap="seismic", center=0, square=True, linewidth=0.5)
-        plt.tight_layout()
-        plt.savefig(RLT_DIR + "/Wv_between")
-        plt.close()
-
-        if "W" in truth:
-            W_truth = truth["W"]
-            sns.heatmap(W_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+    if Wv_in is not None:
+        if Wv_in.shape[1] > 0:
+            sns.heatmap(Wv_in, cmap="seismic", center=0, square=True, linewidth=0.5)
             plt.tight_layout()
-            plt.savefig(RLT_DIR + "/W_truth")
+            plt.savefig(RLT_DIR + "/Wv_in")
             plt.close()
+
+            sns.heatmap(Wv_between, cmap="seismic", center=0, square=True, linewidth=0.5)
+            plt.tight_layout()
+            plt.savefig(RLT_DIR + "/Wv_between")
+            plt.close()
+
+            if "W" in truth:
+                W_truth = truth["W"]
+                sns.heatmap(W_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+                plt.tight_layout()
+                plt.savefig(RLT_DIR + "/W_truth")
+                plt.close()
+
+    if Wv is not None:
+        if Wv.shape[1] > 0:
+            sns.heatmap(Wv, cmap="seismic", center=0, square=True, linewidth=0.5)
+            plt.tight_layout()
+            plt.savefig(RLT_DIR + "/Wv_taxon")
+            plt.close()
+
+            if "W" in truth:
+                W_truth = truth["W"]
+                sns.heatmap(W_truth, cmap="seismic", center=0, square=True, linewidth=0.5)
+                plt.tight_layout()
+                plt.savefig(RLT_DIR + "/W_truth")
+                plt.close()
