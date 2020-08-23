@@ -420,38 +420,41 @@ class trainer:
 
         return res
 
-    def evaluate_R_square(self, y_hat_N_BxTxDy, y_N_BxTxDy):
-        n_steps = len(y_hat_N_BxTxDy) - 1
-        y_hat = [np.concatenate(y_hat_i, axis=1)[0] for y_hat_i in y_hat_N_BxTxDy]
-        y = [np.concatenate(y_i, axis=1)[0] for y_i in y_N_BxTxDy]
-        n_tp, Dy = y[0].shape
+    @staticmethod
+    def evaluate_R_square(y_hat_N_BxTxDy, y_N_BxTxDy):
 
         def R_square(y_hat_i, y_i):
-            MSE = np.sum((y_hat_i - y_i) ** 2)
-            y_i_mean = np.mean(y_i, axis=0, keepdims=True)
-            y_i_var = np.sum((y_i - y_i_mean) ** 2)
-            return 1 - MSE / y_i_var
+            Rsq = []
+            for y_hat_i_j, y_i_j in zip(y_hat_i, y_i):
+                num_timestamps = y_i_j.shape[0]
+                MSE = np.sum((y_hat_i_j - y_i_j) ** 2)
+                y_i_j_mean = np.mean(y_i_j, axis=0, keepdims=True)
+                y_i_j_var = np.sum((y_i_j - y_i_j_mean) ** 2)
+                Rsq.extend([1 - MSE / y_i_j_var] * num_timestamps)
+            return np.mean(Rsq)
 
-        R_square_original = np.zeros(n_steps + 1)
+        n_steps = len(y_hat_N_BxTxDy) - 1
+        R_square_count = np.zeros(n_steps + 1)
         R_square_percentage = np.zeros(n_steps + 1)
         R_square_logp = np.zeros(n_steps + 1)
-        for i, (y_hat_i, y_i) in enumerate(zip(y_hat, y)):
-            if self.model.g_dist_type == "mvn":
-                p_hat_i = np.concatenate([y_hat_i, np.zeros((n_tp, 1))], axis=-1)
-                p_i = np.concatenate([y_i, np.zeros((n_tp, time, 1))], axis=-1)
-                from scipy.special import logsumexp
-                p_hat_i = logsumexp(p_hat_i, axis=-1)
-                p_i = logsumexp(p_i, axis=-1)
-            else:
-                p_hat_i = y_hat_i / np.sum(y_hat_i, axis=-1, keepdims=True)
-                p_i = y_i / np.sum(y_i, axis=-1, keepdims=True)
-            logp_hat_i = np.log((p_hat_i + 1e-6) / (1 + 1e-6 * Dy))
-            logp_i = np.log((p_i + 1e-6) / (1 + 1e-6 * Dy))
-            R_square_original[i] = R_square(y_hat_i, y_i)
+        for i, (y_hat_i, y_i) in enumerate(zip(y_hat_N_BxTxDy, y_N_BxTxDy)):
+            # remove redundant dimension
+            y_hat_i = [ele[0] for ele in y_hat_i]  # list of (T, Dy) arrays
+            y_i = [ele[0] for ele in y_i]
+
+            Dy = y_i[0].shape[1]
+
+            p_hat_i = [y_hat_i_j / np.sum(y_hat_i_j, axis=-1, keepdims=True) for y_hat_i_j in y_hat_i]
+            p_i = [y_i_j / np.sum(y_i_j, axis=-1, keepdims=True) for y_i_j in y_i]
+
+            logp_hat_i = [np.log((p_hat_i_j + 1e-6) / (1 + 1e-6 * Dy)) for p_hat_i_j in p_hat_i]
+            logp_i = [np.log((p_i_j + 1e-6) / (1 + 1e-6 * Dy)) for p_i_j in p_i]
+
+            R_square_count[i] = R_square(y_hat_i, y_i)
             R_square_percentage[i] = R_square(p_hat_i, p_i)
             R_square_logp[i] = R_square(logp_hat_i, logp_i)
 
-        return R_square_original, R_square_percentage, R_square_logp
+        return R_square_count, R_square_percentage, R_square_logp
 
     def draw_2D_quiver_plot(self, Xs_val, epoch):
         # Xs_val.shape = (saving_test_num, time, n_particles, Dx)

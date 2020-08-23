@@ -165,11 +165,14 @@ def main(_):
         plot_start_idx += int(epoch / print_freq) + 1
         plot_start_epoch += epoch
 
-        y_hat_unmasked_train = mytrainer.evaluate(mytrainer.unmasked_y_hat_N_BxTxDy, mytrainer.train_all_feed_dict)
-        y_hat_unmasked_test = mytrainer.evaluate(mytrainer.unmasked_y_hat_N_BxTxDy, mytrainer.test_all_feed_dict)
-        y_hat_train_0_step, y_hat_test_0_step = y_hat_unmasked_train[0], y_hat_unmasked_test[0]
+        y_hat_train, y_train = mytrainer.evaluate([mytrainer.y_hat_N_BxTxDy, mytrainer.y_N_BxTxDy],
+                                                  mytrainer.train_all_feed_dict)
+        y_hat_test, y_test = mytrainer.evaluate([mytrainer.y_hat_N_BxTxDy, mytrainer.y_N_BxTxDy],
+                                                mytrainer.test_all_feed_dict)
         with open(os.path.join(checkpoint_dir, "y_hat.p"), "wb") as f:
-            pickle.dump({"train": y_hat_train_0_step, "test": y_hat_test_0_step}, f)
+            pickle.dump({"y_hat_train": y_hat_train, "y_train": y_train,
+                         "y_hat_test": y_hat_test, "y_test": y_test},
+                        f)
 
         print("finish plotting!")
 
