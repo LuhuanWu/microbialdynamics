@@ -36,8 +36,8 @@ class clv_transformation(transformation):
         v_size = v.shape[-1]
 
         zeros = tf.zeros_like(x[..., 0:1])
-        x = tf.concat([x, zeros], axis=-1)
-        p = tf.nn.softmax(x, axis=-1)  # (n_particles, batch_size, Dx + 1)
+        x_ = tf.concat([x, zeros], axis=-1)
+        p = tf.nn.softmax(x_, axis=-1)  # (n_particles, batch_size, Dx + 1)
 
         # (..., Dx+1, 1) * (Dx+1, Dx)
         pA = tf.reduce_sum(p[..., None] * A, axis=-2)  # (..., Dx)

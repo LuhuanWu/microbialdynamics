@@ -72,6 +72,9 @@ class SVO:
         if self.model.g_dist_type in ["poisson", "multinomial", "mvn"]:
             # transform to percentage
             obs_4_proposal = obs / tf.reduce_sum(obs, axis=-1, keepdims=True)
+            if self.model.f_tran_type == "clv":
+                obs_4_proposal = tf.log(obs_4_proposal)
+                obs_4_proposal = obs_4_proposal[..., 1:] - obs_4_proposal[..., :1]
             if self.model.f_tran_type in ["ilr_clv", "ilr_clv_taxon"]:
                 obs_4_proposal = ilr_transform(obs_4_proposal, self.model.theta)
         else:
@@ -405,7 +408,11 @@ class SVO:
                 g_input = particle_BxTmkxDz[0]
                 unmasked_y_hat_BxTmkxDy = self.g.mean(g_input, obs=obs[:, k:, :])
                 # (batch_size, time - k, Dy)
-                y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
+                if k == 0:
+                    mask_ = mask
+                else:
+                    mask_ = tf.logical_and(mask[:, :-k], mask[:, k:])
+                y_hat_BxTmkxDy = tf.boolean_mask(unmasked_y_hat_BxTmkxDy, mask_)[tf.newaxis, :, :]
 
                 y_hat_N_BxTxDy.append(y_hat_BxTmkxDy)
                 unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmkxDy)
@@ -421,7 +428,8 @@ class SVO:
 
             g_input = particle_BxTmkxDz[0]
             unmasked_y_hat_BxTmNxDy = self.g.mean(g_input, obs=obs[:, n_steps:, :])  # (batch_size, T - N, Dy)
-            y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask[:, n_steps:])[tf.newaxis, :, :]
+            mask_ = tf.logical_and(mask[:, :-n_steps], mask[:, n_steps:])
+            y_hat_BxTmNxDy = tf.boolean_mask(unmasked_y_hat_BxTmNxDy, mask_)[tf.newaxis, :, :]
 
             y_hat_N_BxTxDy.append(y_hat_BxTmNxDy)
             unmasked_y_hat_N_BxTxDy.append(unmasked_y_hat_BxTmNxDy)
@@ -431,7 +439,11 @@ class SVO:
 
             for k in range(n_steps + 1):
                 y_BxTmkxDy = obs[:, k:, :]
-                y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask[:, k:])[tf.newaxis, :, :]
+                if k == 0:
+                    mask_ = mask
+                else:
+                    mask_ = tf.logical_and(mask[:, :-k], mask[:, k:])
+                y_BxTmkxDy = tf.boolean_mask(y_BxTmkxDy, mask_)[tf.newaxis, :, :]
                 y_N_BxTxDy.append(y_BxTmkxDy)
 
         return y_hat_N_BxTxDy, y_N_BxTxDy, unmasked_y_hat_N_BxTxDy
