@@ -1,4 +1,4 @@
-# available data options
+00# available data options
 toy_data_dir = "data/fhn_with_inputs_dirichlet"
 
 # --------------------------------------------- real data --------------------------------------------- #
@@ -99,15 +99,22 @@ in_group_gran_2_mag_30_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_2_mag_3
 in_group_gran_3_mag_20_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_3_mag_20.p"
 in_group_gran_3_mag_30_dir = "data/ilr_clv/vary_granularity/16_taxa_gran_3_mag_30.p"
 
+tran_000_emi_000_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_0.0.p"
 tran_025_emi_000_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_0.0.p"
 tran_050_emi_000_dir = "data/ilr_clv/vary_noise/transition_0.5_emission_0.0.p"
 tran_075_emi_000_dir = "data/ilr_clv/vary_noise/transition_0.75_emission_0.0.p"
 tran_100_emi_000_dir = "data/ilr_clv/vary_noise/transition_1.0_emission_0.0.p"
+tran_150_emi_000_dir = "data/ilr_clv/vary_noise/transition_1.5_emission_0.0.p"
+tran_200_emi_000_dir = "data/ilr_clv/vary_noise/transition_2.0_emission_0.0.p"
+tran_300_emi_000_dir = "data/ilr_clv/vary_noise/transition_3.0_emission_0.0.p"
 
-tran_025_emi_025_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_0.25.p"
-tran_025_emi_050_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_0.5.p"
-tran_025_emi_075_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_0.75.p"
-tran_025_emi_100_dir = "data/ilr_clv/vary_noise/transition_0.25_emission_1.0.p"
+tran_000_emi_025_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_0.25.p"
+tran_000_emi_050_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_0.5.p"
+tran_000_emi_075_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_0.75.p"
+tran_000_emi_100_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_1.0.p"
+tran_000_emi_150_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_1.5.p"
+tran_000_emi_200_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_2.0.p"
+tran_000_emi_300_dir = "data/ilr_clv/vary_noise/transition_0.00_emission_3.0.p"
 
 # ----------------------------------------- interpolation data ---------------------------------------- #
 count_clv_interpolation_data_dir = "data/interpolation/count_clv.p"
@@ -152,14 +159,21 @@ COUNT_DATA_DICT = dict(count=count_data_dir,
                        oral_21_taxa=oral_21_taxa_dir,
                        oral_16_taxa=oral_16_taxa_dir,
                        oral_11_taxa=oral_11_taxa_dir,
+                       tran_000_emi_000=tran_000_emi_000_dir,
                        tran_025_emi_000=tran_025_emi_000_dir,
                        tran_050_emi_000=tran_050_emi_000_dir,
                        tran_075_emi_000=tran_075_emi_000_dir,
                        tran_100_emi_000=tran_100_emi_000_dir,
-                       tran_025_emi_025=tran_025_emi_025_dir,
-                       tran_025_emi_050=tran_025_emi_050_dir,
-                       tran_025_emi_075=tran_025_emi_075_dir,
-                       tran_025_emi_100=tran_025_emi_100_dir,
+                       tran_150_emi_000=tran_150_emi_000_dir,
+                       tran_200_emi_000=tran_200_emi_000_dir,
+                       tran_300_emi_000=tran_300_emi_000_dir,
+                       tran_000_emi_025=tran_000_emi_025_dir,
+                       tran_000_emi_050=tran_000_emi_050_dir,
+                       tran_000_emi_075=tran_000_emi_075_dir,
+                       tran_000_emi_100=tran_000_emi_100_dir,
+                       tran_000_emi_150=tran_000_emi_150_dir,
+                       tran_000_emi_200=tran_000_emi_200_dir,
+                       tran_000_emi_300=tran_000_emi_300_dir,
                        )
 
 
