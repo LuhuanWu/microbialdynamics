@@ -139,14 +139,16 @@ class SSM(object):
         else:
             raise ValueError("Invalid value for g transformation. Must choose from MLP and LDA.")
 
-        self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
-                                          initialize_around_zero=self.f_tran_type == "clv",
-                                          name="q0_tran")
+        # self.q0_tran = MLP_transformation(self.q0_layers, self.Dx,
+        #                                   initialize_around_zero=self.f_tran_type == "clv",
+        #                                   name="q0_tran")
+        self.q0_tran = identity_transformation()
 
         if self.use_2_q:
-            self.q2_tran = MLP_transformation(self.q2_layers, self.Dx,
-                                              initialize_around_zero=self.f_tran_type == "clv",
-                                              name="q2_tran")
+            # self.q2_tran = MLP_transformation(self.q2_layers, self.Dx,
+            #                                   initialize_around_zero=self.f_tran_type == "clv",
+            #                                   name="q2_tran")
+            self.q2_tran = identity_transformation()
         else:
             self.q2_tran = None
 
@@ -243,7 +245,11 @@ class SSM(object):
                 X0_smoother_f = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_f)
                 X0_smoother_b = tf.nn.rnn_cell.MultiRNNCell(X0_smoother_b)
 
-            self.bRNN = (y_smoother_f, y_smoother_b, X0_smoother_f, X0_smoother_b)
+            y_smoother_projector = Dense(self.Dx, kernel_initializer="he_normal", name="y_smoother_projector")
+            X0_smoother_projector = Dense(self.Dx, kernel_initializer="he_normal", name="y_smoother_projector")
+
+            self.bRNN = (y_smoother_f, y_smoother_b, y_smoother_projector,
+                         X0_smoother_f, X0_smoother_b, X0_smoother_projector)
 
         else:
             self.bRNN = None

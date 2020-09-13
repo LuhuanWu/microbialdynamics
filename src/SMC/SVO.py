@@ -340,32 +340,35 @@ class SVO:
         return preprocessed_X0, preprocessed_obs
 
     def preprocess_obs_w_bRNN(self, obs, time_interval):
-        self.y_smoother_f, self.y_smoother_b, self.X0_smoother_f, self.X0_smoother_b = self.model.bRNN
+        y_smoother_f, y_smoother_b, y_smoother_projector, \
+            X0_smoother_f, X0_smoother_b, X0_smoother_projector = self.model.bRNN
         rnn_input = tf.concat([obs, time_interval[:, :, tf.newaxis]], axis=-1)
 
         if self.use_stack_rnn:
-            outputs, state_fw, state_bw = \
-                tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.y_smoother_f,
-                                                               self.y_smoother_b,
+            preprocessed_obs, state_fw, state_bw = \
+                tf.contrib.rnn.stack_bidirectional_dynamic_rnn(y_smoother_f,
+                                                               y_smoother_b,
                                                                rnn_input,
                                                                dtype=tf.float32)
         else:
-            outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.y_smoother_f,
-                                                                            self.y_smoother_b,
+            outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(y_smoother_f,
+                                                                            y_smoother_b,
                                                                             rnn_input,
                                                                             dtype=tf.float32)
-        smoothed_obs = tf.concat(outputs, axis=-1)
-        preprocessed_obs = tf.transpose(smoothed_obs, perm=[1, 0, 2])
+            preprocessed_obs = tf.concat(outputs, axis=-1)
+        preprocessed_obs = tf.transpose(preprocessed_obs, perm=[1, 0, 2])
+        preprocessed_obs = y_smoother_projector(preprocessed_obs)
+        preprocessed_obs += tf.transpose(obs, perm=[1, 0, 2])
 
         if self.use_stack_rnn:
             outputs, state_fw, state_bw = \
-                tf.contrib.rnn.stack_bidirectional_dynamic_rnn(self.X0_smoother_f,
-                                                               self.X0_smoother_b,
+                tf.contrib.rnn.stack_bidirectional_dynamic_rnn(X0_smoother_f,
+                                                               X0_smoother_b,
                                                                rnn_input,
                                                                dtype=tf.float32)
         else:
-            outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(self.X0_smoother_f,
-                                                                            self.X0_smoother_b,
+            outputs, (state_fw, state_bw) = tf.nn.bidirectional_dynamic_rnn(X0_smoother_f,
+                                                                            X0_smoother_b,
                                                                             rnn_input,
                                                                             dtype=tf.float32)
         if self.use_stack_rnn:
@@ -373,6 +376,7 @@ class SVO:
         else:
             outputs_fw, outputs_bw = outputs
         preprocessed_X0 = tf.concat([outputs_fw[:, -1, :], outputs_bw[:, 0, :]], axis=-1)
+        preprocessed_X0 = X0_smoother_projector(preprocessed_X0) + obs[:, 0, :]
 
         return preprocessed_X0, preprocessed_obs
 
