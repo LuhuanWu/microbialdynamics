@@ -424,14 +424,20 @@ class trainer:
     def evaluate_R_square(y_hat_N_BxTxDy, y_N_BxTxDy):
 
         def R_square(y_hat_i, y_i):
-            Rsq = []
-            for y_hat_i_j, y_i_j in zip(y_hat_i, y_i):
-                num_timestamps = y_i_j.shape[0]
-                MSE = np.sum((y_hat_i_j - y_i_j) ** 2)
-                y_i_j_mean = np.mean(y_i_j, axis=0, keepdims=True)
-                y_i_j_var = np.sum((y_i_j - y_i_j_mean) ** 2)
-                Rsq.extend([1 - MSE / y_i_j_var] * num_timestamps)
-            return np.mean(Rsq)
+            y_hat_i = np.concatenate(y_hat_i, axis=0)
+            y_i = np.concatenate(y_i, axis=0)
+            RMSE = np.sqrt(np.sum(y_hat_i - y_i) ** 2 / y_hat_i.shape[0])
+            return RMSE
+            # Rsq = []
+            # for y_hat_i_j, y_i_j in zip(y_hat_i, y_i):
+            #     num_timestamps = y_i_j.shape[0]
+            #     MSE = np.sum((y_hat_i_j - y_i_j) ** 2)
+            #     y_i_j_mean = np.mean(y_i_j, axis=0, keepdims=True)
+            #     y_i_j_var = np.sum((y_i_j - y_i_j_mean) ** 2)
+            #     Rsq.extend([1 - MSE / y_i_j_var] * num_timestamps)
+            #     if not math.isfinite(1 - MSE / y_i_j_var):
+            #         print(MSE, y_i_j_var)
+            # return np.mean(Rsq)
 
         n_steps = len(y_hat_N_BxTxDy) - 1
         R_square_count = np.zeros(n_steps + 1)
