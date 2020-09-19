@@ -426,7 +426,7 @@ class trainer:
         def R_square(y_hat_i, y_i):
             y_hat_i = np.concatenate(y_hat_i, axis=0)
             y_i = np.concatenate(y_i, axis=0)
-            RMSE = np.sqrt(np.sum(y_hat_i - y_i) ** 2 / y_hat_i.shape[0])
+            RMSE = np.sqrt(np.sum((y_hat_i - y_i) ** 2) / y_hat_i.shape[0])
             return RMSE
             # Rsq = []
             # for y_hat_i_j, y_i_j in zip(y_hat_i, y_i):

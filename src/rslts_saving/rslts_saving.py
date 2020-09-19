@@ -303,7 +303,11 @@ def plot_y_hat_bar_plot(RLT_DIR, ys_hat_val, original_obs, mask, saving_num=20, 
         for k, ys_k_hat_val in enumerate(ys_hat_val):
             masked_yhat = np.zeros((time, Dy))  # (full_ndays, Dy)
 
-            masked_yhat[k:][mask[i][k:]] = ys_k_hat_val[i]
+            if k == 0:
+                mask_ = mask[i]
+            else:
+                mask_ = np.logical_and(mask[i][k:], mask[i][:-k])
+            masked_yhat[k:][mask_] = ys_k_hat_val[i][0]
 
             plt.figure(figsize=(15,5))
             plt.title("obs idx {} {}-step prediction".format(i, k))
